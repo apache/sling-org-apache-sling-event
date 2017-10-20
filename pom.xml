@@ -37,9 +37,9 @@
     </description>
 
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/sling/trunk/bundles/extensions/event/resource</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/sling/trunk/bundles/extensions/event/resource</developerConnection>
-        <url>http://svn.apache.org/viewvc/sling/trunk/bundles/extensions/event/resource</url>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</conncetion>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</developerConnection>
+        <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-event.git</url>
     </scm>
 
     <properties>
