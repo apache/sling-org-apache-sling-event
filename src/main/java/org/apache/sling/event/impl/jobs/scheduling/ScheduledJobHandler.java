@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.jackrabbit.JcrConstants;
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
@@ -295,6 +296,7 @@ public class ScheduledJobHandler implements Runnable {
         properties.remove(ResourceResolver.PROPERTY_RESOURCE_TYPE);
         properties.remove(Job.PROPERTY_JOB_CREATED);
         properties.remove(Job.PROPERTY_JOB_CREATED_INSTANCE);
+        properties.remove(JcrConstants.JCR_PRIMARYTYPE);
 
         final String jobTopic = (String) properties.remove(ResourceHelper.PROPERTY_JOB_TOPIC);
         final String schedulerName = (String) properties.remove(ResourceHelper.PROPERTY_SCHEDULE_NAME);
