@@ -473,7 +473,7 @@ public class JobManagerConfiguration {
             this.topologyCapabilities = null;
 
             // stop all listeners
-            this.notifiyListeners();
+            this.notifyListeners();
         }
         logger.debug("Job processing stopped");
     }
@@ -499,7 +499,7 @@ public class JobManagerConfiguration {
             final CheckTopologyTask mt = new CheckTopologyTask(this);
             mt.fullRun();
 
-            notifiyListeners();
+            notifyListeners();
         } else {
             // and run checker again in some seconds (if leader)
             // notify listeners afterwards
@@ -511,7 +511,7 @@ public class JobManagerConfiguration {
                 public void run() {
                     if ( newCaps == topologyCapabilities && newCaps.isActive()) {
                         // start listeners
-                        notifiyListeners();
+                        notifyListeners();
                         if ( newCaps.isLeader() && newCaps.isActive() ) {
                             final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
                             mt.fullRun();
@@ -526,7 +526,7 @@ public class JobManagerConfiguration {
     /**
      * Notify all listeners
      */
-    private void notifiyListeners() {
+    private void notifyListeners() {
         synchronized ( this.listeners ) {
             final TopologyCapabilities caps = this.topologyCapabilities;
             for(final ConfigurationChangeListener l : this.listeners) {
