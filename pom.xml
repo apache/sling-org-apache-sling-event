@@ -264,12 +264,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-        	<groupId>org.apache.sling</groupId>
-        	<artifactId>org.apache.sling.discovery.commons</artifactId>
-        	<version>1.0.20</version>
-        	<scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.serviceusermapper</artifactId>
             <version>1.2.0</version>

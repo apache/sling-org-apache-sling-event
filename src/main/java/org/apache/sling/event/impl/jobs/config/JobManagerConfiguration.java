@@ -26,8 +26,8 @@ import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.discovery.TopologyEvent;
 import org.apache.sling.discovery.TopologyEvent.Type;
 import org.apache.sling.discovery.TopologyEventListener;
-import org.apache.sling.discovery.commons.InitDelayingTopologyEventListener;
 import org.apache.sling.event.impl.EnvironmentComponent;
+import org.apache.sling.event.impl.discovery.InitDelayingTopologyEventListener;
 import org.apache.sling.event.impl.jobs.tasks.CheckTopologyTask;
 import org.apache.sling.event.impl.jobs.tasks.FindUnfinishedJobsTask;
 import org.apache.sling.event.impl.jobs.tasks.UpgradeTask;
@@ -231,7 +231,7 @@ public class JobManagerConfiguration {
                 public void handleTopologyEvent(TopologyEvent event) {
                     doHandleTopologyEvent(event);
                 }
-            }, logger);
+            });
         } else {
             logger.debug("activate: job manager will start without delay. ({}:{})", config.startup_delay(), this.startupDelay);
         }

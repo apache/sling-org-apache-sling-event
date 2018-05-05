@@ -34,8 +34,8 @@ import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.discovery.TopologyEvent;
 import org.apache.sling.discovery.TopologyEventListener;
 import org.apache.sling.discovery.TopologyView;
-import org.apache.sling.discovery.commons.InitDelayingTopologyEventListener;
 import org.apache.sling.event.impl.TestUtil;
+import org.apache.sling.event.impl.discovery.InitDelayingTopologyEventListener;
 import org.junit.Test;
 import org.mockito.Mockito;
 
