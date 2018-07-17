@@ -114,7 +114,7 @@ public class SchedulingTest extends AbstractJobHandlingTest {
             Thread.sleep(1);
         }
         logger.info("schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules", counter.get(), this.getJobManager().getScheduledJobs().size());
-        final long timeout = System.currentTimeMillis() + 30000;
+        final long timeout = System.currentTimeMillis() + 60000;
         while(System.currentTimeMillis() < timeout) {
             if ((counter.get() == NUM_ITERATIONS) && (this.getJobManager().getScheduledJobs().size() == 0)) {
                 break;
