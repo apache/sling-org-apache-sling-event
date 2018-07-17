@@ -223,6 +223,7 @@ public class ScheduledJobHandler implements Runnable {
             holder.read = System.currentTimeMillis();
             holder.info = this.addOrUpdateScheduledJob(properties, h == null ? null : h.info);
 
+            this.scheduledJobs.put(key, holder);
             this.jobScheduler.scheduleJob(holder.info);
             return holder.info;
         }

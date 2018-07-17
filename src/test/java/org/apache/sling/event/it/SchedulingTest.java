@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.sling.event.jobs.Job;
@@ -32,11 +34,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(PaxExam.class)
 public class SchedulingTest extends AbstractJobHandlingTest {
 
     private static final String TOPIC = "job/scheduled/topic";
+
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
     @Before
@@ -83,5 +89,41 @@ public class SchedulingTest extends AbstractJobHandlingTest {
         assertEquals(1, this.getJobManager().getScheduledJobs().size()); // scheduled jobs
         info2.unschedule();
         assertEquals(0, this.getJobManager().getScheduledJobs().size()); // scheduled jobs
+    }
+
+    @Test
+    public void schedulingLoadTest() throws Exception {
+        logger.info("schedulingLoadTest: start");
+        final AtomicInteger counter = new AtomicInteger();
+        final int NUM_ITERATIONS = 1500;
+        final String ownTopic = "random/" + UUID.randomUUID().toString();
+        this.registerJobConsumer(ownTopic, new JobConsumer() {
+
+            @Override
+            public JobResult process(final Job job) {
+                if ( job.getTopic().equals(ownTopic) ) {
+                    counter.incrementAndGet();
+                }
+                return JobResult.OK;
+            }
+
+        });
+        for(int i=0; i<NUM_ITERATIONS; i++) {
+            logger.info("schedulingLoadTest: loop-" + i);
+            this.getJobManager().createJob(ownTopic).schedule().at(new Date(System.currentTimeMillis() + 2500)).add();
+            Thread.sleep(1);
+        }
+        logger.info("schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules", counter.get(), this.getJobManager().getScheduledJobs().size());
+        final long timeout = System.currentTimeMillis() + 30000;
+        while(System.currentTimeMillis() < timeout) {
+            if ((counter.get() == NUM_ITERATIONS) && (this.getJobManager().getScheduledJobs().size() == 0)) {
+                break;
+            }
+            logger.info("schedulingLoadTest: currently at {} jobs, {} schedules", counter.get(), getJobManager().getScheduledJobs().size());
+            Thread.sleep(100);
+        }
+        assertEquals(NUM_ITERATIONS, counter.get());
+        assertEquals(0, this.getJobManager().getScheduledJobs().size());
+        logger.info("schedulingLoadTest: end");
     }
 }
