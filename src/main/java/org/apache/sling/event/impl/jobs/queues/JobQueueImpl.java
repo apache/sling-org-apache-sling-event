@@ -455,7 +455,7 @@ public class JobQueueImpl
                 retryCount++;
                 if ( retries != -1 && retryCount > retries ) {
                     if ( this.logger.isDebugEnabled() ) {
-                        this.logger.debug("Cancelled job {} after {} retries",
+                        this.logger.error("Cancelled job {} after {} unsuccessful retries",
                                 Utility.toString(handler.getJob()),
                                 retries);
                     }
@@ -463,8 +463,9 @@ public class JobQueueImpl
                 } else {
                     info.reschedule = true;
                     handler.getJob().retry();
-                    this.logger.warn("Failed job {}, will retry, retryCount={}",
+                    this.logger.warn("Failed job {}, will retry {} more time(s), retryCount={}",
                             Utility.toString(handler.getJob()),
+                            retries-retryCount,
                             retryCount);
                     info.finalState = InternalJobState.FAILED;
                 }
