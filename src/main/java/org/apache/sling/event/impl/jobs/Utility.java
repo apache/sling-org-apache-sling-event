@@ -48,10 +48,21 @@ public abstract class Utility {
         String message = null;
         if ( jobTopic != null ) {
             if ( jobTopic instanceof String ) {
+                boolean topicIsCorrect = false;
+                String exceptionDetails = "";
+
                 try {
                     new Event((String)jobTopic, (Dictionary<String, Object>)null);
+                    topicIsCorrect = true;
                 } catch (final IllegalArgumentException iae) {
-                	message = String.format("Discarding job - job has an illegal job topic '%s'",jobTopic);
+                    exceptionDetails = iae.getLocalizedMessage();
+                }
+
+                if (!topicIsCorrect){
+                    message = String.format("Discarding job - job has an illegal job topic, due to: '%s'",
+                            exceptionDetails);
+                } else {
+                    message = null;
                 }
 
             } else {

@@ -72,7 +72,7 @@ public class UtilityTest extends TestCase {
     	assertNull (Utility.checkJobTopic("simpleTopic"));
     	final String result = Utility.checkJobTopic("simpleTopic.withDots");
     	assertNotNull(result);
-    	assertTrue ("Discarding job - job has an illegal job topic 'simpleTopic.withDots'".equals(result));
+    	assertTrue ("Discarding job - job has an illegal job topic, due to: 'invalid topic: simpleTopic.withDots'".equals(result));
     	assertNotNull (Utility.checkJobTopic(new StringBuilder("simpleTopic")));
     	assertNotNull (Utility.checkJobTopic(null));
     }
