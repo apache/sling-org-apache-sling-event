@@ -45,7 +45,7 @@ public abstract class Utility {
      * @return <code>null</code> if the topic is syntactically correct otherwise an error description is returned
      */
     public static String checkJobTopic(final Object jobTopic) {
-        String message = null;
+        String message;
         if ( jobTopic != null ) {
             if ( jobTopic instanceof String ) {
                 boolean topicIsCorrect = false;
