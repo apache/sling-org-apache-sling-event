@@ -109,6 +109,8 @@ public abstract class AbstractJobHandlingTest {
                 when( localRepo.length() > 0 ).useOptions(
                         systemProperty("org.ops4j.pax.url.mvn.localRepository").value(localRepo)
                 ),
+                when(System.getProperty("coverage.command") != null).useOptions(
+                        CoreOptions.vmOption(System.getProperty("coverage.command"))),
                 when( System.getProperty(PORT_CONFIG) != null ).useOptions(
                         systemProperty(PORT_CONFIG).value(System.getProperty(PORT_CONFIG))),
                 systemProperty("pax.exam.osgi.unresolved.fail").value("true"),

@@ -130,6 +130,21 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+              <groupId>org.jacoco</groupId>
+              <artifactId>jacoco-maven-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>prepare-agent-integration</id>
+                  <goals>
+                    <goal>prepare-agent-integration</goal>
+                  </goals>
+                  <configuration>
+                    <propertyName>coverage.command</propertyName>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
             <!-- integration tests run with pax-exam -->
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
@@ -155,6 +170,7 @@
                             <name>org.osgi.service.http.port</name>
                             <value>${http.port}</value>
                         </property>
+                        <coverage.command>${coverage.command}</coverage.command>
                     </systemProperties>
                     <argLine>
                         -Xmx2048m -XX:MaxPermSize=512m
