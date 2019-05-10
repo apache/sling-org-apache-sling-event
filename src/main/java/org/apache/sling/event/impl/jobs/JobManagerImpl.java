@@ -520,6 +520,9 @@ public class JobManagerImpl
                 buf.append(Job.PROPERTY_JOB_CREATED);
                 buf.append(" ascending");
             }
+            if (configuration.isFailTraversal()) {
+                buf.append(" option(traversal fail)");
+            }
             final Iterator<Resource> iter = resolver.findResources(buf.toString(), "xpath");
             long count = 0;
 
@@ -535,7 +538,12 @@ public class JobManagerImpl
                 }
              }
         } catch (final QuerySyntaxException qse) {
-            logger.warn("Query syntax wrong " + buf.toString(), qse);
+            // the query syntax is wrong,
+            // or no index is available (if fail traversal is enabled)
+            String message = "Query " + buf.toString() + " failed: " + qse.getMessage();
+            logger.debug(message, qse);
+            logger.info(message);
+            throw new IllegalStateException();
         } finally {
             resolver.close();
         }

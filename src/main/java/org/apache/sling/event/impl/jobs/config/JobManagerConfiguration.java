@@ -117,6 +117,9 @@ public class JobManagerConfiguration {
     /** Configuration property for the scheduled jobs path. */
     public static final String PROPERTY_SCHEDULED_JOBS_PATH = "job.scheduled.jobs.path";
 
+    /** Configuration property to fail traversal queries. */
+    public static final String PROPERTY_FAIL_TRAVERSAL = "job.failTraversal";
+
     /** The jobs base path with a slash. */
     private String jobsBasePathWithSlash;
 
@@ -178,6 +181,8 @@ public class JobManagerConfiguration {
     /** The topology capabilities. */
     private volatile TopologyCapabilities topologyCapabilities;
 
+    private boolean failTraversal;
+
     /**
      * Activate this component.
      * @param props Configuration properties
@@ -206,6 +211,8 @@ public class JobManagerConfiguration {
         this.scheduledJobsPath = PropertiesUtil.toString(props.get(PROPERTY_SCHEDULED_JOBS_PATH),
             DEFAULT_SCHEDULED_JOBS_PATH);
         this.scheduledJobsPathWithSlash = this.scheduledJobsPath + "/";
+
+        this.failTraversal = PropertiesUtil.toBoolean(props.get(PROPERTY_FAIL_TRAVERSAL), true);
 
         this.historyCleanUpRemovedJobs = config.cleanup_period();
 
@@ -458,6 +465,15 @@ public class JobManagerConfiguration {
      */
     public String getScheduledJobsPath(final boolean slash) {
         return (slash ? this.scheduledJobsPathWithSlash : this.scheduledJobsPath);
+    }
+
+    /**
+     * Whether to fail traversal when querying for jobs.
+     *
+     * @return true if enabled
+     */
+    public boolean isFailTraversal() {
+        return failTraversal;
     }
 
     /**

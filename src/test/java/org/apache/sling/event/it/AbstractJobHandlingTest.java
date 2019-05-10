@@ -98,8 +98,8 @@ public abstract class AbstractJobHandlingTest {
 
         String localRepo = System.getProperty("maven.repo.local", "");
 
-        final String jackrabbitVersion = "2.13.1";
-        final String oakVersion = "1.5.7";
+        final String jackrabbitVersion = "2.14.6";
+        final String oakVersion = "1.6.0";
 
         final String slingHome = new File(buildDir + File.separatorChar + "sling_" + System.currentTimeMillis()).getAbsolutePath();
 
@@ -230,6 +230,7 @@ public abstract class AbstractJobHandlingTest {
 
                 mavenBundle("com.google.guava", "guava", "15.0"),
                 mavenBundle("org.apache.jackrabbit", "jackrabbit-api", jackrabbitVersion),
+                mavenBundle("org.apache.jackrabbit", "jackrabbit-data", jackrabbitVersion),
                 mavenBundle("org.apache.jackrabbit", "jackrabbit-jcr-commons", jackrabbitVersion),
                 mavenBundle("org.apache.jackrabbit", "jackrabbit-spi", jackrabbitVersion),
                 mavenBundle("org.apache.jackrabbit", "jackrabbit-spi-commons", jackrabbitVersion),
