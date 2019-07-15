@@ -114,7 +114,7 @@ public class JobHandlerTest {
         // check that the jobpath has been deleted
         ArgumentCaptor<Resource> captor = ArgumentCaptor.forClass(Resource.class);
         Mockito.verify (resolver,Mockito.atLeast(1)).delete(captor.capture());
-        assertEquals(captor.getValue().getPath(),JOB_PATH);
+        assertEquals(JOB_PATH,captor.getValue().getPath());
         
         // check that the history resource is present
         String historyPath = config.getStoragePath(job.getTopic(), job.getId(), true);
@@ -134,7 +134,7 @@ public class JobHandlerTest {
         // check that the jobpath has been deleted
         ArgumentCaptor<Resource> captor = ArgumentCaptor.forClass(Resource.class);
         Mockito.verify (resolver,Mockito.atLeast(1)).delete(captor.capture());
-        assertEquals(captor.getValue().getPath(),JOB_PATH);
+        assertEquals(JOB_PATH,captor.getValue().getPath());
         
         // check that the history resource is not present
         String historyPath = config.getStoragePath(job.getTopic(), job.getId(), true);
@@ -152,7 +152,7 @@ public class JobHandlerTest {
         // check that the old jobpath has been deleted
         ArgumentCaptor<Resource> captor = ArgumentCaptor.forClass(Resource.class);
         Mockito.verify (resolver,Mockito.atLeast(1)).delete(captor.capture());
-        assertEquals(captor.getValue().getPath(),JOB_PATH);
+        assertEquals(JOB_PATH,captor.getValue().getPath());
         
         // check that the reassigned job is present
         String newJobPath = config.getUniquePath("targetId", job.getTopic(), job.getId(), job.getProperties());
@@ -178,8 +178,8 @@ public class JobHandlerTest {
         ValueMap vm = jobResource.adaptTo(ValueMap.class);
         assertNotNull(vm);
         
-        assertEquals(vm.get("prop1"),"value1");
-        assertEquals(vm.get("toBeUpdated"),"updatedValue2");
+        assertEquals("value1",vm.get("prop1"));
+        assertEquals("updatedValue2",vm.get("toBeUpdated"));
         assertNull(vm.get("toBeRemoved"));
         
         
