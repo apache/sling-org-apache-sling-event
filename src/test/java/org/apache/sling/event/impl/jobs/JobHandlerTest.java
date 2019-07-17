@@ -40,7 +40,6 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.event.impl.EnvironmentComponent;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager;
-import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager.QueueInfo;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
 import org.apache.sling.event.impl.support.Environment;
 import org.apache.sling.event.jobs.Job;
@@ -48,7 +47,6 @@ import org.apache.sling.event.jobs.consumer.JobExecutor;
 import org.apache.sling.serviceusermapping.ServiceUserMapped;
 import org.apache.sling.testing.mock.sling.junit.SlingContext;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -95,7 +93,7 @@ public class JobHandlerTest {
     
     @Test
     public void rescheduleWithExistingJobPath() throws Exception {
-        context.build().resource(JOB_PATH, Collections.EMPTY_MAP).commit();
+        context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
         assertTrue(handler.reschedule());
@@ -104,7 +102,7 @@ public class JobHandlerTest {
     
     @Test
     public void finishedKeepHistory () throws Exception {
-        context.build().resource(JOB_PATH, Collections.EMPTY_MAP).commit();
+        context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
         
@@ -123,7 +121,7 @@ public class JobHandlerTest {
     
     @Test
     public void finishedDropHistory () throws Exception {
-        context.build().resource(JOB_PATH, Collections.EMPTY_MAP).commit();
+        context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
         
@@ -144,7 +142,7 @@ public class JobHandlerTest {
     
     @Test
     public void reassign () throws Exception {
-        context.build().resource(JOB_PATH, Collections.EMPTY_MAP).commit();
+        context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
         handler.reassign();
