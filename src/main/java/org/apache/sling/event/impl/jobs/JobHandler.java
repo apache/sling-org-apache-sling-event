@@ -23,12 +23,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager.QueueInfo;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
@@ -78,31 +78,23 @@ public class JobHandler {
      * Reschedule the job
      * Update the retry count and remove the started time.
      * @return <code>true</code> if rescheduling was successful, <code>false</code> otherwise.
-     */
+     */    
     public boolean reschedule() {
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
-            final Resource jobResource = resolver.getResource(job.getResourcePath());
-            if ( jobResource != null ) {
-                final ModifiableValueMap mvm = jobResource.adaptTo(ModifiableValueMap.class);
-                mvm.put(Job.PROPERTY_JOB_RETRY_COUNT, job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT, Integer.class));
-                if ( job.getProperty(Job.PROPERTY_RESULT_MESSAGE) != null ) {
-                    mvm.put(Job.PROPERTY_RESULT_MESSAGE, job.getProperty(Job.PROPERTY_RESULT_MESSAGE));
-                }
-                mvm.remove(Job.PROPERTY_JOB_STARTED_TIME);
-                mvm.put(JobImpl.PROPERTY_JOB_QUEUED, Calendar.getInstance());
-                try {
-                    resolver.commit();
-                    return true;
-                } catch ( final PersistenceException pe ) {
-                    this.configuration.getMainLogger().debug("Unable to update reschedule properties for job " + job.getId(), pe);
-                }
+        return withJobResource((jobResource,mvm) -> {
+            mvm.put(Job.PROPERTY_JOB_RETRY_COUNT, job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT, Integer.class));
+            if ( job.getProperty(Job.PROPERTY_RESULT_MESSAGE) != null ) {
+                mvm.put(Job.PROPERTY_RESULT_MESSAGE, job.getProperty(Job.PROPERTY_RESULT_MESSAGE));
             }
-        } finally {
-            resolver.close();
-        }
-
-        return false;
+            mvm.remove(Job.PROPERTY_JOB_STARTED_TIME);
+            mvm.put(JobImpl.PROPERTY_JOB_QUEUED, Calendar.getInstance());
+            try {
+                jobResource.getResourceResolver().commit();
+                return true;
+            } catch ( final PersistenceException pe ) {
+                this.configuration.getMainLogger().debug("Unable to update reschedule properties for job " + job.getId(), pe);
+            }
+            return false;
+        });
     }
 
     /**
@@ -110,59 +102,53 @@ public class JobHandler {
      * @param state The state of the processing
      * @param keepJobInHistory whether to keep the job in the job history.
      * @param duration the duration of the processing.
-     */
-    public void finished(final Job.JobState state,
-                          final boolean keepJobInHistory,
-                          final Long duration) {
+     */    
+    public void finished(final Job.JobState state, final boolean keepJobInHistory, final Long duration) {
         final boolean isSuccess = (state == Job.JobState.SUCCEEDED);
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
-            final Resource jobResource = resolver.getResource(job.getResourcePath());
-            if ( jobResource != null ) {
-                try {
-                    String newPath = null;
-                    if ( keepJobInHistory ) {
-                        final ValueMap vm = ResourceHelper.getValueMap(jobResource);
-                        newPath = this.configuration.getStoragePath(job.getTopic(), job.getId(), isSuccess);
-                        final Map<String, Object> props = new HashMap<>(vm);
-                        props.put(JobImpl.PROPERTY_FINISHED_STATE, state.name());
-                        if ( isSuccess ) {
-                            // we set the finish date to start date + duration
-                            final Date finishDate = new Date();
-                            finishDate.setTime(job.getProcessingStarted().getTime().getTime() + duration);
-                            final Calendar finishCal = Calendar.getInstance();
-                            finishCal.setTime(finishDate);
-                            props.put(JobImpl.PROPERTY_FINISHED_DATE, finishCal);
-                        } else {
-                            // current time is good enough
-                            props.put(JobImpl.PROPERTY_FINISHED_DATE, Calendar.getInstance());
-                        }
-                        if ( job.getProperty(Job.PROPERTY_RESULT_MESSAGE) != null ) {
-                            props.put(Job.PROPERTY_RESULT_MESSAGE, job.getProperty(Job.PROPERTY_RESULT_MESSAGE));
-                        }
-                        ResourceHelper.getOrCreateResource(resolver, newPath, props);
+        withJobResource((jobResource,mvm) -> {
+            try {
+                ResourceResolver rr = jobResource.getResourceResolver();
+                String newPath = null;
+                if (keepJobInHistory) {
+                    newPath = this.configuration.getStoragePath(job.getTopic(), job.getId(), isSuccess);
+                    final Map<String, Object> props = new HashMap<>(mvm);
+                    props.put(JobImpl.PROPERTY_FINISHED_STATE, state.name());
+                    if (isSuccess) {
+                        // we set the finish date to start date + duration
+                        final Date finishDate = new Date();
+                        finishDate.setTime(job.getProcessingStarted().getTime().getTime() + duration);
+                        final Calendar finishCal = Calendar.getInstance();
+                        finishCal.setTime(finishDate);
+                        props.put(JobImpl.PROPERTY_FINISHED_DATE, finishCal);
+                    } else {
+                        // current time is good enough
+                        props.put(JobImpl.PROPERTY_FINISHED_DATE, Calendar.getInstance());
                     }
-                    resolver.delete(jobResource);
-                    resolver.commit();
-
-                    if ( keepJobInHistory && configuration.getMainLogger().isDebugEnabled() ) {
-                        if ( isSuccess ) {
-                            configuration.getMainLogger().debug("Kept successful job {} at {}", Utility.toString(job), newPath);
-                        } else {
-                            configuration.getMainLogger().debug("Moved cancelled job {} to {}", Utility.toString(job), newPath);
-                        }
+                    if (job.getProperty(Job.PROPERTY_RESULT_MESSAGE) != null) {
+                        props.put(Job.PROPERTY_RESULT_MESSAGE, job.getProperty(Job.PROPERTY_RESULT_MESSAGE));
                     }
-                } catch ( final PersistenceException pe ) {
-                    this.configuration.getMainLogger().warn("Unable to finish job " + job.getId(), pe);
-                } catch (final InstantiationException ie) {
-                    // something happened with the resource in the meantime
-                    this.configuration.getMainLogger().debug("Unable to instantiate job", ie);
+                    ResourceHelper.getOrCreateResource(rr, newPath, props);
                 }
+                rr.delete(jobResource);
+                rr.commit();
+
+                if (keepJobInHistory && configuration.getMainLogger().isDebugEnabled()) {
+                    if (isSuccess) {
+                        configuration.getMainLogger().debug("Kept successful job {} at {}", Utility.toString(job),
+                                newPath);
+                    } else {
+                        configuration.getMainLogger().debug("Moved cancelled job {} to {}", Utility.toString(job),
+                                newPath);
+                    }
+                }
+            } catch (final PersistenceException pe) {
+                this.configuration.getMainLogger().warn("Unable to finish job " + job.getId(), pe);
             }
-        } finally {
-            resolver.close();
-        }
+            return false;
+        });
     }
+    
+    
 
     /**
      * Reassign to a new instance.
@@ -171,80 +157,65 @@ public class JobHandler {
         final QueueInfo queueInfo = this.configuration.getQueueConfigurationManager().getQueueInfo(job.getTopic());
         // Sanity check if queue configuration has changed
         final TopologyCapabilities caps = this.configuration.getTopologyCapabilities();
-        final String targetId = (caps == null ? null : caps.detectTarget(job.getTopic(), job.getProperties(), queueInfo));
+        final String targetId = (caps == null ? null
+                : caps.detectTarget(job.getTopic(), job.getProperties(), queueInfo));
 
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
-            final Resource jobResource = resolver.getResource(job.getResourcePath());
-            if ( jobResource != null ) {
-                try {
-                    final ValueMap vm = ResourceHelper.getValueMap(jobResource);
-                    final String newPath = this.configuration.getUniquePath(targetId, job.getTopic(), job.getId(), job.getProperties());
+        withJobResource((jobResource, mvm) -> {
+            final String newPath = this.configuration.getUniquePath(targetId, job.getTopic(), job.getId(),
+                    job.getProperties());
 
-                    final Map<String, Object> props = new HashMap<>(vm);
-                    props.remove(Job.PROPERTY_JOB_QUEUE_NAME);
-                    if ( targetId == null ) {
-                        props.remove(Job.PROPERTY_JOB_TARGET_INSTANCE);
-                    } else {
-                        props.put(Job.PROPERTY_JOB_TARGET_INSTANCE, targetId);
-                    }
-                    props.remove(Job.PROPERTY_JOB_STARTED_TIME);
-
-                    try {
-                        ResourceHelper.getOrCreateResource(resolver, newPath, props);
-                        resolver.delete(jobResource);
-                        resolver.commit();
-                    } catch ( final PersistenceException pe ) {
-                        this.configuration.getMainLogger().warn("Unable to reassign job " + job.getId(), pe);
-                    }
-                } catch (final InstantiationException ie) {
-                    // something happened with the resource in the meantime
-                    this.configuration.getMainLogger().debug("Unable to instantiate job", ie);
-                }
+            final Map<String, Object> props = new HashMap<>(mvm);
+            props.remove(Job.PROPERTY_JOB_QUEUE_NAME);
+            if (targetId == null) {
+                props.remove(Job.PROPERTY_JOB_TARGET_INSTANCE);
+            } else {
+                props.put(Job.PROPERTY_JOB_TARGET_INSTANCE, targetId);
             }
-        } finally {
-            resolver.close();
-        }
+            props.remove(Job.PROPERTY_JOB_STARTED_TIME);
+
+            try {
+                ResourceResolver r = jobResource.getResourceResolver();
+                ResourceHelper.getOrCreateResource(r, newPath, props);
+                r.delete(jobResource);
+                r.commit();
+            } catch (final PersistenceException pe) {
+                this.configuration.getMainLogger().warn("Unable to reassign job " + job.getId(), pe);
+            }
+            return true;
+        });
     }
 
     /**
      * Update the property of a job in the resource tree
      * @param propNames the property names to update
      * @return {@code true} if the update was successful.
-     */
+     */    
     public boolean persistJobProperties(final String... propNames) {
-        if ( propNames != null ) {
-            final ResourceResolver resolver = this.configuration.createResourceResolver();
-            try {
-                final Resource jobResource = resolver.getResource(job.getResourcePath());
-                if ( jobResource != null ) {
-                    final ModifiableValueMap mvm = jobResource.adaptTo(ModifiableValueMap.class);
-                    for(final String propName : propNames) {
-                        final Object val = job.getProperty(propName);
-                        if ( val != null ) {
-                            if ( val.getClass().isEnum() ) {
-                                mvm.put(propName, val.toString());
-                            } else {
-                                mvm.put(propName, val);
-                            }
-                        } else {
-                            mvm.remove(propName);
-                        }
+        if (propNames == null) {
+            return true;
+        }
+        return withJobResource((jobResource,mvm) -> {
+            for(final String propName : propNames) {
+                final Object val = job.getProperty(propName);
+                if ( val != null ) {
+                    if ( val.getClass().isEnum() ) {
+                        mvm.put(propName, val.toString());
+                    } else {
+                        mvm.put(propName, val);
                     }
-                    resolver.commit();
-
-                    return true;
                 } else {
-                    this.configuration.getMainLogger().debug("No job resource found at {}", job.getResourcePath());
+                    mvm.remove(propName);
                 }
-            } catch ( final PersistenceException ignore ) {
+            }
+            try {
+                jobResource.getResourceResolver().commit();
+                return true;
+            } catch (PersistenceException ignore) {
                 this.configuration.getMainLogger().debug("Unable to persist properties", ignore);
-            } finally {
-                resolver.close();
             }
             return false;
-        }
-        return true;
+        });
+        
     }
 
     public boolean isStopped() {
@@ -281,4 +252,23 @@ public class JobHandler {
     public String toString() {
         return "JobHandler(" + this.job.getId() + ")";
     }
+    
+    
+    private boolean withJobResource (BiFunction<Resource,ModifiableValueMap,Boolean> process) {
+        try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
+            Resource jobResource = resolver.getResource(job.getResourcePath());
+            if (jobResource == null) {
+                this.configuration.getMainLogger().debug("No job resource found at {}", job.getResourcePath());
+                return false;  
+            } 
+            ModifiableValueMap mvm = jobResource.adaptTo(ModifiableValueMap.class);
+            if (mvm == null){
+                this.configuration.getMainLogger().debug("Cannot adapt resource {} to ModifiableValueMap", job.getResourcePath());
+                return false;  
+            }
+            return process.apply(jobResource,mvm);
+        }
+        
+    }
+    
 }
