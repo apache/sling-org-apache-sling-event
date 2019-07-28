@@ -253,8 +253,17 @@ public class JobHandler {
         return "JobHandler(" + this.job.getId() + ")";
     }
     
-    
-    private boolean withJobResource (BiFunction<Resource,ModifiableValueMap,Boolean> process) {
+    /**
+     * Helper method to execute a function on the job resource. Performs all necessary checks and validations
+     * so that the function does not need to perform any null checks and such.
+     * 
+     * The second parameter is a ModifiableValueMap, so both a readonly and a read/write case
+     * can be implemented.
+     * 
+     * @param func the function to execute
+     * @return a boolean status
+     */
+    private boolean withJobResource (BiFunction<Resource,ModifiableValueMap,Boolean> func) {
         try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
             Resource jobResource = resolver.getResource(job.getResourcePath());
             if (jobResource == null) {
@@ -266,7 +275,7 @@ public class JobHandler {
                 this.configuration.getMainLogger().debug("Cannot adapt resource {} to ModifiableValueMap", job.getResourcePath());
                 return false;  
             }
-            return process.apply(jobResource,mvm);
+            return func.apply(jobResource,mvm);
         }
         
     }
