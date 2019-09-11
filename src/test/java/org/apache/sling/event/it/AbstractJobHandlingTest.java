@@ -186,6 +186,8 @@ public abstract class AbstractJobHandlingTest {
                 mavenBundle("org.apache.commons", "commons-lang3", "3.5"),
                 mavenBundle("commons-pool", "commons-pool", "1.6"),
 
+                mavenBundle("io.dropwizard.metrics", "metrics-core", "3.2.4"),
+
                 mavenBundle("org.apache.servicemix.bundles", "org.apache.servicemix.bundles.concurrent", "1.3.4_1"),
 
                 mavenBundle("org.apache.geronimo.bundles", "commons-httpclient", "3.1_1"),
@@ -209,6 +211,7 @@ public abstract class AbstractJobHandlingTest {
                 mavenBundle("org.apache.sling", "org.apache.sling.commons.johnzon", "1.0.0"),
                 mavenBundle("org.apache.sling", "org.apache.sling.commons.scheduler", "2.4.14"),
                 mavenBundle("org.apache.sling", "org.apache.sling.commons.threads", "3.2.4"),
+                mavenBundle("org.apache.sling", "org.apache.sling.commons.metrics", "1.2.6"),
 
                 mavenBundle("org.apache.sling", "org.apache.sling.auth.core", "1.3.12"),
                 mavenBundle("org.apache.sling", "org.apache.sling.discovery.api", "1.0.2"),
