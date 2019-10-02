@@ -119,6 +119,8 @@ public class StatisticsManager {
             queueStatistics.putIfAbsent(queueName, new StatisticsImpl());
             queueStats = (StatisticsImpl)queueStatistics.get(queueName);
             topicGauges.putIfAbsent(queueName, new GaugeSupport(queueName, queueStats, metricRegistry));
+            GaugeSupport gaugeSupport = topicGauges.get(queueName);
+            gaugeSupport.initialize();
         }
         return queueStats;
     }
@@ -197,12 +199,17 @@ public class StatisticsManager {
 
     @Activate
     protected void activate() {
-        globalGauges = new GaugeSupport(globalStatistics, metricRegistry);
+        if (metricRegistry != null) {
+            globalGauges = new GaugeSupport(globalStatistics, metricRegistry);
+            globalGauges.initialize();
+        }
     }
 
     @Deactivate
     protected void deactivate() {
-        globalGauges.shutdown();
+        if (globalGauges != null) {
+            globalGauges.shutdown();
+        }
         for (GaugeSupport gaugeSupport : topicGauges.values()) {
             gaugeSupport.shutdown();
         }

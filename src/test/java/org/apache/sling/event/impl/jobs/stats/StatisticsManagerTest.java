@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import static org.apache.sling.event.impl.jobs.stats.GaugeSupport.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class StatisticsManagerTest {
 
@@ -46,6 +47,15 @@ public class StatisticsManagerTest {
         TestUtil.setFieldValue(statisticsManager, "globalStatistics", statistics);
         TestUtil.setFieldValue(statisticsManager, "metricRegistry", metricRegistry);
         statisticsManager.activate();
+    }
+
+    @Test
+    public void testActivateDeactivateWithMissingRegistry() {
+        statisticsManager = new StatisticsManager();
+        TestUtil.setFieldValue(statisticsManager, "globalStatistics", statistics);
+        statisticsManager.activate();
+        assertNull(TestUtil.getFieldValue(statisticsManager, "metricRegistry"));
+        statisticsManager.deactivate();
     }
 
     @Test
@@ -69,10 +79,10 @@ public class StatisticsManagerTest {
         Statistics queueStatistics = statisticsManager.getQueueStatistics(TEST_QUEUE_NAME);
 
         assertEquals(1L, queueStatistics.getNumberOfActiveJobs());
-        assertEquals(1L, topicMetric.getValue());
-        assertEquals(1L, globalMetric.getValue());
-        assertEquals(queueStatistics.getAverageWaitingTime(), waitingTimeTopicMetric.getValue());
-        assertEquals(queueStatistics.getAverageWaitingTime(), waitingTimeGlobalMetric.getValue());
+        assertEquals((Long) 1L, topicMetric.getValue());
+        assertEquals((Long) 1L, globalMetric.getValue());
+        assertEquals((Long) queueStatistics.getAverageWaitingTime(), waitingTimeTopicMetric.getValue());
+        assertEquals((Long) queueStatistics.getAverageWaitingTime(), waitingTimeGlobalMetric.getValue());
     }
 
     @Test
@@ -82,13 +92,13 @@ public class StatisticsManagerTest {
         Gauge globalMetric = getGlobalMetric(QUEUED_METRIC_SUFFIX);
         Statistics queueStatistics = statisticsManager.getQueueStatistics(TEST_QUEUE_NAME);
         assertEquals(1L, queueStatistics.getNumberOfQueuedJobs());
-        assertEquals(1L, topicMetric.getValue());
-        assertEquals(1L, globalMetric.getValue());
+        assertEquals((Long) 1L, topicMetric.getValue());
+        assertEquals((Long) 1L, globalMetric.getValue());
 
         statisticsManager.jobDequeued(TEST_QUEUE_NAME, TEST_TOPIC);
         assertEquals(0L, queueStatistics.getNumberOfQueuedJobs());
-        assertEquals(0L, topicMetric.getValue());
-        assertEquals(0L, globalMetric.getValue());
+        assertEquals((Long) 0L, topicMetric.getValue());
+        assertEquals((Long) 0L, globalMetric.getValue());
     }
 
     @Test
@@ -98,8 +108,8 @@ public class StatisticsManagerTest {
         Gauge globalMetric = getGlobalMetric(CANCELLED_METRIC_SUFFIX);
         Statistics queueStatistics = statisticsManager.getQueueStatistics(TEST_QUEUE_NAME);
         assertEquals(1L, queueStatistics.getNumberOfCancelledJobs());
-        assertEquals(1L, topicMetric.getValue());
-        assertEquals(1L, globalMetric.getValue());
+        assertEquals((Long) 1L, topicMetric.getValue());
+        assertEquals((Long) 1L, globalMetric.getValue());
     }
 
     @Test
@@ -109,8 +119,8 @@ public class StatisticsManagerTest {
         Gauge globalMetric = getGlobalMetric(FAILED__METRIC_SUFFIX);
         Statistics queueStatistics = statisticsManager.getQueueStatistics(TEST_QUEUE_NAME);
         assertEquals(1L, queueStatistics.getNumberOfFailedJobs());
-        assertEquals(1L, topicMetric.getValue());
-        assertEquals(1L, globalMetric.getValue());
+        assertEquals((Long) 1L, topicMetric.getValue());
+        assertEquals((Long) 1L, globalMetric.getValue());
     }
 
     @Test
@@ -127,12 +137,32 @@ public class StatisticsManagerTest {
         Statistics queueStatistics = statisticsManager.getQueueStatistics(TEST_QUEUE_NAME);
 
         assertEquals(1L, queueStatistics.getNumberOfFinishedJobs());
-        assertEquals(1L, finishedTopicMetric.getValue());
-        assertEquals(1L, processedTopicMetric.getValue());
-        assertEquals(queueStatistics.getAverageProcessingTime(), processingTopicTimeMetric.getValue());
-        assertEquals(1L, finishedGlobalMetric.getValue());
-        assertEquals(1L, processedGlobalMetric.getValue());
-        assertEquals(queueStatistics.getAverageProcessingTime(), processingGlobalTimeMetric.getValue());
+        assertEquals((Long) 1L, finishedTopicMetric.getValue());
+        assertEquals((Long) 1L, processedTopicMetric.getValue());
+        assertEquals((Long) queueStatistics.getAverageProcessingTime(), processingTopicTimeMetric.getValue());
+        assertEquals((Long) 1L, finishedGlobalMetric.getValue());
+        assertEquals((Long) 1L, processedGlobalMetric.getValue());
+        assertEquals((Long) queueStatistics.getAverageProcessingTime(), processingGlobalTimeMetric.getValue());
+    }
+
+    @Test
+    public void testQueueWithSpecialCharsIsSanitized() {
+        String queueName = "Topic*With%Special/Chars";
+        String queueName2 = "topic$with?special§chars";
+        String queueName3 = "topic with<special>chars";
+        statisticsManager.jobQueued(queueName, TEST_TOPIC);
+        statisticsManager.jobQueued(queueName2, TEST_TOPIC);
+        statisticsManager.jobQueued(queueName3, TEST_TOPIC);
+
+        Gauge topicMetric = (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
+                "." + QUEUE_PREFIX + ".topic_with_special_chars" + QUEUED_METRIC_SUFFIX);
+        Gauge topicMetric2 = (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
+                "." + QUEUE_PREFIX + ".topic_with_special_chars_1" + QUEUED_METRIC_SUFFIX);
+        Gauge topicMetric3 = (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
+                "." + QUEUE_PREFIX + ".topic_with_special_chars_2" + QUEUED_METRIC_SUFFIX);
+        assertEquals(1L, topicMetric.getValue());
+        assertEquals(1L, topicMetric2.getValue());
+        assertEquals(1L, topicMetric3.getValue());
     }
 
     private Gauge getTopicMetric(String metricSuffix) {

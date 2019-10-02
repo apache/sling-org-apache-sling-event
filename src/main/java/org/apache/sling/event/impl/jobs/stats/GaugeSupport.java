@@ -23,9 +23,13 @@ import com.codahale.metrics.MetricRegistry;
 import org.apache.sling.event.jobs.Statistics;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
-/** Helper class that holds gauges for relevant queue statistics. */
+/**
+ * Helper class that holds gauges for relevant queue statistics.
+ */
 class GaugeSupport {
 
     static final String GAUGE_NAME_PREFIX = "event.jobs";
@@ -40,89 +44,130 @@ class GaugeSupport {
     static final String AVG_PROCESSING_TIME_METRIC_SUFFIX = ".averageProcessingTime";
 
     private final MetricRegistry metricRegistry;
-    private Map<String, Gauge> gaugeList = new HashMap<>();
+    private final Map<String, Gauge<Long>> gaugeList = new HashMap<>();
+    private final Set<String> gaugeMetricNames = new HashSet<>();
+    private final String queueName;
 
-    /** Create a new GaugeSupport instance for the global queue.
+    /**
+     * Create a new GaugeSupport instance for the global queue.
      *
      * @param globalQueueStats the global queueStats
-     * @param metricRegistry the (sling) metric registry */
-    GaugeSupport(final Statistics globalQueueStats, MetricRegistry metricRegistry) {
+     * @param metricRegistry   the (sling) metric registry
+     */
+    GaugeSupport(final Statistics globalQueueStats, final MetricRegistry metricRegistry) {
         this(null, globalQueueStats, metricRegistry);
     }
 
-    /** Creates a new GaugeSupport instance. Registers gauges for jobs (based on the queueStats).
+    /**
+     * Creates a new GaugeSupport instance. Registers gauges for jobs (based on the queueStats).
      *
-     * @param queueName name of the queue
-     * @param queueStats queueStats of that queue
-     * @param metricRegistry the (sling) metric registry */
-    GaugeSupport(String queueName, final Statistics queueStats, MetricRegistry metricRegistry) {
+     * @param queueName      name of the queue
+     * @param queueStats     queueStats of that queue
+     * @param metricRegistry the (sling) metric registry
+     */
+    GaugeSupport(final String queueName, final Statistics queueStats, final MetricRegistry metricRegistry) {
         this.metricRegistry = metricRegistry;
-        if (metricRegistry != null) {
-            gaugeList.put(getMetricName(queueName, FINISHED_METRIC_SUFFIX), new Gauge() {
+        this.queueName = getSanitizedQueueName(queueName);
+        if (metricRegistry != null && queueStats != null) {
+            gaugeList.put(FINISHED_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getNumberOfFinishedJobs();
                 }
             });
-            gaugeList.put(getMetricName(queueName, CANCELLED_METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(CANCELLED_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getNumberOfCancelledJobs();
                 }
             });
-            gaugeList.put(getMetricName(queueName, FAILED__METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(FAILED__METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getNumberOfFailedJobs();
                 }
             });
-            gaugeList.put(getMetricName(queueName, QUEUED_METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(QUEUED_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getNumberOfQueuedJobs();
                 }
             });
-            gaugeList.put(getMetricName(queueName, PROCESSED_METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(PROCESSED_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getNumberOfProcessedJobs();
                 }
             });
-            gaugeList.put(getMetricName(queueName, ACTIVE_METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(ACTIVE_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getNumberOfActiveJobs();
                 }
             });
-            gaugeList.put(getMetricName(queueName, AVG_WAITING_TIME_METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(AVG_WAITING_TIME_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getAverageWaitingTime();
                 }
             });
-            gaugeList.put(getMetricName(queueName, AVG_PROCESSING_TIME_METRIC_SUFFIX), new Gauge() {
+            gaugeList.put(AVG_PROCESSING_TIME_METRIC_SUFFIX, new Gauge<Long>() {
 
-                public Object getValue() {
+                public Long getValue() {
                     return queueStats.getAverageProcessingTime();
                 }
             });
-            for (Map.Entry<String, Gauge> entry : gaugeList.entrySet()) {
-                metricRegistry.register(entry.getKey(), entry.getValue());
-            }
         }
     }
 
-    private String getMetricName(String queueName, String metricSuffix) {
-        return GAUGE_NAME_PREFIX + (queueName != null ? "." + QUEUE_PREFIX + "." + queueName : "") + metricSuffix;
-    }
-
-    /** Unregisters all job gauges of the queue. */
+    /**
+     * Unregisters all job gauges of the queue.
+     */
     void shutdown() {
         if (metricRegistry != null) {
-            for (String metricName : gaugeList.keySet()) {
-                metricRegistry.remove(metricName);
+           for (String metricName : gaugeMetricNames) {
+                try {
+                    metricRegistry.remove(metricName);
+                } catch (RuntimeException e) {
+                    // ignore
+                }
             }
         }
     }
 
+    /**
+     * Initializes the metric registry with the gauges.
+     */
+    void initialize() {
+        for (Map.Entry<String, Gauge<Long>> entry : gaugeList.entrySet()) {
+            registerWithSuffix(entry.getKey(), 0, entry.getValue());
+        }
+    }
+
+    private void registerWithSuffix(String suffix, int count, Gauge<Long> value) {
+        try {
+            String metricName = getMetricName(queueName, count, suffix);
+            metricRegistry.register(metricName, value);
+            gaugeMetricNames.add(metricName);
+        } catch (IllegalArgumentException e) {
+            if (queueName != null) {
+                registerWithSuffix(suffix, count + 1, value);
+            }
+        }
+    }
+
+    private String getMetricName(final String queueName, int count, final String metricSuffix) {
+        String metricName = (queueName != null ? "." + QUEUE_PREFIX + "." + queueName : "");
+        if (count > 0) {
+            metricName = metricName + "_" + count;
+        }
+        return GAUGE_NAME_PREFIX + metricName + metricSuffix;
+    }
+
+    private String getSanitizedQueueName(String queueName) {
+        if (queueName == null) {
+            return null;
+        }
+        return queueName.replaceAll("[^a-zA-Z\\d]", "_").toLowerCase();
+    }
 }
