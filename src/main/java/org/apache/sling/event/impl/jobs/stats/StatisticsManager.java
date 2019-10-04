@@ -71,7 +71,7 @@ public class StatisticsManager {
     private final ConcurrentMap<String, TopicStatistics> topicStatistics = new ConcurrentHashMap<>();
 
     /** Gauges for the statistics per topic. */
-    private final ConcurrentMap<String, GaugeSupport> topicGauges = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, GaugeSupport> queueGauges = new ConcurrentHashMap<>();
 
     /** Statistics per queue. */
     private final ConcurrentMap<String, Statistics> queueStatistics = new ConcurrentHashMap<>();
@@ -118,9 +118,12 @@ public class StatisticsManager {
         if ( queueStats == null ) {
             queueStatistics.putIfAbsent(queueName, new StatisticsImpl());
             queueStats = (StatisticsImpl)queueStatistics.get(queueName);
-            topicGauges.putIfAbsent(queueName, new GaugeSupport(queueName, queueStats, metricRegistry));
-            GaugeSupport gaugeSupport = topicGauges.get(queueName);
-            gaugeSupport.initialize();
+            if (metricRegistry != null) {
+                GaugeSupport gaugeSupport = new GaugeSupport(queueName, queueStats, metricRegistry);
+                if (queueGauges.putIfAbsent(queueName, gaugeSupport) == null) {
+                    gaugeSupport.initialize();
+                }
+            }
         }
         return queueStats;
     }
@@ -210,7 +213,7 @@ public class StatisticsManager {
         if (globalGauges != null) {
             globalGauges.shutdown();
         }
-        for (GaugeSupport gaugeSupport : topicGauges.values()) {
+        for (GaugeSupport gaugeSupport : queueGauges.values()) {
             gaugeSupport.shutdown();
         }
     }
