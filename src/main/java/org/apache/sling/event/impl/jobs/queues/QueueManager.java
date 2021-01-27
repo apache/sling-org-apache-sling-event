@@ -79,6 +79,20 @@ import org.slf4j.LoggerFactory;
 public class QueueManager
     implements Runnable, EventHandler, ConfigurationChangeListener {
 
+    static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
+            QueuesMBean queuesMBean, ThreadPoolManager threadPoolManager, ThreadPool threadPool,
+            JobManagerConfiguration configuration, StatisticsManager statisticsManager) {
+        final QueueManager qm = new QueueManager();
+        qm.eventAdmin = eventAdmin;
+        qm.jobConsumerManager = jobConsumerManager;
+        qm.queuesMBean = queuesMBean;
+        qm.threadPoolManager = threadPoolManager;
+        qm.threadPool = threadPool;
+        qm.configuration = configuration;
+        qm.statisticsManager = statisticsManager;
+        return qm;
+    }
+
     /** Default logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -364,7 +378,7 @@ public class QueueManager
         }
     }
 
-    private void fullTopicScan() {
+    void fullTopicScan() {
         logger.debug("Scanning repository for existing topics...");
         final Set<String> topics = this.scanTopics();
         final Map<QueueInfo, Set<String>> mapping = this.updateTopicMapping(topics);

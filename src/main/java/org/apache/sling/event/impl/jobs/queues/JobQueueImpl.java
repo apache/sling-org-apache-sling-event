@@ -712,5 +712,9 @@ public class JobQueueImpl
             this.requeue(handler);
         }
     }
+
+    QueueJobCache getCache() {
+        return cache;
+    }
 }
 
