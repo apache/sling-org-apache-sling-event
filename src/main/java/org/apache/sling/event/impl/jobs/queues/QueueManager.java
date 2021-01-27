@@ -242,6 +242,7 @@ public class QueueManager
             }
         }
         if ( queue != null ) {
+            logger.debug("Starting queue {}", queueInfo.queueName);
             if ( !isNewQueue ) {
                 queue.wakeUpQueue(topics);
             }
@@ -406,6 +407,7 @@ public class QueueManager
     public void handleEvent(final Event event) {
         final String topic = (String)event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
         if ( this.isActive.get() && topic != null ) {
+            logger.debug("Received event {}", topic);
             final QueueInfo info = this.configuration.getQueueConfigurationManager().getQueueInfo(topic);
             this.start(info, Collections.singleton(topic));
         }

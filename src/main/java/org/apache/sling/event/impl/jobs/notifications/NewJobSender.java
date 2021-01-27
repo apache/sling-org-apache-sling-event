@@ -76,6 +76,7 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
         properties.put(ResourceChangeListener.PATHS, this.configuration.getLocalJobsPath());
 
         this.listenerRegistration = bundleContext.registerService(ResourceChangeListener.class, this, properties);
+        logger.debug("Registered resource event listener for {}", this.configuration.getLocalJobsPath());
     }
 
     /**
@@ -88,14 +89,15 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
             this.listenerRegistration.unregister();
             this.listenerRegistration = null;
         }
+        logger.debug("Deactivating resource event listener");
     }
 
     @Override
 	public void onChange(final List<ResourceChange> resourceChanges) {
     	for(final ResourceChange resourceChange : resourceChanges) {
-    		logger.debug("Received event {}", resourceChange);
+            final String path = resourceChange.getPath();
 
-    		final String path = resourceChange.getPath();
+            logger.debug("Received event {} : {}", resourceChange.getType().name(), path);
 
     		final int topicStart = this.configuration.getLocalJobsPath().length() + 1;
     		final int topicEnd = path.indexOf('/', topicStart);
@@ -109,12 +111,13 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
                 	properties.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_ID, jobId);
                     properties.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC, topic);
 
-                 // we also set internally the queue name
+                     // we also set internally the queue name
                     final String queueName = this.configuration.getQueueConfigurationManager().getQueueInfo(topic).queueName;
                     properties.put(Job.PROPERTY_JOB_QUEUE_NAME, queueName);
 
                     final Event jobEvent = new Event(NotificationConstants.TOPIC_JOB_ADDED, properties);
                     // as this is send within handling an event, we do sync call
+                    logger.debug("Sending event {} : {}", topic, jobId);
                     this.eventAdmin.sendEvent(jobEvent);
                 }
     		}
