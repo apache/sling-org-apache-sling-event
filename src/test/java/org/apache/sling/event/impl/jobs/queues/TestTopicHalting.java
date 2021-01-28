@@ -21,7 +21,6 @@ package org.apache.sling.event.impl.jobs.queues;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -79,8 +78,18 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.event.EventAdmin;
 
+/**
+ * SLING-9906
+ * This tests a new behaviour of a topic introduced with SLING-9906.
+ * When there are ClassNotFoundException read errors when loading a job,
+ * this is now considered a special, temporarily blocking case which
+ * is likely due to a missing bundle. To prevent this exception from
+ * reoccurring over and over again, the topic is now "halted", ie job
+ * execution is stopped for this topic. It is "unhalted" once some
+ * configuration changes (such as a JobConsumer/Executor being added).
+ */
 @RunWith(MockitoJUnitRunner.class)
-public class TestQueueJobCache {
+public class TestTopicHalting {
 
     private static AtomicInteger cnfeCount = new AtomicInteger();
 
