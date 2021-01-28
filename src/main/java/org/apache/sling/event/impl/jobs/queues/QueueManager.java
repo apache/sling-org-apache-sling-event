@@ -377,6 +377,11 @@ public class QueueManager
         if ( this.configuration != null ) {
             logger.debug("Topology changed {}", active);
             this.isActive.set(active);
+            if ( !haltedTopics.isEmpty() ) {
+                logger.info("configurationChanged : unhalting topics due to configuration change : "
+                        + haltedTopics);
+                haltedTopics.clear();
+            }
             if ( active ) {
                 fullTopicScan();
             } else {

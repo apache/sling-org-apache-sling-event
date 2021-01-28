@@ -194,6 +194,30 @@ public class TestQueueJobCache {
     }
     
     @Test
+    public void testUnhalting() throws Throwable {
+        assertNotNull(queueManager);
+        assertEquals(0, cnfeCount.get());
+        queueManager.configurationChanged(true);
+        int expectedCnfeCount = 2 * jobCnt;
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.maintain();
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.maintain();
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.maintain();
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.configurationChanged(true);
+        expectedCnfeCount += 2 * jobCnt;
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.maintain();
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.maintain();
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        queueManager.maintain();
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+    }
+
+    @Test
     public void testFullTopicScan() throws Throwable {
         assertNotNull(queueManager);
         assertEquals(0, cnfeCount.get());
