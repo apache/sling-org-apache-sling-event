@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
@@ -39,6 +40,12 @@ import org.osgi.service.event.Event;
 import org.slf4j.Logger;
 
 public abstract class Utility {
+
+    /** SLING-9906 : silence read errors after this many logs in this VM */
+    private static final int READ_ERROR_SILENCE_LIMIT = 1000;
+
+    /** SLING-9906 : count read errors to be able to silence */
+    private static final AtomicInteger readErrorWarnCount = new AtomicInteger();
 
     /**
      * Check if the job topic is a valid OSGI event name (see 113.3.1 of the OSGI spec)
@@ -194,7 +201,21 @@ public abstract class Utility {
                     final List<Exception> readErrorList = (List<Exception>) jobProperties.get(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
                     if ( readErrorList != null ) {
                         for(final Exception e : readErrorList) {
-                            logger.warn("Unable to read job from " + resource.getPath(), e);
+                            final int c = readErrorWarnCount.getAndIncrement();
+                            if ( c == READ_ERROR_SILENCE_LIMIT ) {
+                                logger.warn("Too many 'Unable to read job from ' messages - silencing 99% of them from now on.");
+                                continue;
+                            } else if ( c > READ_ERROR_SILENCE_LIMIT && c % 100 == 0 ) {
+                                // SLING-9906 : then silence the log altogether
+                                continue;
+                            }
+                            if ( e.getCause() != null && e.getCause() instanceof ClassNotFoundException ) {
+                                // SLING-9906 : suppress exception in ClassNotFoundException case
+                                // as this can happen many times in case of a not deployed class.
+                                logger.warn("Unable to read job from " + resource.getPath() + ", exception: " + e + ", cause: " + e.getCause());
+                            } else {
+                                logger.warn("Unable to read job from " + resource.getPath(), e);
+                            }
                         }
                     }
                     job = new JobImpl(topic,

@@ -137,7 +137,15 @@ public class JobQueueImpl
         // these we need to retain, to avoid scanning them going forward.
         // but since the cache might be empty and thus discarded,
         // we pass them back explicitly in provided haltedTopicsRef
-        haltedTopicsBackRef.addAll(cache.getNewlyHaltedTopics());
+        if ( !cache.getNewlyHaltedTopics().isEmpty() ) {
+            for (String haltedTopic : cache.getNewlyHaltedTopics() ) {
+                if (haltedTopicsBackRef.add(haltedTopic)) {
+                    LoggerFactory.getLogger(JobQueueImpl.class.getName() + '.' + name)
+                            .warn("createQueue : topic halted due to ClassNotFoundExceptions : "
+                                    + haltedTopic);
+                }
+            }
+        }
         if ( cache.isEmpty() ) {
             return null;
         }
