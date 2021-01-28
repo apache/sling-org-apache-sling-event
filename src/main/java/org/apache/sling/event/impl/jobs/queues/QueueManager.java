@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.sling.api.resource.Resource;
@@ -136,6 +137,9 @@ public class QueueManager
     /** The queue services. */
     private volatile QueueServices queueServices;
 
+    /** The set of new topics to pause. */
+    private final Set<String> haltedTopics = new ConcurrentSkipListSet<String>();
+
     /**
      * Activate this component.
      * @param props Configuration properties
@@ -180,7 +184,7 @@ public class QueueManager
      * is idle for two consecutive clean up calls, it is removed.
      * @see java.lang.Runnable#run()
      */
-    private void maintain() {
+    void maintain() {
         this.schedulerRuns++;
         logger.debug("Queue manager maintenance: Starting #{}", this.schedulerRuns);
 
@@ -233,6 +237,9 @@ public class QueueManager
     private void start(final QueueInfo queueInfo,
                        final Set<String> topics) {
         final InternalQueueConfiguration config = queueInfo.queueConfiguration;
+        final Set<String> filteredTopics = new HashSet<String>(topics);
+        filteredTopics.removeAll(haltedTopics);
+
         // get or create queue
         boolean isNewQueue = false;
         JobQueueImpl queue = null;
@@ -246,7 +253,7 @@ public class QueueManager
                 queue = null;
             }
             if ( queue == null ) {
-                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, topics);
+                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, filteredTopics, haltedTopics);
                 // on startup the queue might be empty and we get null back from createQueue
                 if ( queue != null ) {
                     isNewQueue = true;
@@ -258,7 +265,7 @@ public class QueueManager
         if ( queue != null ) {
             logger.debug("Starting queue {}", queueInfo.queueName);
             if ( !isNewQueue ) {
-                queue.wakeUpQueue(topics);
+                queue.wakeUpQueue(filteredTopics);
             }
             queue.startJobs();
         }

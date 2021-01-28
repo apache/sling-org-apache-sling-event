@@ -68,7 +68,6 @@ import org.apache.sling.testing.mock.sling.MockSling;
 import org.apache.sling.testing.mock.sling.ResourceResolverType;
 import org.apache.sling.testing.mock.sling.builder.ContentBuilder;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -128,6 +127,7 @@ public class TestQueueJobCache {
 
     @Before
     public void setUp() throws Throwable {
+        cnfeCount.set(0);
         ownSlingId = UUID.randomUUID().toString();
         Environment.APPLICATION_ID = ownSlingId;
         componentContext = MockOsgi.newComponentContext();
@@ -164,9 +164,20 @@ public class TestQueueJobCache {
     private void initQueueConfigurationManagerMocks() {
         Mockito.when(queueConfigurationManager.getQueueInfo(Mockito.anyString())).thenAnswer(new Answer<QueueInfo>() {
             
+            private final Map<String, QueueInfo> queueInfos = new HashMap<>();
+
             @Override
             public QueueInfo answer(InvocationOnMock invocation) throws Throwable {
                 final String topic = (String) invocation.getArguments()[0];
+                QueueInfo queueInfo = queueInfos.get(topic);
+                if ( queueInfo == null ) {
+                    queueInfo = createQueueInfo(topic);
+                    queueInfos.put(topic, queueInfo);
+                }
+                return queueInfo;
+            }
+
+            private QueueInfo createQueueInfo(final String topic) {
                 final QueueInfo result = new QueueInfo();
                 result.queueName = "Queue for topic=" + topic;
                 Map<String, Object> props = new HashMap<>();
@@ -183,10 +194,37 @@ public class TestQueueJobCache {
     }
     
     @Test
-    @Ignore(value="nothing useful tested here yet")
     public void testFullTopicScan() throws Throwable {
         assertNotNull(queueManager);
-        queueManager.fullTopicScan();
+        assertEquals(0, cnfeCount.get());
+        for( int i = 0; i < 50; i++ ) {
+            queueManager.fullTopicScan();
+            assertEquals(2 * jobCnt, cnfeCount.get());
+        }
+    }
+
+    @Test
+    public void testMaintain() throws Throwable {
+        assertNotNull(queueManager);
+        assertEquals(0, cnfeCount.get());
+        // configurationChanged(true) is going to do a fullTopicScan()
+        queueManager.configurationChanged(true);
+        // due to fullTopicScan -> 2 times the jobs are loaded causing a CNFE
+        int expectedCnfeCount = 2 * jobCnt;
+        assertEquals(expectedCnfeCount, cnfeCount.get());
+        for( int i = 0; i < 50; i++ ) {
+            // schedulerRuns % 3 == 1
+            queueManager.maintain();
+            assertEquals(expectedCnfeCount, cnfeCount.get());
+            // schedulerRuns % 3 == 2
+            queueManager.maintain();
+            assertEquals(expectedCnfeCount, cnfeCount.get());
+            // schedulerRuns % 3 == 0
+            queueManager.maintain();
+            // if we weren't halting the topic due to CNFE, we'd now be doing:
+            // expectedCnfeCount += 2 * jobCnt;
+            assertEquals(expectedCnfeCount, cnfeCount.get());
+        }
     }
     
     @Test
@@ -196,17 +234,12 @@ public class TestQueueJobCache {
         queueManager.configurationChanged(false);
         assertEquals(0, cnfeCount.get());
         queueManager.configurationChanged(true);
-        assertEquals(4 * jobCnt, cnfeCount.get());
+        assertEquals(2 * jobCnt, cnfeCount.get());
         Iterable<Queue> qit = queueManager.getQueues();
         assertNotNull(qit);
         Iterator<Queue> it = qit.iterator();
         assertNotNull(it);
-        assertTrue(it.hasNext());
-        JobQueueImpl n = (JobQueueImpl) it.next();
-        assertNotNull(n);
-        QueueJobCache c = n.getCache();
-        assertNotNull(c);
-        assertFalse(c.isEmpty());
+        assertFalse(it.hasNext());
     }
     
     private Resource createJob(ContentBuilder contentBuilder, String localSlingId, String topic, int year, int month) throws ItemExistsException, PathNotFoundException, VersionException, ConstraintViolationException, LockException, RepositoryException {

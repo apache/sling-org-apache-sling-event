@@ -123,14 +123,21 @@ public class JobQueueImpl
      * @param config The queue configuration
      * @param services The queue services
      * @param topics The topics handled by this queue
+     * @param haltedTopics reference to pass newly halted topics back
      *
      * @return {@code JobQueueImpl} if there are jobs to process, {@code null} otherwise.
      */
     public static JobQueueImpl createQueue(final String name,
                         final InternalQueueConfiguration config,
                         final QueueServices services,
-                        final Set<String> topics) {
+                        final Set<String> topics,
+                        final Set<String> haltedTopicsBackRef) {
         final QueueJobCache cache = new QueueJobCache(services.configuration, name, services.statisticsManager, config.getType(), topics);
+        // the cache might contain newly halted topics.
+        // these we need to retain, to avoid scanning them going forward.
+        // but since the cache might be empty and thus discarded,
+        // we pass them back explicitly in provided haltedTopicsRef
+        haltedTopicsBackRef.addAll(cache.getNewlyHaltedTopics());
         if ( cache.isEmpty() ) {
             return null;
         }
