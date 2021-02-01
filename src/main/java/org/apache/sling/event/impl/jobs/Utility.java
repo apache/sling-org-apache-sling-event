@@ -202,19 +202,24 @@ public abstract class Utility {
                     if ( readErrorList != null ) {
                         for(final Exception e : readErrorList) {
                             final int c = readErrorWarnCount.getAndIncrement();
+                            final String prefix;
                             if ( c == READ_ERROR_SILENCE_LIMIT ) {
                                 logger.warn("Too many 'Unable to read job from ' messages - silencing 99% of them from now on.");
                                 continue;
-                            } else if ( c > READ_ERROR_SILENCE_LIMIT && c % 100 == 0 ) {
+                            } else if ( c > READ_ERROR_SILENCE_LIMIT && c % 100 != 0 ) {
                                 // SLING-9906 : then silence the log altogether
                                 continue;
+                            } else if ( c > READ_ERROR_SILENCE_LIMIT ) {
+                                prefix = "[unsilenced] ";
+                            } else {
+                                prefix = "";
                             }
                             if ( e.getCause() != null && e.getCause() instanceof ClassNotFoundException ) {
                                 // SLING-9906 : suppress exception in ClassNotFoundException case
                                 // as this can happen many times in case of a not deployed class.
-                                logger.warn("Unable to read job from " + resource.getPath() + ", exception: " + e + ", cause: " + e.getCause());
+                                logger.warn(prefix + "Unable to read job from " + resource.getPath() + ", exception: " + e + ", cause: " + e.getCause());
                             } else {
-                                logger.warn("Unable to read job from " + resource.getPath(), e);
+                                logger.warn(prefix + "Unable to read job from " + resource.getPath(), e);
                             }
                         }
                     }
