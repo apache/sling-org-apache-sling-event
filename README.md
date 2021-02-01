@@ -68,7 +68,7 @@ until after Oak commits.
 When a Sling instance in a cluster is shutdown, it will stop processing all the jobs allocated to it. When it shuts down
 a Topology change event propagates and the cluster leader scans all instances under /var/eventing/jobs/assigned/ to see
 if there are any instances that don't exist any more. If there are, the topology leader moves those jobs to a different
-node by deleting the Oak node and writing a new node into the new targetId assigned location. Any jobs that cant be re-assigned
+node by deleting the Oak node and writing a new node into the new targetId assigned location. Any jobs that can't be re-assigned
 are written to the unassigned location.
 
 ### Known issues with current implementation and design
