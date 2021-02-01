@@ -79,7 +79,7 @@ import org.osgi.service.component.ComponentContext;
 import org.osgi.service.event.EventAdmin;
 
 /**
- * SLING-9906
+ * SLING-9906.
  * This tests a new behaviour of a topic introduced with SLING-9906.
  * When there are ClassNotFoundException read errors when loading a job,
  * this is now considered a special, temporarily blocking case which
