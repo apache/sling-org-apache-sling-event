@@ -377,17 +377,27 @@ public class QueueManager
         if ( this.configuration != null ) {
             logger.debug("Topology changed {}", active);
             this.isActive.set(active);
-            if ( !haltedTopics.isEmpty() ) {
-                logger.info("configurationChanged : unhalting topics due to configuration change : "
-                        + haltedTopics);
-                haltedTopics.clear();
-            }
+            clearHaltedTopics("configurationChanged : unhalted topics due to configuration change");
             if ( active ) {
                 fullTopicScan();
             } else {
                 this.restart();
             }
         }
+    }
+
+    private void clearHaltedTopics(String logPrefix) {
+        final String haltedTopicsToString;
+        // Note: the synchronized below is just to avoid wrong logging about unhalting,
+        // the haltedTopics access itself isn't prevented by this (and it is a concurrent set)
+        synchronized( haltedTopics ) {
+            if ( haltedTopics.isEmpty() ) {
+                return;
+            }
+            haltedTopicsToString = haltedTopics.toString();
+            haltedTopics.clear();
+        }
+        logger.info(logPrefix + " : " + haltedTopicsToString);
     }
 
     void fullTopicScan() {
@@ -431,6 +441,10 @@ public class QueueManager
      */
     @Override
     public void handleEvent(final Event event) {
+        if ( ResourceHelper.BUNDLE_EVENT_STARTED.equals(event.getTopic())
+                || ResourceHelper.BUNDLE_EVENT_UPDATED.equals(event.getTopic()) ) {
+            clearHaltedTopics("handleEvent: unhalted topics due to bundle started/updated event");
+       }
         final String topic = (String)event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
         if ( this.isActive.get() && topic != null ) {
             logger.debug("Received event {}", topic);
