@@ -22,13 +22,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.sling</groupId>
-        <artifactId>sling</artifactId>
-        <version>33</version>
+        <artifactId>sling-bundle-parent</artifactId>
+        <version>35</version>
         <relativePath />
     </parent>
 
     <artifactId>org.apache.sling.event</artifactId>
-    <packaging>bundle</packaging>
     <version>4.2.13-SNAPSHOT</version>
 
     <name>Apache Sling Event Support</name>
@@ -56,42 +55,10 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Import-Package>
-                            javax.servlet;javax.servlet.http;resolution:=optional,
-                            org.apache.felix.inventory;resolution:=optional,
-                            *
-                        </Import-Package>
-                        <Export-Package>
-                        	org.apache.sling.event.jobs,
-                        	org.apache.sling.event.jobs.consumer,
-                        	org.apache.sling.event.jobs.jmx
-                        </Export-Package>
-                       <DynamicImport-Package>
-                            javax.servlet,
-                            javax.servlet.http,
-                            org.apache.felix.inventory
-                        </DynamicImport-Package>
-                        <Sling-Nodetypes>
-                            SLING-INF/nodetypes/event.cnd
-                        </Sling-Nodetypes>
-                        <Sling-Namespaces>
-                            slingevent=http://sling.apache.org/jcr/event/1.0
-                        </Sling-Namespaces>
-                        <Embed-Dependency>
-                            jackrabbit-jcr-commons;inline="org/apache/jackrabbit/util/ISO9075.*|org/apache/jackrabbit/util/ISO8601.*|org/apache/jackrabbit/util/XMLChar.*",
-                            org.apache.sling.commons.osgi;inline="org/apache/sling/commons/osgi/PropertiesUtil.*",
-                            quartz;inline="org/quartz/CronExpression.*|org/quartz/ValueSet.*",
-                            org.apache.sling.event.api
-                        </Embed-Dependency>
-                    </instructions>
-                </configuration>
-            </plugin>
+			<plugin>
+				<groupId>biz.aQute.bnd</groupId>
+				<artifactId>bnd-maven-plugin</artifactId>
+			</plugin>
            <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
