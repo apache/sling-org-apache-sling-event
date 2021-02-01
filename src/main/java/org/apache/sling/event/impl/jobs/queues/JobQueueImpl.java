@@ -123,14 +123,29 @@ public class JobQueueImpl
      * @param config The queue configuration
      * @param services The queue services
      * @param topics The topics handled by this queue
+     * @param haltedTopics reference to pass newly halted topics back
      *
      * @return {@code JobQueueImpl} if there are jobs to process, {@code null} otherwise.
      */
     public static JobQueueImpl createQueue(final String name,
                         final InternalQueueConfiguration config,
                         final QueueServices services,
-                        final Set<String> topics) {
+                        final Set<String> topics,
+                        final Set<String> haltedTopicsBackRef) {
         final QueueJobCache cache = new QueueJobCache(services.configuration, name, services.statisticsManager, config.getType(), topics);
+        // the cache might contain newly halted topics.
+        // these we need to retain, to avoid scanning them going forward.
+        // but since the cache might be empty and thus discarded,
+        // we pass them back explicitly in provided haltedTopicsRef
+        if ( !cache.getNewlyHaltedTopics().isEmpty() ) {
+            for (String haltedTopic : cache.getNewlyHaltedTopics() ) {
+                if (haltedTopicsBackRef.add(haltedTopic)) {
+                    LoggerFactory.getLogger(JobQueueImpl.class.getName() + '.' + name)
+                            .warn("createQueue : topic halted due to ClassNotFoundExceptions : "
+                                    + haltedTopic);
+                }
+            }
+        }
         if ( cache.isEmpty() ) {
             return null;
         }
@@ -711,6 +726,10 @@ public class JobQueueImpl
             // put directly into queue
             this.requeue(handler);
         }
+    }
+
+    QueueJobCache getCache() {
+        return cache;
     }
 }
 

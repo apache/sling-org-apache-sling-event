@@ -37,6 +37,13 @@ import org.apache.sling.event.jobs.Queue;
  */
 public class JobImpl implements Job, Comparable<JobImpl> {
 
+    public enum ReadErrorType {
+        NONE,
+        RUNTIMEEXCEPTION,
+        CLASSNOTFOUNDEXCEPTION,
+        OTHER_EXCEPTION
+    }
+
     /** Internal job property containing the resource path. */
     public static final String PROPERTY_RESOURCE_PATH = "slingevent:path";
 
@@ -104,20 +111,26 @@ public class JobImpl implements Job, Comparable<JobImpl> {
         return this.readErrorList != null;
     }
 
+    public ReadErrorType getReadErrorType() {
+        if ( this.readErrorList == null || this.readErrorList.isEmpty() ) {
+            return ReadErrorType.NONE;
+        } else {
+            for(final Exception e : this.readErrorList) {
+                if ( e instanceof RuntimeException ) {
+                    return ReadErrorType.RUNTIMEEXCEPTION;
+                } else if ( e.getCause() != null && e.getCause() instanceof ClassNotFoundException ) {
+                    return ReadErrorType.CLASSNOTFOUNDEXCEPTION;
+                }
+            }
+            return ReadErrorType.OTHER_EXCEPTION;
+        }
+    }
+
     /**
      * Is the error recoverable?
      */
     public boolean isReadErrorRecoverable() {
-        boolean result = true;
-        if ( this.readErrorList != null ) {
-            for(final Exception e : this.readErrorList) {
-                if ( e instanceof RuntimeException ) {
-                    result = false;
-                    break;
-                }
-            }
-        }
-        return result;
+        return getReadErrorType() != ReadErrorType.RUNTIMEEXCEPTION;
     }
 
     /**

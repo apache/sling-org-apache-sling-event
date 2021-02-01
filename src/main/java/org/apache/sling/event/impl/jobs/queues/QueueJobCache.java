@@ -66,6 +66,9 @@ public class QueueJobCache {
     /** The set of new topics to scan. */
     private final Set<String> topicsWithNewJobs = new HashSet<String>();
 
+    /** The set of new topics to pause. */
+    private final Set<String> newlyHaltedTopics = new HashSet<String>();
+
     /** The cache of current objects. */
     private final List<JobImpl> cache = new ArrayList<JobImpl>();
 
@@ -119,6 +122,12 @@ public class QueueJobCache {
         return result;
     }
 
+    Set<String> getNewlyHaltedTopics() {
+        synchronized ( this.topicsWithNewJobs ) {
+            return new HashSet<>(this.newlyHaltedTopics);
+        }
+    }
+
     public void setIsBlocked(final boolean value) {
         this.queueIsBlocked.set(value);
     }
@@ -166,6 +175,7 @@ public class QueueJobCache {
                         if ( doFull ) {
                             checkingTopics.addAll(this.topics);
                         }
+                        checkingTopics.removeAll(newlyHaltedTopics);
                         if ( !checkingTopics.isEmpty() ) {
                             this.loadJobs(queue.getName(), checkingTopics, statisticsManager);
                         }
@@ -273,6 +283,7 @@ public class QueueJobCache {
         final List<JobImpl> list = new ArrayList<JobImpl>();
 
         final AtomicBoolean scanTopic = new AtomicBoolean(false);
+        final AtomicBoolean haltTopic = new AtomicBoolean(false);
 
         JobTopicTraverser.traverse(logger, topicResource, new JobTopicTraverser.JobCallback() {
 
@@ -288,19 +299,32 @@ public class QueueJobCache {
                     logger.debug("Ignoring job {} - processing already started.", job);
                 } else {
                     // error reading job
-                    scanTopic.set(true);
-                    if ( job.isReadErrorRecoverable() ) {
-                        logger.debug("Ignoring job {} due to recoverable read errors.", job);
-                    } else {
+                    switch( job.getReadErrorType() ) {
+                    case CLASSNOTFOUNDEXCEPTION : {
+                        haltTopic.set(true);
+                        break;
+                    }
+                    case RUNTIMEEXCEPTION : {
+                        scanTopic.set(true);
                         logger.debug("Failing job {} due to unrecoverable read errors.", job);
                         final JobHandler handler = new JobHandler(job, null, configuration);
                         handler.finished(JobState.ERROR, true, null);
+                        break;
+                    }
+                    default: {
+                        scanTopic.set(true);
+                        logger.debug("Ignoring job {} due to recoverable read errors.", job);
+                    }
                     }
                 }
                 return list.size() < maxPreloadLimit;
             }
         });
-        if ( scanTopic.get() ) {
+        if ( haltTopic.get() ) {
+            synchronized ( this.topicsWithNewJobs ) {
+                this.newlyHaltedTopics.add(topic);
+            }
+        } else if ( scanTopic.get() ) {
             synchronized ( this.topicsWithNewJobs ) {
                 this.topicsWithNewJobs.add(topic);
             }
@@ -317,7 +341,12 @@ public class QueueJobCache {
     public void handleNewTopics(final Set<String> topics) {
         logger.debug("Update cache to handle new event for topics {}", topics);
         synchronized ( this.topicsWithNewJobs ) {
-            this.topicsWithNewJobs.addAll(topics);
+            final Set<String> nonHaltedTopics = new HashSet<>(topics);
+            if (!Collections.disjoint(topics, newlyHaltedTopics)) {
+                logger.warn("handleNewTopics : sets not disjoint as expected. topics: " + topics + ", newlyHaltedTopics: " + newlyHaltedTopics);
+                nonHaltedTopics.removeAll(newlyHaltedTopics);
+            }
+            this.topicsWithNewJobs.addAll(nonHaltedTopics);
         }
         this.topics.addAll(topics);
     }

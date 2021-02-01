@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.sling.api.resource.Resource;
@@ -79,6 +80,20 @@ import org.slf4j.LoggerFactory;
 public class QueueManager
     implements Runnable, EventHandler, ConfigurationChangeListener {
 
+    static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
+            QueuesMBean queuesMBean, ThreadPoolManager threadPoolManager, ThreadPool threadPool,
+            JobManagerConfiguration configuration, StatisticsManager statisticsManager) {
+        final QueueManager qm = new QueueManager();
+        qm.eventAdmin = eventAdmin;
+        qm.jobConsumerManager = jobConsumerManager;
+        qm.queuesMBean = queuesMBean;
+        qm.threadPoolManager = threadPoolManager;
+        qm.threadPool = threadPool;
+        qm.configuration = configuration;
+        qm.statisticsManager = statisticsManager;
+        return qm;
+    }
+
     /** Default logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -121,6 +136,9 @@ public class QueueManager
 
     /** The queue services. */
     private volatile QueueServices queueServices;
+
+    /** The set of new topics to pause. */
+    private final Set<String> haltedTopics = new ConcurrentSkipListSet<String>();
 
     /**
      * Activate this component.
@@ -166,7 +184,7 @@ public class QueueManager
      * is idle for two consecutive clean up calls, it is removed.
      * @see java.lang.Runnable#run()
      */
-    private void maintain() {
+    void maintain() {
         this.schedulerRuns++;
         logger.debug("Queue manager maintenance: Starting #{}", this.schedulerRuns);
 
@@ -219,6 +237,9 @@ public class QueueManager
     private void start(final QueueInfo queueInfo,
                        final Set<String> topics) {
         final InternalQueueConfiguration config = queueInfo.queueConfiguration;
+        final Set<String> filteredTopics = new HashSet<String>(topics);
+        filteredTopics.removeAll(haltedTopics);
+
         // get or create queue
         boolean isNewQueue = false;
         JobQueueImpl queue = null;
@@ -232,7 +253,7 @@ public class QueueManager
                 queue = null;
             }
             if ( queue == null ) {
-                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, topics);
+                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, filteredTopics, haltedTopics);
                 // on startup the queue might be empty and we get null back from createQueue
                 if ( queue != null ) {
                     isNewQueue = true;
@@ -244,7 +265,7 @@ public class QueueManager
         if ( queue != null ) {
             logger.debug("Starting queue {}", queueInfo.queueName);
             if ( !isNewQueue ) {
-                queue.wakeUpQueue(topics);
+                queue.wakeUpQueue(filteredTopics);
             }
             queue.startJobs();
         }
@@ -356,6 +377,7 @@ public class QueueManager
         if ( this.configuration != null ) {
             logger.debug("Topology changed {}", active);
             this.isActive.set(active);
+            clearHaltedTopics("configurationChanged : unhalted topics due to configuration change");
             if ( active ) {
                 fullTopicScan();
             } else {
@@ -364,7 +386,21 @@ public class QueueManager
         }
     }
 
-    private void fullTopicScan() {
+    private void clearHaltedTopics(String logPrefix) {
+        final String haltedTopicsToString;
+        // Note: the synchronized below is just to avoid wrong logging about unhalting,
+        // the haltedTopics access itself isn't prevented by this (and it is a concurrent set)
+        synchronized( haltedTopics ) {
+            if ( haltedTopics.isEmpty() ) {
+                return;
+            }
+            haltedTopicsToString = haltedTopics.toString();
+            haltedTopics.clear();
+        }
+        logger.info(logPrefix + " : " + haltedTopicsToString);
+    }
+
+    void fullTopicScan() {
         logger.debug("Scanning repository for existing topics...");
         final Set<String> topics = this.scanTopics();
         final Map<QueueInfo, Set<String>> mapping = this.updateTopicMapping(topics);
@@ -405,6 +441,10 @@ public class QueueManager
      */
     @Override
     public void handleEvent(final Event event) {
+        if ( ResourceHelper.BUNDLE_EVENT_STARTED.equals(event.getTopic())
+                || ResourceHelper.BUNDLE_EVENT_UPDATED.equals(event.getTopic()) ) {
+            clearHaltedTopics("handleEvent: unhalted topics due to bundle started/updated event");
+       }
         final String topic = (String)event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
         if ( this.isActive.get() && topic != null ) {
             logger.debug("Received event {}", topic);
