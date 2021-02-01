@@ -23,6 +23,7 @@ import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.CoreOptions.repository;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.CoreOptions.when;
 
@@ -104,6 +105,7 @@ public abstract class AbstractJobHandlingTest {
         final String slingHome = new File(buildDir + File.separatorChar + "sling_" + System.currentTimeMillis()).getAbsolutePath();
 
         return options(
+                repository("https://repo.maven.apache.org/maven2/").id("central"),
                 frameworkProperty("sling.home").value(slingHome),
                 frameworkProperty("repository.home").value(slingHome + File.separatorChar + "repository"),
                 when( localRepo.length() > 0 ).useOptions(
