@@ -117,6 +117,16 @@ public class JobManagerConfiguration {
     /** Configuration property for the scheduled jobs path. */
     public static final String PROPERTY_SCHEDULED_JOBS_PATH = "job.scheduled.jobs.path";
 
+    static JobManagerConfiguration newForTest(ResourceResolverFactory resourceResolverFactory,
+            QueueConfigurationManager queueConfigurationManager,
+            Map<String, Object> activateProps, Config config) {
+        final JobManagerConfiguration jobMgrConfig = new JobManagerConfiguration();
+        jobMgrConfig.resourceResolverFactory = resourceResolverFactory;
+        jobMgrConfig.queueConfigManager = queueConfigurationManager;
+        jobMgrConfig.activate(activateProps, config);
+        return jobMgrConfig;
+    }
+
     /** The jobs base path with a slash. */
     private String jobsBasePathWithSlash;
 
