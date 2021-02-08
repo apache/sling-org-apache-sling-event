@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.sling</groupId>
         <artifactId>sling</artifactId>
-        <version>33</version>
+        <version>40</version>
         <relativePath />
     </parent>
 
@@ -55,6 +55,48 @@
 
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <version>4.2.1</version>
+                    <inherited>true</inherited>
+                    <configuration>
+                        <outputDirectory>${basedir}/target/classes</outputDirectory>
+                        <obrRepository>NONE</obrRepository>
+                        <!-- Export SCR metadata to classpath to have them available in unit tests -->
+                        <exportScr>true</exportScr>
+                        <instructions>
+                            <Bundle-Category>sling</Bundle-Category>
+                            <Bundle-DocURL>
+                                http://sling.apache.org
+                            </Bundle-DocURL>
+                            <Bundle-Vendor>The Apache Software Foundation</Bundle-Vendor>
+                            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        </instructions>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>baseline</id>
+                            <goals>
+                                <goal>baseline</goal>
+                            </goals>
+                        </execution>
+                        <!-- Configure extra execution of 'manifest' in process-classes phase to make sure SCR metadata is generated before unit test runs -->
+                        <execution>
+                            <id>scr-metadata</id>
+                            <goals>
+                                <goal>manifest</goal>
+                            </goals>
+                            <configuration>
+                                <supportIncrementalBuild>true</supportIncrementalBuild>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>
@@ -206,6 +248,8 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.3.0</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.sling</groupId>
@@ -226,6 +270,12 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi.core</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
+            <version>6.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
@@ -305,7 +355,7 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
+            <artifactId>mockito-core</artifactId>
             <version>1.10.19</version>
             <scope>test</scope>
         </dependency>
@@ -378,12 +428,6 @@
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.commons.testing</artifactId>
             <version>2.0.10</version>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.sling</groupId>
