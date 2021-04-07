@@ -74,7 +74,7 @@ Sling-Nodetypes: SLING-INF/nodetypes/event.cnd
 Import-Package: \
     javax.servlet.http;resolution:=optional,\
     org.apache.felix.inventory;resolution:=optional,\
-    javax.servlet,\
+    javax.servlet;resolution:=optional,\
     <!-- For build compatibility with Java 11 -->\
     javax.annotation;version="[0.0,2)",\
     *
