@@ -289,7 +289,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
             final long cc = getConsumerChangeCount();
             if ( cc >= minimum ) {
                 // we need to wait for the topology events (TODO)
-                sleep(200);
+                sleep(5000);
                 return;
             }
             sleep(50);
