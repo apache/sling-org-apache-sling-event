@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 
@@ -47,6 +48,8 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.discovery.PropertyProvider;
+import org.apache.sling.discovery.TopologyEvent;
+import org.apache.sling.discovery.TopologyEventListener;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
@@ -186,9 +189,12 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
 
     public void setup() throws IOException {
         log.info("starting setup");
+        registerTopologyListener();
     }
 
     private int deleteCount;
+
+    protected AtomicReference<TopologyEvent> lastTopologyEvent = new AtomicReference<>();
 
     private void delete(final Resource rsrc )
     throws PersistenceException {
@@ -288,13 +294,20 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
         do {
             final long cc = getConsumerChangeCount();
             if ( cc >= minimum ) {
-                // we need to wait for the topology events (TODO)
-                sleep(5000);
-                return;
+                if (isTopologyInitialized()) {
+                    return;
+                }
+                log.info("waitConsumerChangeCount (topology not yet initialized)");
+            } else {
+                log.info("waitConsumerChangeCount (is={}, expected={})",cc, minimum);
             }
             sleep(50);
-            log.info("waitConsumerChangeCount (is={}, expected={})",cc, minimum);
         } while ( true );
+    }
+
+    protected boolean isTopologyInitialized() {
+        final TopologyEvent event = lastTopologyEvent.get();
+        return (event != null) && (event.getNewView() != null);
     }
 
     /**
@@ -312,6 +325,20 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
         this.waitConsumerChangeCount(cc + 1);
         log.info("registered2 JobConsumer for topic {} and changecount={}",topic, cc);
         return reg;
+    }
+
+    protected void registerTopologyListener() {
+        final Dictionary<String, Object> props = new Hashtable<>();
+        final ServiceRegistration<TopologyEventListener> reg = this.bc.registerService(TopologyEventListener.class,
+                new TopologyEventListener() {
+
+                    @Override
+                    public void handleTopologyEvent(TopologyEvent event) {
+                        log.info("handleTopologyEvent : GOT EVENT : " + event);
+                        lastTopologyEvent.set(event);
+                    }
+                }, props);
+        this.registrations.add(reg);
     }
 
     /**
