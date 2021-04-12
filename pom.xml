@@ -57,43 +57,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <phase>process-sources</phase>
-                    </execution>
-                </executions>
-                <configuration>
-                    <artifactItems>
-                        <artifactItem>
-                            <groupId>org.apache.sling</groupId>
-                            <artifactId>org.apache.sling.event.api</artifactId>
-                            <destFileName>org.apache.sling.event.api.jar</destFileName>
-                        </artifactItem>
-                        <artifactItem>
-                            <groupId>org.quartz-scheduler</groupId>
-                            <artifactId>quartz</artifactId>
-                            <destFileName>quartz.jar</destFileName>
-                        </artifactItem>
-                        <artifactItem>
-                            <groupId>org.apache.sling</groupId>
-                            <artifactId>org.apache.sling.commons.osgi</artifactId>
-                            <destFileName>org.apache.sling.commons.osgi.jar</destFileName>
-                        </artifactItem>
-                        <artifactItem>
-                            <groupId>org.apache.jackrabbit</groupId>
-                            <artifactId>jackrabbit-jcr-commons</artifactId>
-                            <destFileName>jackrabbit-jcr-commons.jar</destFileName>
-                        </artifactItem>
-                    </artifactItems>
-                </configuration>
-            </plugin>
            <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>

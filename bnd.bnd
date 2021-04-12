@@ -20,11 +20,10 @@ Export-Package: \
     org.apache.sling.commons.osgi,\
     org.apache.sling.event.api
 -includeresource: \
-    target/dependency/org.apache.sling.event.api.jar,\
-    @target/dependency/quartz.jar!/org/quartz/CronExpression.class,\
-    @target/dependency/quartz.jar!/org/quartz/ValueSet.class,\
-    @target/dependency/org.apache.sling.commons.osgi.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
-    @target/dependency/jackrabbit-jcr-commons.jar!/org/apache/jackrabbit/util/ISO9075.class,\
-    @target/dependency/jackrabbit-jcr-commons.jar!/org/apache/jackrabbit/util/ISO8601.class,\
-    @target/dependency/jackrabbit-jcr-commons.jar!/org/apache/jackrabbit/util/XMLChar.class
-Bundle-Classpath: ., org.apache.sling.event.api.jar
+    @org.apache.sling.event.api-[0-9.]*.jar,\
+    @quartz-[0-9.]*.jar!/org/quartz/CronExpression.class,\
+    @quartz-[0-9.]*.jar!/org/quartz/ValueSet.class,\
+    @org.apache.sling.commons.osgi-[0-9.]*.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
+    @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/ISO9075.class,\
+    @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/ISO8601.class,\
+    @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/XMLChar.class
