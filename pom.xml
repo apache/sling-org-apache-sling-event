@@ -51,6 +51,7 @@
         <bundle.file.name>${bundle.build.dir}/${project.build.finalName}.jar</bundle.file.name>
         <min.port>37000</min.port>
         <max.port>37999</max.port>
+        <project.build.outputTimestamp>2021-04-12T10:00:00Z</project.build.outputTimestamp>
     </properties>
 
 
