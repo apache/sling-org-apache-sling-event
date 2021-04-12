@@ -51,11 +51,15 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(PaxExam.class)
 public class JobHandlingTest extends AbstractJobHandlingTest {
 
     public static final String TOPIC = "sling/test";
+
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Override
     @Before
@@ -404,19 +408,21 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
     public void testNoJobProcessor() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
 
+        log.info("testNoJobProcessor : registering job consumer");
         this.registerJobConsumer(TOPIC,
                 new JobConsumer() {
 
             @Override
             public JobResult process(final Job job) {
-                count.incrementAndGet();
-
+                final int got = count.incrementAndGet();
+                log.info("testNoJobProcessor.process : got " + got + " jobs");
                 return JobResult.OK;
             }
          });
 
         final JobManager jobManager = this.getJobManager();
 
+        log.info("testNoJobProcessor : starting 20 jobs, 10 on " + TOPIC + " and 10 on " + TOPIC + "2");
         // we start 20 jobs, every second job has no processor
         final int COUNT = 20;
         for(int i = 0; i < COUNT; i++ ) {
@@ -424,6 +430,8 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
 
             jobManager.addJob(jobTopic, null);
         }
+
+        log.info("testNoJobProcessor : waiting for jobs to be received ...");
         while ( jobManager.getStatistics().getNumberOfFinishedJobs() < COUNT / 2) {
             this.sleep(50);
         }
