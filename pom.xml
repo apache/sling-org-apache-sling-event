@@ -40,8 +40,8 @@
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</developerConnection>
         <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-event.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
         <site.jira.version.id>12315369</site.jira.version.id>
@@ -57,7 +57,7 @@
 
     <build>
         <plugins>
-           <plugin>
+            <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
                 <configuration>
@@ -99,18 +99,18 @@
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <executions>
-                  <execution>
-                    <goals>
-                      <goal>integration-test</goal>
-                      <goal>verify</goal>
-                    </goals>
-                  </execution>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
                 </executions>
                 <configuration>
                     <systemProperties>
                         <property>
-                              <name>bundle.filename</name>
-                              <value>${basedir}/target/${project.build.finalName}.jar</value>
+                            <name>bundle.filename</name>
+                            <value>${basedir}/target/${project.build.finalName}.jar</value>
                         </property>
                         <property>
                             <name>org.ops4j.pax.url.mvn.useFallbackRepositories</name>
@@ -130,8 +130,8 @@
                 </configuration>
             </plugin>
             <plugin>
-              <groupId>org.apache.servicemix.tooling</groupId>
-              <artifactId>depends-maven-plugin</artifactId>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <artifactId>maven-clean-plugin</artifactId>
@@ -238,7 +238,7 @@
             <version>3.1.0</version>
             <scope>provided</scope>
         </dependency>
-         <dependency>
+        <dependency>
             <artifactId>metrics-core</artifactId>
             <version>3.2.4</version>
             <groupId>io.dropwizard.metrics</groupId>
@@ -262,12 +262,12 @@
             <version>2.2.0</version>
             <scope>provided</scope>
         </dependency>
-      <!-- Webconsole -->
+        <!-- Webconsole -->
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
         </dependency>
-      <!-- Testing -->
+        <!-- Testing -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
@@ -290,12 +290,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-          <groupId>org.apache.sling</groupId>
-          <artifactId>org.apache.sling.testing.sling-mock</artifactId>
-          <version>2.2.6</version>
-          <scope>test</scope>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.testing.sling-mock</artifactId>
+            <version>2.2.6</version>
+            <scope>test</scope>
         </dependency>
-         <dependency>
+        <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.testing.sling-mock-oak</artifactId>
             <version>2.1.10-1.16.0</version>
@@ -348,11 +348,11 @@
             <version>1</version>
             <scope>test</scope>
         </dependency>
-    	<dependency>
-    		<groupId>org.apache.sling</groupId>
-    		<artifactId>org.apache.sling.event.api</artifactId>
-    		<version>1.0.0</version>
-    	</dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.event.api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.sling</groupId>
@@ -375,32 +375,32 @@
 
         <!-- an OSGi framework -->
         <dependency>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>org.apache.felix.framework</artifactId>
-          <version>6.0.3</version>
-          <scope>test</scope>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.framework</artifactId>
+            <version>6.0.3</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- JUnit -->
         <dependency>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-          <scope>test</scope>
-          <version>4.12</version>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+            <version>4.12</version>
         </dependency>
         <dependency>
-          <groupId>org.jmock</groupId>
-          <artifactId>jmock-junit4</artifactId>
-          <version>2.8.2</version>
-          <scope>test</scope>
+            <groupId>org.jmock</groupId>
+            <artifactId>jmock-junit4</artifactId>
+            <version>2.8.2</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Pax Exam -->
         <dependency>
-          <groupId>org.ops4j.pax.exam</groupId>
-          <artifactId>pax-exam</artifactId>
-          <version>4.13.4</version>
-          <scope>test</scope>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam</artifactId>
+            <version>4.13.4</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
