@@ -1,5 +1,3 @@
--noextraheader:true
--snapshot: SNAPSHOT
 Sling-Namespaces: slingevent=http://sling.apache.org/jcr/event/1.0
 Sling-Nodetypes: SLING-INF/nodetypes/event.cnd
 
