@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.sling</groupId>
         <artifactId>sling-bundle-parent</artifactId>
-        <version>40</version>
+        <version>41</version>
         <relativePath />
     </parent>
 
@@ -56,51 +56,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>biz.aQute.bnd</groupId>
-                <artifactId>bnd-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>bnd-process</id>
-                        <goals>
-                            <goal>bnd-process</goal>
-                        </goals>
-                        <configuration>
-                            <bnd>
--noextraheader:true
--snapshot: SNAPSHOT
-Sling-Namespaces: slingevent=http://sling.apache.org/jcr/event/1.0
-Sling-Nodetypes: SLING-INF/nodetypes/event.cnd
-Import-Package: \
-    javax.servlet.http;resolution:=optional,\
-    org.apache.felix.inventory;resolution:=optional,\
-    javax.servlet;resolution:=optional,\
-    <!-- For build compatibility with Java 11 -->\
-    javax.annotation;version="[0.0,2)",\
-    *
-Export-Package: \
-    org.apache.sling.event.jobs,\
-    org.apache.sling.event.jobs.consumer,\
-    org.apache.sling.event.jobs.jmx
-
--conditionalpackage: \
-    org.apache.jackrabbit.util,\
-    org.apache.sling.commons.osgi,\
-    org.apache.sling.event.api
--includeresource: \
-    target/dependency/org.apache.sling.event.api.jar,\
-    @target/dependency/quartz.jar!/org/quartz/CronExpression.class,\
-    @target/dependency/quartz.jar!/org/quartz/ValueSet.class,\
-    @target/dependency/org.apache.sling.commons.osgi.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
-    @target/dependency/jackrabbit-jcr-commons.jar!/org/apache/jackrabbit/util/ISO9075.class,\
-    @target/dependency/jackrabbit-jcr-commons.jar!/org/apache/jackrabbit/util/ISO8601.class,\
-    @target/dependency/jackrabbit-jcr-commons.jar!/org/apache/jackrabbit/util/XMLChar.class
-Bundle-Classpath: ., org.apache.sling.event.api.jar
-                            </bnd>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-baseline-maven-plugin</artifactId>
@@ -479,6 +434,13 @@ Bundle-Classpath: ., org.apache.sling.event.api.jar
         <dependency>
           <groupId>junit</groupId>
           <artifactId>junit</artifactId>
+          <scope>test</scope>
+          <version>4.12</version>
+        </dependency>
+        <dependency>
+          <groupId>org.jmock</groupId>
+          <artifactId>jmock-junit4</artifactId>
+          <version>2.8.2</version>
           <scope>test</scope>
         </dependency>
 
