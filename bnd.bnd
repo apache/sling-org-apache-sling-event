@@ -25,4 +25,3 @@ Export-Package: \
     @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/ISO9075.class,\
     @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/ISO8601.class,\
     @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/XMLChar.class
-
