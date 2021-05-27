@@ -18,7 +18,7 @@ Export-Package: \
     org.apache.sling.commons.osgi,\
     org.apache.sling.event.api
 -includeresource: \
-    @org.apache.sling.event.api-[0-9.]*.jar;lib:=true,\
+    org.apache.sling.event.api-1.0.0.jar/=org.apache.sling.event.api-[0-9.]*.jar;lib:=true,\
     @quartz-[0-9.]*.jar!/org/quartz/CronExpression.class,\
     @quartz-[0-9.]*.jar!/org/quartz/ValueSet.class,\
     @org.apache.sling.commons.osgi-[0-9.]*.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
