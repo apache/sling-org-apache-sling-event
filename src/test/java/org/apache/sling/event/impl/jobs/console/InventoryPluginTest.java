@@ -20,6 +20,7 @@ package org.apache.sling.event.impl.jobs.console;
 
 
 import org.apache.felix.inventory.Format;
+import org.apache.sling.event.impl.JsonTestBase;
 import org.apache.sling.event.impl.jobs.JobConsumerManager;
 import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
@@ -31,6 +32,7 @@ import org.apache.sling.event.jobs.ScheduleInfo;
 import org.apache.sling.event.jobs.ScheduledJobInfo;
 import org.apache.sling.event.jobs.Statistics;
 import org.apache.sling.event.jobs.TopicStatistics;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -42,10 +44,15 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
+import static com.jayway.jsonpath.matchers.JsonPathMatchers.hasJsonPath;
+import static org.junit.Assert.assertThat;
 
-public class InventoryPluginTest extends Mockito {
+public class InventoryPluginTest extends JsonTestBase {
     @Mock
     private JobManager jobManager;
 
@@ -186,118 +193,86 @@ public class InventoryPluginTest extends Mockito {
 
     @Test
     public void printJsonFormat() {
-        StringWriter writerOutput = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(writerOutput);
+        try {
+            final String json = queryInventoryJSON(inventoryPlugin);
 
-        inventoryPlugin.print(printWriter, Format.JSON, false);
+            Map<String, Object> expectedJsonPaths = new HashMap(){{
+                put("$.statistics", null);
+                put("$.statistics.startTime", 0);
+                put("$.statistics.lastActivatedJobTime", 0);
+                put("$.statistics.lastFinishedJobTime", 0);
+                put("$.statistics.numberOfQueuedJobs", 0);
+                put("$.statistics.numberOfActiveJobs", 0);
+                put("$.statistics.numberOfJobs", 0);
+                put("$.statistics.numberOfFinishedJobs", 0);
+                put("$.statistics.numberOfFailedJobs", 0);
+                put("$.statistics.numberOfCancelledJobs", 0);
+                put("$.statistics.numberOfProcessedJobs", 0);
+                put("$.statistics.averageProcessingTime", 0);
+                put("$.statistics.averageWaitingTime", 0);
+                put("$.scheduledJobs", null);
+                put("$.scheduledJobs[0].jobTopic", "topic");
+                put("$.scheduledJobs[0].schedules", null);
+                put("$.scheduledJobs[0].schedules[0].type", "HOURLY");
+                put("$.scheduledJobs[0].schedules[0].schedule", "40");
+                put("$.scheduledJobs[0].schedules[1].type", "CRON");
+                put("$.scheduledJobs[0].schedules[1].schedule", "0 * * * *");
+                put("$.queues", null);
+                put("$.queues[0].suspended", false);
+                put("$.queues[0].statistics", null);
+                put("$.queues[0].statistics.startTime", 0);
+                put("$.queues[0].statistics.lastActivatedJobTime", 0);
+                put("$.queues[0].statistics.lastActivatedJobTime", 0);
+                put("$.queues[0].statistics.lastFinishedJobTime", 0);
+                put("$.queues[0].statistics.numberOfQueuedJobs", 0);
+                put("$.queues[0].statistics.numberOfActiveJobs", 0);
+                put("$.queues[0].statistics.numberOfJobs", 0);
+                put("$.queues[0].statistics.numberOfFinishedJobs", 0);
+                put("$.queues[0].statistics.numberOfFailedJobs", 0);
+                put("$.queues[0].statistics.numberOfCancelledJobs", 0);
+                put("$.queues[0].statistics.numberOfProcessedJobs", 0);
+                put("$.queues[0].statistics.averageProcessingTime", 0);
+                put("$.queues[0].statistics.averageWaitingTime", 0);
+                put("$.queues[0].configuration", null);
+                put("$.queues[0].configuration.type", "ORDERED");
+                put("$.queues[0].configuration.topics", "[]");
+                put("$.queues[0].configuration.maxParallel", 0);
+                put("$.queues[0].configuration.maxRetries", 0);
+                put("$.queues[0].configuration.retryDelayInMs", 0);
+                put("$.topicStatistics", null);
+                put("$.topicStatistics[0].lastActivatedJobTime", 0);
+                put("$.topicStatistics[0].lastFinishedJobTime", 0);
+                put("$.topicStatistics[0].numberOfFinishedJobs", 0);
+                put("$.topicStatistics[0].numberOfFailedJobs", 0);
+                put("$.topicStatistics[0].numberOfCancelledJobs", 0);
+                put("$.topicStatistics[0].numberOfProcessedJobs", 0);
+                put("$.topicStatistics[0].averageProcessingTime", 0);
+                put("$.topicStatistics[0].averageWaitingTime", 0);
+                put("$.configurations", null);
+                put("$.configurations[0].valid", false);
+                put("$.configurations[0].type", "ORDERED");
+                put("$.configurations[0].maxParallel", 0);
+                put("$.configurations[0].maxRetries", 0);
+                put("$.configurations[0].retryDelayInMs", 0);
+                put("$.configurations[0].ranking", 0);
+                put("$.configurations[1].valid", false);
+                put("$.configurations[1].type", "ORDERED");
+                put("$.configurations[1].maxParallel", 0);
+                put("$.configurations[1].maxRetries", 0);
+                put("$.configurations[1].retryDelayInMs", 0);
+                put("$.configurations[1].ranking", 0);
+            }};
 
-        String output = writerOutput.toString();
-        assertEquals("{\n" +
-                "  \"statistics\" : {\n" +
-                "    \"startTime\" : 0,\n" +
-                "    \"startTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "    \"lastActivatedJobTime\" : 0,\n" +
-                "    \"lastActivatedJobTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "    \"lastFinishedJobTime\" : 0,\n" +
-                "    \"lastFinishedJobTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "    \"numberOfQueuedJobs\" : 0,\n" +
-                "    \"numberOfActiveJobs\" : 0,\n" +
-                "    \"numberOfJobs\" : 0,\n" +
-                "    \"numberOfFinishedJobs\" : 0,\n" +
-                "    \"numberOfFailedJobs\" : 0,\n" +
-                "    \"numberOfCancelledJobs\" : 0,\n" +
-                "    \"numberOfProcessedJobs\" : 0,\n" +
-                "    \"averageProcessingTime\" : 0,\n" +
-                "    \"averageProcessingTimeText\" : \"-\",\n" +
-                "    \"averageWaitingTime\" : 0,\n" +
-                "    \"averageWaitingTimeText\" : \"-\"\n" +
-                "  },\n" +
-                "  \"scheduledJobs\" : [\n" +
-                "    {\n" +
-                "      \"jobTopic\" : \"topic\",\n" +
-                "      \"schedules\" : [\n" +
-                "        {\n" +
-                "          \"type\" : \"HOURLY\",\n" +
-                "          \"schedule\" : \"40\"\n" +
-                "        }, \n" +
-                "        {\n" +
-                "          \"type\" : \"CRON\",\n" +
-                "          \"schedule\" : \"0 * * * *\"\n" +
-                "        }      ]\n" +
-                "    }\n" +
-                "  ],\n" +
-                "  \"queues\" : [\n" +
-                "    {\n" +
-                "      \"name\" : \"null\",\n" +
-                "      \"suspended\" : false,\n" +
-                "      \"statistics\" : {\n" +
-                "        \"startTime\" : 0,\n" +
-                "        \"startTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "        \"lastActivatedJobTime\" : 0,\n" +
-                "        \"lastActivatedJobTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "        \"lastFinishedJobTime\" : 0,\n" +
-                "        \"lastFinishedJobTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "        \"numberOfQueuedJobs\" : 0,\n" +
-                "        \"numberOfActiveJobs\" : 0,\n" +
-                "        \"numberOfJobs\" : 0,\n" +
-                "        \"numberOfFinishedJobs\" : 0,\n" +
-                "        \"numberOfFailedJobs\" : 0,\n" +
-                "        \"numberOfCancelledJobs\" : 0,\n" +
-                "        \"numberOfProcessedJobs\" : 0,\n" +
-                "        \"averageProcessingTime\" : 0,\n" +
-                "        \"averageProcessingTimeText\" : \"-\",\n" +
-                "        \"averageWaitingTime\" : 0,\n" +
-                "        \"averageWaitingTimeText\" : \"-\"\n" +
-                "      },      \"stateInfo\" : \"null\",\n" +
-                "      \"configuration\" : {\n" +
-                "        \"type\" : \"ORDERED\",\n" +
-                "        \"topics\" : \"[]\",\n" +
-                "        \"maxParallel\" : 0,\n" +
-                "        \"maxRetries\" : 0,\n" +
-                "        \"retryDelayInMs\" : 0,\n" +
-                "        \"priority\" : \"null\"\n" +
-                "      }\n" +
-                "    }  ],\n" +
-                "  \"topicStatistics\" : [\n" +
-                "    {\n" +
-                "      \"topic\" : \"null\",\n" +
-                "      \"lastActivatedJobTime\" : 0,\n" +
-                "      \"lastActivatedJobTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "      \"lastFinishedJobTime\" : 0,\n" +
-                "      \"lastFinishedJobTimeText\" : \"01:00:00:000 1970-Jan-01\",\n" +
-                "      \"numberOfFinishedJobs\" : 0,\n" +
-                "      \"numberOfFailedJobs\" : 0,\n" +
-                "      \"numberOfCancelledJobs\" : 0,\n" +
-                "      \"numberOfProcessedJobs\" : 0,\n" +
-                "      \"averageProcessingTime\" : 0,\n" +
-                "      \"averageProcessingTimeText\" : \"-\",\n" +
-                "      \"averageWaitingTime\" : 0,\n" +
-                "      \"averageWaitingTimeText\" : \"-\"\n" +
-                "    }  ],\n" +
-                "  \"configurations\" : [\n" +
-                "    {\n" +
-                "      \"name\" : \"null\",\n" +
-                "      \"valid\" : false,\n" +
-                "      \"type\" : \"ORDERED\",\n" +
-                "      \"topics\" : [],\n" +
-                "      \"maxParallel\" : 0,\n" +
-                "      \"maxRetries\" : 0,\n" +
-                "      \"retryDelayInMs\" : 0,\n" +
-                "      \"priority\" : \"null\",\n" +
-                "      \"ranking\" : 0\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"name\" : \"null\",\n" +
-                "      \"valid\" : false,\n" +
-                "      \"type\" : \"ORDERED\",\n" +
-                "      \"topics\" : [],\n" +
-                "      \"maxParallel\" : 0,\n" +
-                "      \"maxRetries\" : 0,\n" +
-                "      \"retryDelayInMs\" : 0,\n" +
-                "      \"priority\" : \"null\",\n" +
-                "      \"ranking\" : 0\n" +
-                "    }\n" +
-                "  ]\n" +
-                "}\n", output);
+            expectedJsonPaths.forEach((k, v) -> {
+                if (v != null) {
+                    assertThat(json, hasJsonPath(k, equalTo(v)));
+                } else {
+                    assertThat(json, hasJsonPath(k));
+                }
+            });
+
+        } catch (Exception e) {
+            Assert.fail("Should not catch any exception. JSON format might be wrong. Error thrown: " + e.getMessage());
+        }
     }
 }
