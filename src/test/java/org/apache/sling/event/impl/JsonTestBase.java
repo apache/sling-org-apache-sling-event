@@ -1,9 +1,3 @@
-package org.apache.sling.event.impl;
-
-
-import org.apache.felix.inventory.Format;
-import org.apache.felix.inventory.InventoryPrinter;
-import org.mockito.Mockito;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,6 +16,13 @@ import org.mockito.Mockito;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.sling.event.impl;
+
+
+import org.apache.felix.inventory.Format;
+import org.apache.felix.inventory.InventoryPrinter;
+import org.mockito.Mockito;
+
 import javax.json.Json;
 import java.io.PrintWriter;
 import java.io.StringReader;
