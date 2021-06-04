@@ -45,8 +45,10 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static com.jayway.jsonpath.matchers.JsonPathMatchers.hasJsonPath;
@@ -111,84 +113,35 @@ public class InventoryPluginTest extends JsonTestBase {
 
         inventoryPlugin.print(printWriter, Format.TEXT, false);
 
-        String output = writerOutput.toString();
-        assertEquals("Apache Sling Job Handling\n" +
-                "-------------------------\n" +
-                "Overall Statistics\n" +
-                "Start Time : 01:00:00:000 1970-Jan-01\n" +
-                "Local topic consumers: \n" +
-                "Last Activated : 01:00:00:000 1970-Jan-01\n" +
-                "Last Finished : 01:00:00:000 1970-Jan-01\n" +
-                "Queued Jobs : 0\n" +
-                "Active Jobs : 0\n" +
-                "Jobs : 0\n" +
-                "Finished Jobs : 0\n" +
-                "Failed Jobs : 0\n" +
-                "Cancelled Jobs : 0\n" +
-                "Processed Jobs : 0\n" +
-                "Average Processing Time : -\n" +
-                "Average Waiting Time : -\n" +
-                "\n" +
-                "Topology Capabilities\n" +
-                "No topology information available !\n" +
-                "Scheduled Jobs\n" +
-                "Schedule\n" +
-                "Job Topic< : topic\n" +
-                "Schedules : HOURLY 40, CRON 0 * * * *\n\n\n" +
-                "Active JobQueue: null \n" +
-                "Statistics\n" +
-                "Start Time : 01:00:00:000 1970-Jan-01\n" +
-                "Last Activated : 01:00:00:000 1970-Jan-01\n" +
-                "Last Finished : 01:00:00:000 1970-Jan-01\n" +
-                "Queued Jobs : 0\n" +
-                "Active Jobs : 0\n" +
-                "Jobs : 0\n" +
-                "Finished Jobs : 0\n" +
-                "Failed Jobs : 0\n" +
-                "Cancelled Jobs : 0\n" +
-                "Processed Jobs : 0\n" +
-                "Average Processing Time : -\n" +
-                "Average Waiting Time : -\n" +
-                "Status Info : null\n" +
-                "Configuration\n" +
-                "Type : Ordered\n" +
-                "Topics : \n" +
-                "Max Parallel : 0\n" +
-                "Max Retries : 0\n" +
-                "Retry Delay : 0 ms\n" +
-                "Priority : null\n" +
-                "\n" +
-                "Topic Statistics - null\n" +
-                "Last Activated : 01:00:00:000 1970-Jan-01\n" +
-                "Last Finished : 01:00:00:000 1970-Jan-01\n" +
-                "Finished Jobs : 0\n" +
-                "Failed Jobs : 0\n" +
-                "Cancelled Jobs : 0\n" +
-                "Processed Jobs : 0\n" +
-                "Average Processing Time : -\n" +
-                "Average Waiting Time : -\n" +
-                "\n" +
-                "Apache Sling Job Handling - Job Queue Configurations\n" +
-                "----------------------------------------------------\n" +
-                "Job Queue Configuration: null\n" +
-                "Valid : false\n" +
-                "Type : Ordered\n" +
-                "Topics : \n" +
-                "Max Parallel : 0\n" +
-                "Max Retries : 0\n" +
-                "Retry Delay : 0 ms\n" +
-                "Priority : null\n" +
-                "Ranking : 0\n" +
-                "\n" +
-                "Job Queue Configuration: null\n" +
-                "Valid : false\n" +
-                "Type : Ordered\n" +
-                "Topics : \n" +
-                "Max Parallel : 0\n" +
-                "Max Retries : 0\n" +
-                "Retry Delay : 0 ms\n" +
-                "Priority : null\n" +
-                "Ranking : 0\n\n", output);
+        List<String> outputContains = new ArrayList() {{
+            add("Apache Sling Job Handling");
+            add("Overall Statistics");
+            add("Local topic consumers:");
+            add("Queued Jobs : 0");
+            add("Active Jobs : 0");
+            add("Jobs : 0");
+            add("Finished Jobs : 0");
+            add("Failed Jobs : 0");
+            add("Cancelled Jobs : 0");
+            add("Processed Jobs : 0");
+            add("Topology Capabilities");
+            add("No topology information available");
+            add("Scheduled Jobs");
+            add("Job Topic< : topic");
+            add("Schedules : HOURLY 40, CRON 0 * * * *");
+            add("Apache Sling Job Handling - Job Queue Configurations");
+            add("Valid : false");
+            add("Type : Ordered");
+            add("Max Parallel : 0");
+            add("Max Retries : 0");
+            add("Retry Delay : 0 ms");
+            add("Ranking : 0");
+        }};
+
+        String text = writerOutput.toString();
+        outputContains.forEach((e) -> {
+            assertThat(text, containsString(e));
+        });
     }
 
     @Test
