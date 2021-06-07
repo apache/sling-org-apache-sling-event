@@ -112,7 +112,7 @@ public class InventoryPluginTest extends JsonTestBase {
 
         inventoryPlugin.print(printWriter, Format.TEXT, false);
 
-        List<String> outputContains = new ArrayList() {{
+        List<String> outputContains = new ArrayList<String>() {{
             add("Apache Sling Job Handling");
             add("Overall Statistics");
             add("Local topic consumers:");
@@ -148,7 +148,7 @@ public class InventoryPluginTest extends JsonTestBase {
         try {
             final String json = queryInventoryJSON(inventoryPlugin);
 
-            Map<String, Object> expectedJsonPaths = new HashMap(){{
+            Map<String, Object> expectedJsonPaths = new HashMap<String, Object>(){{
                 put("$.statistics", null);
                 put("$.statistics.startTime", 0);
                 put("$.statistics.lastActivatedJobTime", 0);
