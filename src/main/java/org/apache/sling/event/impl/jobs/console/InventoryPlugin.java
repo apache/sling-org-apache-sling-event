@@ -35,6 +35,7 @@ import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.event.impl.jobs.JobConsumerManager;
 import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
+import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
 import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.Queue;
@@ -345,6 +346,67 @@ public class InventoryPlugin implements InventoryPrinter {
         }
 
         boolean first = true;
+        final Collection<ScheduledJobInfo> infos = this.jobManager.getScheduledJobs();
+        for(final ScheduledJobInfo info : infos) {
+            pw.println(",");
+            if ( first ) {
+                pw.println("  \"scheduledJobs\" : [");
+                first = false;
+            }
+
+            pw.println("    {");
+            pw.printf("      \"jobTopic\" : \"%s\",%n", info.getJobTopic());
+            pw.println("      \"schedules\" : [");
+            boolean internalFirst = true;
+            for(final ScheduleInfo si : info.getSchedules() ) {
+                if ( !internalFirst ) {
+                    pw.println(", ");
+                }
+                internalFirst = false;
+                pw.println("        {");
+                switch ( si.getType() ) {
+                    case YEARLY :
+                        pw.printf("          \"type\" : \"%s\",%n", "YEARLY");
+                        pw.printf("          \"schedule\" : \"%s %s : %s:%s\"%n", si.getMonthOfYear(),
+                                si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
+                        break;
+                    case MONTHLY :
+                        pw.printf("          \"type\" : \"%s\",%n", "MONTHLY");
+                        pw.printf("          \"schedule\" : \"%s : %s:%s\"%n", si.getDayOfMonth(), si.getHourOfDay(),
+                                si.getMinuteOfHour());
+                        break;
+                    case WEEKLY :
+                        pw.printf("          \"type\" : \"%s\",%n", "WEEKLY");
+                        pw.printf("          \"schedule\" : \"%s : %s:%s\"%n", si.getDayOfWeek(), si.getHourOfDay(),
+                                si.getMinuteOfHour());
+                        break;
+                    case DAILY :
+                        pw.printf("          \"type\" : \"%s\",%n", "DAILY");
+                        pw.printf("          \"schedule\" : \"%s:%s\"%n", si.getHourOfDay(), si.getMinuteOfHour());
+                        break;
+                    case HOURLY :
+                        pw.printf("          \"type\" : \"%s\",%n", "HOURLY");
+                        pw.printf("          \"schedule\" : \"%s\"%n", si.getMinuteOfHour());
+                        break;
+                    case CRON :
+                        pw.printf("          \"type\" : \"%s\",%n", "CRON");
+                        pw.printf("          \"schedule\" : \"%s\"%n", si.getExpression());
+                        break;
+                    default :
+                        pw.printf("          \"type\" : \"%s\",%n", "AT");
+                        pw.printf("          \"schedule\" : \"%s\"%n", si.getAt());
+                }
+                pw.print("        }");
+            }
+
+            pw.println("      ]");
+            pw.println("    }");
+        }
+        if ( !first ) {
+            pw.print("  ]");
+        }
+
+        first = true;
         for(final Queue q : this.jobManager.getQueues()) {
             pw.println(",");
             if ( first ) {
