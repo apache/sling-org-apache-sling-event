@@ -36,7 +36,7 @@ public class RoundRobinMaxParallelTest extends AbstractMaxParallelTest {
 
     private static final int MAX_PARALLEL = 3;
 
-    private static final int DURATION = 30;
+    private static final int DURATION = 50;
 
     @Override
     @Before
