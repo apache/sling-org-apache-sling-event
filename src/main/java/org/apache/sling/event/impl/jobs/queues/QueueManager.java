@@ -128,6 +128,10 @@ public class QueueManager
     /** All active queues. */
     private final Map<String, JobQueueImpl> queues = new ConcurrentHashMap<>();
 
+    /** upon outdating a queue its available etc semaphores are parked here,
+     * to handle long-running jobs vs topology changes properly */
+    private final Map<String, OutdatedJobQueueInfo> outdatedQueues = new ConcurrentHashMap<>();
+
     /** We count the scheduler runs. */
     private volatile long schedulerRuns;
 
@@ -253,7 +257,8 @@ public class QueueManager
                 queue = null;
             }
             if ( queue == null ) {
-                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, filteredTopics, haltedTopics);
+                final OutdatedJobQueueInfo outdatedQueueInfo = outdatedQueues.get(queueInfo.queueName);
+                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, filteredTopics, haltedTopics, outdatedQueueInfo);
                 // on startup the queue might be empty and we get null back from createQueue
                 if ( queue != null ) {
                     isNewQueue = true;
@@ -285,7 +290,10 @@ public class QueueManager
         // remove the queue with the old name
         // check for main queue
         final String oldName = ResourceHelper.filterQueueName(queue.getName());
-        this.queues.remove(oldName);
+        final JobQueueImpl oldQueue = this.queues.remove(oldName);
+        if (oldQueue != null) {
+            outdatedQueues.put(oldName, oldQueue.getOutdatedJobQueueInfo());
+        }
         // check if we can close or have to rename
         if ( queue.tryToClose() ) {
             // copy statistics

@@ -112,7 +112,7 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
 
         return options(
                 newConfiguration("org.apache.sling.event.impl.jobs.jcr.PersistenceHandler")
-                    .put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, 3L)
+                    .put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, backgroundLoadDelay())
                     .put("startup.delay", 1L)
                     .asOption(),
                 baseConfiguration(),
@@ -143,6 +143,10 @@ public abstract class AbstractJobHandlingTest extends TestSupport {
                 mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.commons.json").version("2.0.20"),
                 junitBundles()
            );
+    }
+
+    long backgroundLoadDelay() {
+        return 3L;
     }
 
     protected ModifiableCompositeOption baseConfiguration() {
