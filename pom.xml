@@ -55,15 +55,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.rat</groupId>
-                <artifactId>apache-rat-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>derby.log</exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
             <!-- plain unit tests -->
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -110,22 +101,6 @@
             <plugin>
                 <groupId>org.apache.servicemix.tooling</groupId>
                 <artifactId>depends-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <artifactId>maven-clean-plugin</artifactId>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>${basedir}</directory>
-                            <includes>
-                                <include>derby.log</include>
-                            </includes>
-                        </fileset>
-                        <fileset>
-                            <directory>jackrabbit</directory>
-                        </fileset>
-                    </filesets>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
