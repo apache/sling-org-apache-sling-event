@@ -18,39 +18,35 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.ScheduledJobInfo;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.ops4j.pax.exam.CoreOptions.options;
 
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
 public class TimedJobsTest extends AbstractJobHandlingTest {
 
     private static final String TOPIC = "timed/test/topic";
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration()
+        );
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
@@ -73,13 +69,13 @@ public class TimedJobsTest extends AbstractJobHandlingTest {
         d.setTime(System.currentTimeMillis() + 3000); // run in 3 seconds
 
         // create scheduled job
-        final ScheduledJobInfo info = this.getJobManager().createJob(TOPIC).schedule().at(d).add();
+        final ScheduledJobInfo info = jobManager.createJob(TOPIC).schedule().at(d).add();
         assertNotNull(info);
 
         while ( counter.get() == 0 ) {
             this.sleep(1000);
         }
-        assertEquals(0, this.getJobManager().getScheduledJobs().size()); // job is not scheduled anymore
+        assertEquals(0, jobManager.getScheduledJobs().size()); // job is not scheduled anymore
         info.unschedule();
     }
 

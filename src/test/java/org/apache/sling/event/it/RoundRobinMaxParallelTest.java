@@ -18,43 +18,41 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.Dictionary;
-import java.util.Hashtable;
-
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.QueueConfiguration;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
+
+import static org.junit.Assert.assertTrue;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
 public class RoundRobinMaxParallelTest extends AbstractMaxParallelTest {
 
     private static final int MAX_PARALLEL = 3;
 
     private static final int DURATION = 50;
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        // create ordered test queue
-        final org.osgi.service.cm.Configuration orderedConfig = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        final Dictionary<String, Object> orderedProps = new Hashtable<>();
-        orderedProps.put(ConfigurationConstants.PROP_NAME, "round-robin-max-parallel");
-        orderedProps.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name());
-        orderedProps.put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME);
-        orderedProps.put(ConfigurationConstants.PROP_RETRIES, 2);
-        orderedProps.put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L);
-        orderedProps.put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PARALLEL);
-        orderedConfig.update(orderedProps);
-
-        this.sleep(1000L);
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration(),
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, "round-robin-max-parallel")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
+                .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PARALLEL)
+                .asOption()
+        );
     }
 
     @Test(timeout=DURATION * 16000L)

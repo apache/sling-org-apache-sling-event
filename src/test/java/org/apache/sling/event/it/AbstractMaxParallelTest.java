@@ -41,7 +41,6 @@ import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
-import org.junit.After;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
@@ -51,8 +50,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class AbstractMaxParallelTest extends AbstractJobHandlingTest {
-
-    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     private static final int BACKGROUND_LOAD_DELAY_SECONDS = 1;
 
@@ -71,14 +68,8 @@ public abstract class AbstractMaxParallelTest extends AbstractJobHandlingTest {
     protected int max = -1;
 
     @Override
-    long backgroundLoadDelay() {
+    protected long backgroundLoadDelay() {
         return BACKGROUND_LOAD_DELAY_SECONDS;
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
     }
 
     private void registerMax(int cnt) {
@@ -231,7 +222,6 @@ public abstract class AbstractMaxParallelTest extends AbstractJobHandlingTest {
     }
 
     void doTestMaxParallel(int numJobs, long jobRunMillis, long duration) throws Exception {
-        final JobManager jobManager = this.getJobManager();
 
         final Map<String, AtomicLong> added = new HashMap<>();
         final Map<String, AtomicLong> created = new HashMap<>();

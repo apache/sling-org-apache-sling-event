@@ -18,60 +18,51 @@
  */
 package org.apache.sling.event.it;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.Dictionary;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.sling.event.impl.Barrier;
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.Job;
-import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.Queue;
 import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
+
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
 public class OrderedQueueTest extends AbstractJobHandlingTest {
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        // create ordered test queue
-        final org.osgi.service.cm.Configuration orderedConfig = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        final Dictionary<String, Object> orderedProps = new Hashtable<String, Object>();
-        orderedProps.put(ConfigurationConstants.PROP_NAME, "orderedtest");
-        orderedProps.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name());
-        orderedProps.put(ConfigurationConstants.PROP_TOPICS, "sling/orderedtest/*");
-        orderedProps.put(ConfigurationConstants.PROP_RETRIES, 2);
-        orderedProps.put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L);
-        orderedConfig.update(orderedProps);
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration(),
+            // create ordered test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, "orderedtest")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                .put(ConfigurationConstants.PROP_TOPICS, "sling/orderedtest/*")
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .asOption()
+        );
     }
 
     /**
@@ -79,7 +70,6 @@ public class OrderedQueueTest extends AbstractJobHandlingTest {
      */
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testOrderedQueue() throws Exception {
-        final JobManager jobManager = this.getJobManager();
 
         // register consumer and event handler
         final Barrier cb = new Barrier(2);

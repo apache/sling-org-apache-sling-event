@@ -18,16 +18,10 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,18 +39,26 @@ import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
+
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
 public class ChaosTest extends AbstractJobHandlingTest {
 
     /** Duration for firing jobs in seconds. */
@@ -90,39 +92,28 @@ public class ChaosTest extends AbstractJobHandlingTest {
         }
     }
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        // create ordered test queue
-        final org.osgi.service.cm.Configuration orderedConfig = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        final Dictionary<String, Object> orderedProps = new Hashtable<>();
-        orderedProps.put(ConfigurationConstants.PROP_NAME, "chaos-ordered");
-        orderedProps.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name());
-        orderedProps.put(ConfigurationConstants.PROP_TOPICS, ORDERED_TOPICS);
-        orderedProps.put(ConfigurationConstants.PROP_RETRIES, 2);
-        orderedProps.put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L);
-        orderedConfig.update(orderedProps);
-
-        // create round robin test queue
-        final org.osgi.service.cm.Configuration rrConfig = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        final Dictionary<String, Object> rrProps = new Hashtable<>();
-        rrProps.put(ConfigurationConstants.PROP_NAME, "chaos-roundrobin");
-        rrProps.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name());
-        rrProps.put(ConfigurationConstants.PROP_TOPICS, ROUND_TOPICS);
-        rrProps.put(ConfigurationConstants.PROP_RETRIES, 2);
-        rrProps.put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L);
-        rrProps.put(ConfigurationConstants.PROP_MAX_PARALLEL, 5);
-        rrConfig.update(rrProps);
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration(),
+            // create ordered test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, "chaos-ordered")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                .put(ConfigurationConstants.PROP_TOPICS, ORDERED_TOPICS)
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .asOption(),
+            // create round robin test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, "chaos-roundrobin")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
+                .put(ConfigurationConstants.PROP_TOPICS, ROUND_TOPICS)
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .put(ConfigurationConstants.PROP_MAX_PARALLEL, 5)
+                .asOption()
+        );
     }
 
     /**
@@ -307,7 +298,6 @@ public class ChaosTest extends AbstractJobHandlingTest {
 
     @Test(timeout=DURATION * 16000L)
     public void testDoChaos() throws Exception {
-        final JobManager jobManager = this.getJobManager();
 
         // setup added, created and finished map
         // added and finished are filled by notifications

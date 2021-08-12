@@ -18,10 +18,6 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.io.IOException;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,33 +25,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.ScheduledJobInfo;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.ops4j.pax.exam.CoreOptions.options;
+
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
 public class SchedulingTest extends AbstractJobHandlingTest {
 
     private static final String TOPIC = "job/scheduled/topic";
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration()
+        );
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
@@ -75,20 +71,20 @@ public class SchedulingTest extends AbstractJobHandlingTest {
         });
 
         // we schedule three jobs
-        final ScheduledJobInfo info1 = this.getJobManager().createJob(TOPIC).schedule().hourly(5).add();
+        final ScheduledJobInfo info1 = jobManager.createJob(TOPIC).schedule().hourly(5).add();
         assertNotNull(info1);
-        final ScheduledJobInfo info2 = this.getJobManager().createJob(TOPIC).schedule().daily(10, 5).add();
+        final ScheduledJobInfo info2 = jobManager.createJob(TOPIC).schedule().daily(10, 5).add();
         assertNotNull(info2);
-        final ScheduledJobInfo info3 = this.getJobManager().createJob(TOPIC).schedule().weekly(3, 19, 12).add();
+        final ScheduledJobInfo info3 = jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
         assertNotNull(info3);
 
-        assertEquals(3, this.getJobManager().getScheduledJobs().size()); // scheduled jobs
+        assertEquals(3, jobManager.getScheduledJobs().size()); // scheduled jobs
         info3.unschedule();
-        assertEquals(2, this.getJobManager().getScheduledJobs().size()); // scheduled jobs
+        assertEquals(2, jobManager.getScheduledJobs().size()); // scheduled jobs
         info1.unschedule();
-        assertEquals(1, this.getJobManager().getScheduledJobs().size()); // scheduled jobs
+        assertEquals(1, jobManager.getScheduledJobs().size()); // scheduled jobs
         info2.unschedule();
-        assertEquals(0, this.getJobManager().getScheduledJobs().size()); // scheduled jobs
+        assertEquals(0, jobManager.getScheduledJobs().size()); // scheduled jobs
     }
 
     @Test
@@ -110,20 +106,20 @@ public class SchedulingTest extends AbstractJobHandlingTest {
         });
         for(int i=0; i<NUM_ITERATIONS; i++) {
             logger.info("schedulingLoadTest: loop-" + i);
-            this.getJobManager().createJob(ownTopic).schedule().at(new Date(System.currentTimeMillis() + 2500)).add();
+            jobManager.createJob(ownTopic).schedule().at(new Date(System.currentTimeMillis() + 2500)).add();
             Thread.sleep(1);
         }
-        logger.info("schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules", counter.get(), this.getJobManager().getScheduledJobs().size());
+        logger.info("schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules", counter.get(), jobManager.getScheduledJobs().size());
         final long timeout = System.currentTimeMillis() + 60000;
         while(System.currentTimeMillis() < timeout) {
-            if ((counter.get() == NUM_ITERATIONS) && (this.getJobManager().getScheduledJobs().size() == 0)) {
+            if ((counter.get() == NUM_ITERATIONS) && (jobManager.getScheduledJobs().size() == 0)) {
                 break;
             }
-            logger.info("schedulingLoadTest: currently at {} jobs, {} schedules", counter.get(), getJobManager().getScheduledJobs().size());
+            logger.info("schedulingLoadTest: currently at {} jobs, {} schedules", counter.get(), jobManager.getScheduledJobs().size());
             Thread.sleep(100);
         }
         assertEquals(NUM_ITERATIONS, counter.get());
-        assertEquals(0, this.getJobManager().getScheduledJobs().size());
+        assertEquals(0, jobManager.getScheduledJobs().size());
         logger.info("schedulingLoadTest: end");
     }
 }

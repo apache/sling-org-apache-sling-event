@@ -18,40 +18,36 @@
  */
 package org.apache.sling.event.it;
 
-import java.io.IOException;
-
 import org.apache.sling.event.impl.Barrier;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.apache.sling.event.jobs.consumer.JobExecutor;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 
+import static org.ops4j.pax.exam.CoreOptions.options;
+
 @RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
 public class TopicMatchingTest extends AbstractJobHandlingTest {
 
     public static final String TOPIC = "sling/test/a";
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration()
+        );
     }
 
     /**
@@ -78,7 +74,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
                     }
                 });
 
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         barrier.block();
     }
 
@@ -106,7 +102,7 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
                     }
                 });
 
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         barrier.block();
     }
 
@@ -148,21 +144,21 @@ public class TopicMatchingTest extends AbstractJobHandlingTest {
                 });
 
         // first test, all three registered, reg3 should get the precedence
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         barrier3.block();
 
         // second test, unregister reg3, now it should be reg2
         long cc = this.getConsumerChangeCount();
         this.unregister(reg3);
         this.waitConsumerChangeCount(cc + 1);
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         barrier2.block();
 
         // third test, unregister reg2, reg1 is now the only one
         cc = this.getConsumerChangeCount();
         this.unregister(reg2);
         this.waitConsumerChangeCount(cc + 1);
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         barrier1.block();
     }
 }
