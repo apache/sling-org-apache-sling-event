@@ -49,10 +49,10 @@ import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfigurati
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class UnorderedQueueTest extends AbstractJobHandlingTest {
+public class RoundRobinQueueIT extends AbstractJobHandlingIT {
 
-    private static final String QUEUE_NAME = "unorderedtestqueue";
-    private static final String TOPIC = "sling/unorderedtest";
+    private static final String QUEUE_NAME = "roundrobintest";
+    private static final String TOPIC = "sling/roundrobintest";
     private static int MAX_PAR = 5;
     private static int NUM_JOBS = 300;
 
@@ -63,7 +63,7 @@ public class UnorderedQueueTest extends AbstractJobHandlingTest {
             // create round robin test queue
             factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
                 .put(ConfigurationConstants.PROP_NAME, QUEUE_NAME)
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
                 .put(ConfigurationConstants.PROP_TOPICS, TOPIC + "/*")
                 .put(ConfigurationConstants.PROP_RETRIES, 2)
                 .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
@@ -73,7 +73,7 @@ public class UnorderedQueueTest extends AbstractJobHandlingTest {
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
-    public void testUnorderedQueue() throws Exception {
+    public void testRoundRobinQueue() throws Exception {
 
         final Barrier cb = new Barrier(2);
 

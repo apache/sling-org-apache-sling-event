@@ -56,7 +56,7 @@ import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfigurati
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class JobHandlingTest extends AbstractJobHandlingTest {
+public class JobHandlingIT extends AbstractJobHandlingIT {
 
     public static final String TOPIC = "sling/test";
 

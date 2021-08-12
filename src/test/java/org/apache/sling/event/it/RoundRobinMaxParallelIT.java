@@ -28,43 +28,44 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerMethod;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class OrderedMaxParallelTest extends AbstractMaxParallelTest {
+public class RoundRobinMaxParallelIT extends AbstractMaxParallelIT {
 
-    private static final int DURATION = 40;
+    private static final int MAX_PARALLEL = 3;
+
+    private static final int DURATION = 50;
 
     @Configuration
     public Option[] configuration() {
         return options(
             baseConfiguration(),
-            // create ordered test queue
             factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "ordered-max-parallel")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                .put(ConfigurationConstants.PROP_NAME, "round-robin-max-parallel")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
                 .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
                 .put(ConfigurationConstants.PROP_RETRIES, 2)
                 .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .put(ConfigurationConstants.PROP_MAX_PARALLEL, 1)
+                .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PARALLEL)
                 .asOption()
         );
     }
 
     @Test(timeout=DURATION * 16000L)
-    public void testOrderedMaxParallel_slow() throws Exception {
-        doTestMaxParallel(12, 1717, DURATION);
+    public void testRoundRobinMaxParallel_slow() throws Exception {
+        doTestMaxParallel(20, 1717, DURATION);
 
-        assertEquals(1, max);
+        assertTrue(max <= MAX_PARALLEL);
     }
 
     @Test(timeout=DURATION * 16000L)
-    public void testOrderedMaxParallel2_fast() throws Exception {
-        doTestMaxParallel(50, 123, DURATION);
+    public void testRoundRobinMaxParallel_fast() throws Exception {
+        doTestMaxParallel(200, 123, DURATION);
 
-        assertEquals(1, max);
+        assertTrue(max <= MAX_PARALLEL);
     }
 }

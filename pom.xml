@@ -67,11 +67,6 @@
             <!-- plain unit tests -->
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>**/it/**</exclude>
-                    </excludes>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -110,9 +105,6 @@
                     <systemPropertyVariables combine.children="append">
                         <bundle.filename>${basedir}/target/${project.build.finalName}.jar</bundle.filename>
                     </systemPropertyVariables>
-                    <includes>
-                        <include>**/it/*</include>
-                    </includes>
                 </configuration>
             </plugin>
             <plugin>

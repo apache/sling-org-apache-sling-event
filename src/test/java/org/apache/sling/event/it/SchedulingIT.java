@@ -41,7 +41,7 @@ import static org.ops4j.pax.exam.CoreOptions.options;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class SchedulingTest extends AbstractJobHandlingTest {
+public class SchedulingIT extends AbstractJobHandlingIT {
 
     private static final String TOPIC = "job/scheduled/topic";
 

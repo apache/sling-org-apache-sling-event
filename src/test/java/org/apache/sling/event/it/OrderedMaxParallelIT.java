@@ -18,12 +18,8 @@
  */
 package org.apache.sling.event.it;
 
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.sling.event.jobs.Job;
-import org.apache.sling.event.jobs.ScheduledJobInfo;
-import org.apache.sling.event.jobs.consumer.JobConsumer;
+import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
+import org.apache.sling.event.jobs.QueueConfiguration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -33,50 +29,42 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerMethod;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class TimedJobsTest extends AbstractJobHandlingTest {
+public class OrderedMaxParallelIT extends AbstractMaxParallelIT {
 
-    private static final String TOPIC = "timed/test/topic";
+    private static final int DURATION = 40;
 
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration()
+            baseConfiguration(),
+            // create ordered test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, "ordered-max-parallel")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .put(ConfigurationConstants.PROP_MAX_PARALLEL, 1)
+                .asOption()
         );
     }
 
-    @Test(timeout = DEFAULT_TEST_TIMEOUT)
-    public void testTimedJob() throws Exception {
-        final AtomicInteger counter = new AtomicInteger();
+    @Test(timeout=DURATION * 16000L)
+    public void testOrderedMaxParallel_slow() throws Exception {
+        doTestMaxParallel(12, 1717, DURATION);
 
-        this.registerJobConsumer(TOPIC, new JobConsumer() {
-
-            @Override
-            public JobResult process(final Job job) {
-                if ( job.getTopic().equals(TOPIC) ) {
-                    counter.incrementAndGet();
-                }
-                return JobResult.OK;
-            }
-
-        });
-
-        final Date d = new Date();
-        d.setTime(System.currentTimeMillis() + 3000); // run in 3 seconds
-
-        // create scheduled job
-        final ScheduledJobInfo info = jobManager.createJob(TOPIC).schedule().at(d).add();
-        assertNotNull(info);
-
-        while ( counter.get() == 0 ) {
-            this.sleep(1000);
-        }
-        assertEquals(0, jobManager.getScheduledJobs().size()); // job is not scheduled anymore
-        info.unschedule();
+        assertEquals(1, max);
     }
 
+    @Test(timeout=DURATION * 16000L)
+    public void testOrderedMaxParallel2_fast() throws Exception {
+        doTestMaxParallel(50, 123, DURATION);
+
+        assertEquals(1, max);
+    }
 }

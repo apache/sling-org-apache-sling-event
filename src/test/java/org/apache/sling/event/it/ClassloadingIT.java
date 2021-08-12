@@ -53,7 +53,7 @@ import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfigurati
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class ClassloadingTest extends AbstractJobHandlingTest {
+public class ClassloadingIT extends AbstractJobHandlingIT {
 
     private static final int CONDITION_INTERVAL_MILLIS = 50;
     private static final int CONDITION_TIMEOUT_SECONDS = 5;

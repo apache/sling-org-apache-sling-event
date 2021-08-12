@@ -59,7 +59,7 @@ import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfigurati
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class ChaosTest extends AbstractJobHandlingTest {
+public class ChaosIT extends AbstractJobHandlingIT {
 
     /** Duration for firing jobs in seconds. */
     private static final long DURATION = 1 * 60;

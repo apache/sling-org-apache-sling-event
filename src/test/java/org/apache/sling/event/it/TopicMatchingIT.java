@@ -39,7 +39,7 @@ import static org.ops4j.pax.exam.CoreOptions.options;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class TopicMatchingTest extends AbstractJobHandlingTest {
+public class TopicMatchingIT extends AbstractJobHandlingIT {
 
     public static final String TOPIC = "sling/test/a";
 

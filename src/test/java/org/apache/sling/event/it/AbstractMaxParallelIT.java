@@ -49,7 +49,7 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractMaxParallelTest extends AbstractJobHandlingTest {
+public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
     private static final int BACKGROUND_LOAD_DELAY_SECONDS = 1;
 

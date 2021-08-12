@@ -38,7 +38,7 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 
-public abstract class AbstractJobHandlingTest extends JobsTestSupport {
+public abstract class AbstractJobHandlingIT extends JobsTestSupport {
 
     protected static final int DEFAULT_TEST_TIMEOUT = 1000*60*5;
 

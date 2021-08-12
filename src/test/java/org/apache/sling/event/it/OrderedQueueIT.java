@@ -48,7 +48,7 @@ import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfigurati
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
-public class OrderedQueueTest extends AbstractJobHandlingTest {
+public class OrderedQueueIT extends AbstractJobHandlingIT {
 
     @Configuration
     public Option[] configuration() {
