@@ -24,14 +24,12 @@ import javax.inject.Inject;
 
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.jobs.JobManager;
-import org.apache.sling.jcr.api.SlingRepository;
 import org.apache.sling.testing.paxexam.TestSupport;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.options.ModifiableCompositeOption;
 import org.ops4j.pax.exam.options.OptionalCompositeOption;
 import org.ops4j.pax.exam.options.extra.VMOption;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,12 +44,6 @@ import static org.ops4j.pax.exam.CoreOptions.when;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
 
 public abstract class JobsTestSupport extends TestSupport {
-
-    @Inject
-    protected SlingRepository slingRepository;
-
-    @Inject
-    protected ConfigurationAdmin configAdmin;
 
     @Inject
     protected BundleContext bundleContext;
