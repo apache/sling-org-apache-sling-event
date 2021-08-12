@@ -68,7 +68,7 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
             final EventHandler handler) {
         final Dictionary<String, Object> props = new Hashtable<>();
         props.put(EventConstants.EVENT_TOPIC, topic);
-        final ServiceRegistration<EventHandler> reg = this.bc.registerService(EventHandler.class,
+        final ServiceRegistration<EventHandler> reg = this.bundleContext.registerService(EventHandler.class,
                 handler, props);
         this.registrations.add(reg);
         return reg;
@@ -77,7 +77,7 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
     protected long getConsumerChangeCount() {
         long result = -1;
         try {
-            final Collection<ServiceReference<PropertyProvider>> refs = this.bc.getServiceReferences(PropertyProvider.class, "(changeCount=*)");
+            final Collection<ServiceReference<PropertyProvider>> refs = this.bundleContext.getServiceReferences(PropertyProvider.class, "(changeCount=*)");
             log.info("GetConsumerChangeCount refs.size = {}", refs.size());
             if ( !refs.isEmpty() ) {
                 result = refs.stream().mapToLong(r -> (Long) r.getProperty("changeCount")).max().getAsLong();
@@ -117,7 +117,7 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
         long cc = this.getConsumerChangeCount();
         final Dictionary<String, Object> props = new Hashtable<>();
         props.put(JobConsumer.PROPERTY_TOPICS, topic);
-        final ServiceRegistration<JobConsumer> reg = this.bc.registerService(JobConsumer.class,
+        final ServiceRegistration<JobConsumer> reg = this.bundleContext.registerService(JobConsumer.class,
                 handler, props);
         this.registrations.add(reg);
         log.info("registered JobConsumer for topic {} and changecount={}",topic, cc);
@@ -128,7 +128,7 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
 
     protected void registerTopologyListener() {
         final Dictionary<String, Object> props = new Hashtable<>();
-        final ServiceRegistration<TopologyEventListener> reg = this.bc.registerService(TopologyEventListener.class,
+        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(TopologyEventListener.class,
                 new TopologyEventListener() {
 
                     @Override
@@ -148,7 +148,7 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
         long cc = this.getConsumerChangeCount();
         final Dictionary<String, Object> props = new Hashtable<>();
         props.put(JobConsumer.PROPERTY_TOPICS, topic);
-        final ServiceRegistration<JobExecutor> reg = this.bc.registerService(JobExecutor.class,
+        final ServiceRegistration<JobExecutor> reg = this.bundleContext.registerService(JobExecutor.class,
                 handler, props);
         this.registrations.add(reg);
         this.waitConsumerChangeCount(cc + 1);

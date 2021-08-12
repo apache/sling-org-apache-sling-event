@@ -54,7 +54,7 @@ public abstract class JobsTestSupport extends TestSupport {
     protected ConfigurationAdmin configAdmin;
 
     @Inject
-    protected BundleContext bc;
+    protected BundleContext bundleContext;
 
     @Inject
     protected JobManager jobManager;

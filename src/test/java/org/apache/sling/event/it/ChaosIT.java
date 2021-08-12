@@ -231,7 +231,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
             final AtomicLong finishedThreads) {
         final List<TopologyView> views = new ArrayList<>();
         // register topology listener
-        final ServiceRegistration<TopologyEventListener> reg = this.bc.registerService(TopologyEventListener.class, new TopologyEventListener() {
+        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(TopologyEventListener.class, new TopologyEventListener() {
 
             @Override
             public void handleTopologyEvent(final TopologyEvent event) {
@@ -247,17 +247,17 @@ public class ChaosIT extends AbstractJobHandlingIT {
         final TopologyView view = views.get(0);
 
         try {
-            final Collection<ServiceReference<TopologyEventListener>> refs = this.bc.getServiceReferences(TopologyEventListener.class, null);
+            final Collection<ServiceReference<TopologyEventListener>> refs = this.bundleContext.getServiceReferences(TopologyEventListener.class, null);
             assertNotNull(refs);
             assertFalse(refs.isEmpty());
             TopologyEventListener found = null;
             for(final ServiceReference<TopologyEventListener> ref : refs) {
-                final TopologyEventListener listener = this.bc.getService(ref);
+                final TopologyEventListener listener = this.bundleContext.getService(ref);
                 if ( listener != null && listener.getClass().getName().equals("org.apache.sling.event.impl.jobs.config.TopologyHandler") ) {
                     found = listener;
                     break;
                 }
-                bc.ungetService(ref);
+                bundleContext.ungetService(ref);
             }
             assertNotNull(found);
             final TopologyEventListener tel = found;
