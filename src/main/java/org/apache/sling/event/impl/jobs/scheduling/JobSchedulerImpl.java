@@ -244,7 +244,10 @@ public class JobSchedulerImpl
                     final Map<String, Serializable> config = new HashMap<>();
                     config.put(PROPERTY_READ_JOB, info);
                     config.put(PROPERTY_SCHEDULE_INDEX, index);
-                    this.scheduler.schedule(this, options.name(name).config(config).canRunConcurrently(false));
+                    this.scheduler.schedule(this, options.name(name)
+                                                         .config(config)
+                                                         .canRunConcurrently(false)
+                                                         .threadPoolName(ScheduleInfoImpl.EVENTING_THREADPOOL_NAME));
                     index++;
                 }
             } else {
