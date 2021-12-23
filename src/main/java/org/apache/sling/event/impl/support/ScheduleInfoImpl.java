@@ -61,6 +61,8 @@ public class ScheduleInfoImpl implements ScheduleInfo, Serializable {
     public static ScheduleInfoImpl DAILY(final int hour, final int minute) {
         return new ScheduleInfoImpl(ScheduleType.DAILY, -1, hour, minute, null, -1, null);
     }
+    
+    public static final String EVENTING_THREADPOOL_NAME = "org-apache-sling-event";
 
     private final ScheduleType scheduleType;
 

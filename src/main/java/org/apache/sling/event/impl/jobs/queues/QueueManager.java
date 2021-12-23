@@ -48,6 +48,7 @@ import org.apache.sling.event.impl.jobs.jmx.QueuesMBeanImpl;
 import org.apache.sling.event.impl.jobs.stats.StatisticsManager;
 import org.apache.sling.event.impl.support.Environment;
 import org.apache.sling.event.impl.support.ResourceHelper;
+import org.apache.sling.event.impl.support.ScheduleInfoImpl;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.Queue;
@@ -74,6 +75,7 @@ import org.slf4j.LoggerFactory;
            property={
                    Scheduler.PROPERTY_SCHEDULER_PERIOD + ":Long=60",
                    Scheduler.PROPERTY_SCHEDULER_CONCURRENT + ":Boolean=false",
+                   Scheduler.PROPERTY_SCHEDULER_THREAD_POOL + "=" + ScheduleInfoImpl.EVENTING_THREADPOOL_NAME,
                    EventConstants.EVENT_TOPIC + "=" + NotificationConstants.TOPIC_JOB_ADDED,
                    Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
            })
