@@ -67,6 +67,7 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -74,6 +75,9 @@ import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 
 
 /**
@@ -91,6 +95,8 @@ import org.slf4j.LoggerFactory;
     })
 public class JobManagerImpl
     implements JobManager, EventHandler, Runnable {
+    
+    private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "totalScheduledJobs";
 
     /** Default logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -116,6 +122,10 @@ public class JobManagerImpl
 
     @Reference
     private StatisticsManager statisticsManager;
+    
+    
+    @Reference(target = "(name=sling)", cardinality = ReferenceCardinality.OPTIONAL)
+    private MetricRegistry metricRegistry;
 
     @Reference
     private QueueManager qManager;
@@ -134,6 +144,10 @@ public class JobManagerImpl
     @Activate
     protected void activate(final BundleContext ctx, final Map<String, Object> props) throws LoginException {
         this.jobScheduler = new org.apache.sling.event.impl.jobs.scheduling.JobSchedulerImpl(this.configuration, this.scheduler, this);
+        if (metricRegistry != null) {
+            Gauge<Integer> sup = () -> jobScheduler.getTotalNumberOfScheduledJobs();
+            metricRegistry.gauge(GAUGE_TOTAL_SCHEDULED_JOBS, () -> sup);
+        }
         this.maintenanceTask = new CleanUpTask(this.configuration, this.jobScheduler);
 
         final Dictionary<String, Object> regProps = new Hashtable<>();
@@ -160,7 +174,9 @@ public class JobManagerImpl
             this.changeListenerReg.unregister();
             this.changeListenerReg = null;
         }
-
+        if (metricRegistry != null) {
+            metricRegistry.remove(GAUGE_TOTAL_SCHEDULED_JOBS);
+        }
         this.jobScheduler.deactivate();
 
         this.maintenanceTask = null;

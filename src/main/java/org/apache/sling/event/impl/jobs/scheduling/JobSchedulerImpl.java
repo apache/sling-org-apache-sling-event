@@ -455,6 +455,14 @@ public class JobSchedulerImpl
         }
         return jobs;
     }
+    
+    /**
+     * Provide the total number of jobs registered in the system, irrespective of topics
+     * @return the total number of scheduled jobs
+     */
+    public int getTotalNumberOfScheduledJobs() {
+       return this.scheduledJobs.size(); 
+    }
 
     /**
      * Change the suspended flag for a scheduled job
