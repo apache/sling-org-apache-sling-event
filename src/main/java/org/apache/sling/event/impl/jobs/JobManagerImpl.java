@@ -96,7 +96,7 @@ import com.codahale.metrics.MetricRegistry;
 public class JobManagerImpl
     implements JobManager, EventHandler, Runnable {
     
-    private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "totalScheduledJobs";
+    private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "event.scheduledJobs.count";
 
     /** Default logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());

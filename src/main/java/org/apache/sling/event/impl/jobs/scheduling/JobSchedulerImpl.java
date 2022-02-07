@@ -461,7 +461,9 @@ public class JobSchedulerImpl
      * @return the total number of scheduled jobs
      */
     public int getTotalNumberOfScheduledJobs() {
-       return this.scheduledJobs.size(); 
+        synchronized (this.scheduledJobs) {
+            return this.scheduledJobs.size(); 
+        }
     }
 
     /**
