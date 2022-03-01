@@ -48,9 +48,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static com.jayway.jsonpath.matchers.JsonPathMatchers.hasJsonPath;
+import static com.jayway.jsonpath.matchers.JsonPathMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 public class InventoryPluginTest extends JsonTestBase {
@@ -88,6 +87,7 @@ public class InventoryPluginTest extends JsonTestBase {
 
         QueueConfiguration mockConfiguration = Mockito.mock(QueueConfiguration.class);
         Mockito.when(mockConfiguration.getType()).thenReturn(QueueConfiguration.Type.ORDERED);
+        Mockito.when(mockConfiguration.getTopics()).thenReturn(new String[]{"topic-1", "topic-2"});
         Mockito.when(mockQueue.getConfiguration()).thenReturn(mockConfiguration);
         Mockito.when(jobManager.getQueues()).thenReturn(new ArrayList<>(Arrays.asList(mockQueue)));
 
@@ -187,7 +187,7 @@ public class InventoryPluginTest extends JsonTestBase {
                 put("$.queues[0].statistics.averageWaitingTime", 0);
                 put("$.queues[0].configuration", null);
                 put("$.queues[0].configuration.type", "ORDERED");
-                put("$.queues[0].configuration.topics", "[]");
+                put("$.queues[0].configuration.topics", new String[]{"topic-1", "topic-2"});
                 put("$.queues[0].configuration.maxParallel", 0);
                 put("$.queues[0].configuration.maxRetries", 0);
                 put("$.queues[0].configuration.retryDelayInMs", 0);
@@ -217,7 +217,13 @@ public class InventoryPluginTest extends JsonTestBase {
 
             expectedJsonPaths.forEach((k, v) -> {
                 if (v != null) {
-                    assertThat(json, hasJsonPath(k, equalTo(v)));
+                    if (v instanceof String[]) {
+                        for (String val : (String[]) v) {
+                            assertThat(json, isJson(withJsonPath(k, hasItem(val))));
+                        }
+                    } else {
+                        assertThat(json, hasJsonPath(k, equalTo(v)));
+                    }
                 } else {
                     assertThat(json, hasJsonPath(k));
                 }
