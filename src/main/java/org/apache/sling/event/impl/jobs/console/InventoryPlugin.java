@@ -35,7 +35,6 @@ import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.event.impl.jobs.JobConsumerManager;
 import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
-import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
 import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.Queue;
@@ -442,7 +441,7 @@ public class InventoryPlugin implements InventoryPrinter {
             pw.printf("      \"stateInfo\" : \"%s\",%n", q.getStateInfo());
             pw.println("      \"configuration\" : {");
             pw.printf("        \"type\" : \"%s\",%n", c.getType());
-            pw.printf("        \"topics\" : \"%s\",%n", formatArrayAsJson(c.getTopics()));
+            pw.printf("        \"topics\" : %s,%n", formatArrayAsJson(c.getTopics()));
             pw.printf("        \"maxParallel\" : %s,%n", c.getMaxParallel());
             pw.printf("        \"maxRetries\" : %s,%n", c.getMaxRetries());
             pw.printf("        \"retryDelayInMs\" : %s,%n", c.getRetryDelayInMs());
