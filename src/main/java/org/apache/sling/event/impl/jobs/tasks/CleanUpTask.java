@@ -18,6 +18,7 @@
  */
 package org.apache.sling.event.impl.jobs.tasks;
 
+import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -31,9 +32,11 @@ import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Maintenance task...
@@ -41,6 +44,12 @@ import java.util.Iterator;
  * In the default configuration, this task runs every minute
  */
 public class CleanUpTask {
+
+    /** Marker property for last checked */
+    private static final String PROPERTY_LAST_CHECKED = "lastCheckedForCleanup";
+
+    /** Time to keep empty folders, defaults to 1 day */
+    private static final long KEEP_DURATION = 24*60*60*1000;
 
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -87,6 +96,9 @@ public class CleanUpTask {
                 this.fullEmptyFolderCleanup(topologyCapabilities, this.configuration.getLocalJobsPath());
                 if ( cleanUpUnassignedPath != null ) {
                     this.fullEmptyFolderCleanup(topologyCapabilities, cleanUpUnassignedPath);
+                }
+                if ( topologyCapabilities.isLeader() ) {
+                    this.cleanUpInstanceIdFolders(topologyCapabilities, this.configuration.getAssginedJobsPath());
                 }
             } else if ( schedulerRuns % 5 == 0 ) { // simple clean up every 5 minutes
                 this.simpleEmptyFolderCleanup(topologyCapabilities, this.configuration.getLocalJobsPath());
@@ -336,6 +348,65 @@ public class CleanUpTask {
         } catch (final PersistenceException pe) {
             // in the case of an error, we just log this as a warning
             this.logger.warn("Exception during job resource tree cleanup.", pe);
+        } finally {
+            resolver.close();
+        }
+    }
+
+
+    /**
+     * Clean up empty instance id folders
+     * @param assginedJobsPath The root path for the assigned jobs
+     */
+    private void cleanUpInstanceIdFolders(final TopologyCapabilities caps, final String assginedJobsPath) {
+        final ResourceResolver resolver = this.configuration.createResourceResolver();
+        if ( resolver == null ) {
+            return;
+        }
+        try {
+            final Resource baseResource = resolver.getResource(assginedJobsPath);
+            // sanity check - should never be null
+            if ( baseResource != null ) {
+                final List<Resource> toDelete = new ArrayList<>();
+                // iterate over children == instance id folders
+                for(final Resource r : baseResource.getChildren()) {
+                    final String instanceId = r.getName();
+                    if ( !caps.isActive(instanceId) ) {
+                        // is the resource empty?
+                        if ( !r.listChildren().hasNext() ) {
+                            // check for timestamp
+                            final long timestamp = r.getValueMap().get(PROPERTY_LAST_CHECKED, -1L);
+                            if ( timestamp > 0 && (timestamp + KEEP_DURATION <= System.currentTimeMillis()) ) {
+                                toDelete.add(r);
+                            } else if ( timestamp == -1 ) {
+                                final ModifiableValueMap mvm = r.adaptTo(ModifiableValueMap.class);
+                                if ( mvm != null ) {
+                                    mvm.put(PROPERTY_LAST_CHECKED, System.currentTimeMillis());
+                                    resolver.commit();
+                                }
+                            }
+                        } else {
+                            // not empty, check if timestamp exists
+                            if ( r.getValueMap().containsKey(PROPERTY_LAST_CHECKED) ) {
+                                final ModifiableValueMap mvm = r.adaptTo(ModifiableValueMap.class);
+                                if ( mvm != null ) {
+                                    mvm.remove(PROPERTY_LAST_CHECKED);
+                                    resolver.commit();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // remove obsolete nodes
+                for(final Resource r : toDelete) {
+                    resolver.delete(r);
+                    resolver.commit();
+                }
+            }
+        } catch (final PersistenceException e) {
+            // in the case of an error, we just log this as a warning
+            this.logger.warn("Exception during job resource tree cleanup.", e);
         } finally {
             resolver.close();
         }
