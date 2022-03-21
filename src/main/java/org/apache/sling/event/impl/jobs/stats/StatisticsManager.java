@@ -141,21 +141,21 @@ public class StatisticsManager {
         }
 
         if ( state == InternalJobState.CANCELLED ) {
-            ts.addCancelled();
+            ts.cancelledJob();;
             this.globalStatistics.cancelledJob();
             if ( queueStats != null ) {
                 queueStats.cancelledJob();
             }
 
         } else if ( state == InternalJobState.FAILED ) {
-            ts.addFailed();
+            ts.failedJob();
             this.globalStatistics.failedJob();
             if ( queueStats != null ) {
                 queueStats.failedJob();
             }
 
         } else if ( state == InternalJobState.SUCCEEDED ) {
-            ts.addFinished(processingTime);
+            ts.finishedJob(processingTime);
             this.globalStatistics.finishedJob(processingTime);
             if ( queueStats != null ) {
                 queueStats.finishedJob(processingTime);
@@ -174,7 +174,7 @@ public class StatisticsManager {
             ts = (TopicStatisticsImpl)this.topicStatistics.get(topic);
         }
 
-        ts.addActivated(queueTime);
+        ts.addActive(queueTime);
         this.globalStatistics.addActive(queueTime);
         if ( queueStats != null ) {
             queueStats.addActive(queueTime);
