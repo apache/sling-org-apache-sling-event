@@ -26,6 +26,7 @@ import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
 import org.apache.sling.event.impl.jobs.queues.ResultBuilderImpl;
 import org.apache.sling.event.impl.jobs.scheduling.JobSchedulerImpl;
+import org.apache.sling.event.impl.support.ResourceHelper;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.event.jobs.consumer.JobExecutionResult;
@@ -50,6 +51,9 @@ public class CleanUpTask {
 
     /** Time to keep empty folders, defaults to 1 day */
     private static final long KEEP_DURATION = 24*60*60*1000;
+
+    /** Number of id folders to be removed on each run */
+    private static final long MAX_REMOVE_ID_FOLDERS = 8;
 
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -370,14 +374,22 @@ public class CleanUpTask {
                 final List<Resource> toDelete = new ArrayList<>();
                 // iterate over children == instance id folders
                 for(final Resource r : baseResource.getChildren()) {
+                    if ( !caps.isActive() ) {
+                        // shutdown, stop check
+                        toDelete.clear();
+                        break;
+                    }
                     final String instanceId = r.getName();
                     if ( !caps.isActive(instanceId) ) {
                         // is the resource empty?
-                        if ( !r.listChildren().hasNext() ) {
+                        if ( !hasJobs(caps, r) ) {
                             // check for timestamp
                             final long timestamp = r.getValueMap().get(PROPERTY_LAST_CHECKED, -1L);
                             if ( timestamp > 0 && (timestamp + KEEP_DURATION <= System.currentTimeMillis()) ) {
                                 toDelete.add(r);
+                                if ( toDelete.size() == MAX_REMOVE_ID_FOLDERS ) {
+                                    break;
+                                }
                             } else if ( timestamp == -1 ) {
                                 final ModifiableValueMap mvm = r.adaptTo(ModifiableValueMap.class);
                                 if ( mvm != null ) {
@@ -400,8 +412,10 @@ public class CleanUpTask {
 
                 // remove obsolete nodes
                 for(final Resource r : toDelete) {
-                    resolver.delete(r);
-                    resolver.commit();
+                    if ( caps.isActive() ) {
+                        resolver.delete(r);
+                        resolver.commit();    
+                    }
                 }
             }
         } catch (final PersistenceException e) {
@@ -410,5 +424,28 @@ public class CleanUpTask {
         } finally {
             resolver.close();
         }
+    }
+
+    /**
+     * Check if the folder is empty
+     * @param caps The capabilities
+     * @param root The root resource/folder
+     * @return {@code true} if there are still jobs
+     */
+    private boolean hasJobs(final TopologyCapabilities caps, final Resource root) {
+        boolean result = false;
+
+        final Iterator<Resource> iter = root.listChildren();
+        while ( !result && caps.isActive() && iter.hasNext() ) {
+            final Resource child = iter.next();
+            if ( ResourceHelper.RESOURCE_TYPE_JOB.equals(child.getResourceType()) ) {
+                result = true;
+            } else {
+                result = hasJobs(caps, child);
+            }
+        }
+
+        // on shutdown, return true to avoid removal while shutdown
+        return !caps.isActive() || result;
     }
 }
