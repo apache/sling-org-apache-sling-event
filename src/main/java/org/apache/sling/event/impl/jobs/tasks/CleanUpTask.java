@@ -33,9 +33,11 @@ import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -67,12 +69,31 @@ public class CleanUpTask {
     /** We count the scheduler runs. */
     private volatile long schedulerRuns;
 
+    /** specific clock instance that tests can the use to fiddle around with */
+    private Clock clock = Clock.systemDefaultZone();
+
     /**
      * Constructor
      */
     public CleanUpTask(final JobManagerConfiguration config, final JobSchedulerImpl jobScheduler) {
         this.configuration = config;
         this.jobScheduler = jobScheduler;
+    }
+
+    /** test hook to overwrite the default clock and fiddle with it */
+    void setClock(Clock clock) {
+        this.clock = clock;
+    }
+
+    private final Calendar getCalendarInstance() {
+        Calendar calendar = Calendar.getInstance();
+        // explicitly set the time based on the clock to allow test fiddlings
+        calendar.setTimeInMillis(clock.millis());
+        return calendar;
+    }
+
+    private final long currentTimeMillis() {
+        return clock.millis();
     }
 
     /**
@@ -115,7 +136,7 @@ public class CleanUpTask {
 
         if (this.configuration.getHistoryCleanUpRemovedJobs() > 0 &&
                 schedulerRuns % 60 == 1) {
-            Calendar removeDate = Calendar.getInstance();
+            Calendar removeDate = getCalendarInstance();
             removeDate.add(Calendar.MINUTE, - this.configuration.getHistoryCleanUpRemovedJobs());
             this.historyCleanUpRemovedJobs(removeDate);
         }
@@ -187,7 +208,7 @@ public class CleanUpTask {
         this.logger.debug("Cleaning up job resource tree: looking for empty folders");
         final ResourceResolver resolver = this.configuration.createResourceResolver();
         try {
-            final Calendar cleanUpDate = Calendar.getInstance();
+            final Calendar cleanUpDate = getCalendarInstance();
             // go back five minutes
             cleanUpDate.add(Calendar.MINUTE, -5);
 
@@ -255,7 +276,7 @@ public class CleanUpTask {
             final Resource baseResource = resolver.getResource(basePath);
             // sanity check - should never be null
             if ( baseResource != null ) {
-                final Calendar now = Calendar.getInstance();
+                final Calendar now = getCalendarInstance();
                 final int removeYear = now.get(Calendar.YEAR);
                 final int removeMonth = now.get(Calendar.MONTH) + 1;
                 final int removeDay = now.get(Calendar.DAY_OF_MONTH);
@@ -385,7 +406,8 @@ public class CleanUpTask {
                         if ( !hasJobs(caps, r) ) {
                             // check for timestamp
                             final long timestamp = r.getValueMap().get(PROPERTY_LAST_CHECKED, -1L);
-                            if ( timestamp > 0 && (timestamp + KEEP_DURATION <= System.currentTimeMillis()) ) {
+                            final long now = currentTimeMillis();
+                            if ( timestamp > 0 && (timestamp + KEEP_DURATION <= now) ) {
                                 toDelete.add(r);
                                 if ( toDelete.size() == MAX_REMOVE_ID_FOLDERS ) {
                                     break;
@@ -393,7 +415,7 @@ public class CleanUpTask {
                             } else if ( timestamp == -1 ) {
                                 final ModifiableValueMap mvm = r.adaptTo(ModifiableValueMap.class);
                                 if ( mvm != null ) {
-                                    mvm.put(PROPERTY_LAST_CHECKED, System.currentTimeMillis());
+                                    mvm.put(PROPERTY_LAST_CHECKED, now);
                                     resolver.commit();
                                 }
                             }
