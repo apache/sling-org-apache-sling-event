@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>org.apache.sling.event</artifactId>
-    <version>4.3.2</version>
+    <version>4.3.3-SNAPSHOT</version>
 
     <name>Apache Sling Event</name>
     <description>Support for eventing.</description>
@@ -49,7 +49,7 @@
         <bundle.file.name>${bundle.build.dir}/${project.build.finalName}.jar</bundle.file.name>
         <min.port>37000</min.port>
         <max.port>37999</max.port>
-        <project.build.outputTimestamp>2022-05-19T05:51:40Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2022-05-19T07:49:58Z</project.build.outputTimestamp>
     </properties>
 
 
