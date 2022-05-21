@@ -287,6 +287,9 @@ public class JobManagerConfiguration {
     /**
      * Create a new resource resolver for reading and writing the resource tree.
      * The resolver needs to be closed by the client.
+     * This ResourceResolver provides read and write access to all resources relevant for the event
+     * and job handling.
+     * 
      * @return A resource resolver or {@code null} if the component is already deactivated.
      * @throws RuntimeException if the resolver can't be created.
      */

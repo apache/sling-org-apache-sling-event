@@ -257,11 +257,11 @@ public class JobHandler {
      * Helper method to execute a function on the job resource. Performs all necessary checks and validations
      * so that the function does not need to perform any null checks and such.
      * 
-     * The second parameter is a ModifiableValueMap, so both a readonly and a read/write case
-     * can be implemented.
-     * 
+     * The second parameter is a ModifiableValueMap (non-null) adapted from the JobResource,
+     * so both a read-only and a read/write case can be implemented.
+     *
      * @param func the function to execute
-     * @return a boolean status
+     * @return the status (which is passed thru from func
      */
     private boolean withJobResource (BiFunction<Resource,ModifiableValueMap,Boolean> func) {
         try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
@@ -269,10 +269,12 @@ public class JobHandler {
             if (jobResource == null) {
                 this.configuration.getMainLogger().debug("No job resource found at {}", job.getResourcePath());
                 return false;  
-            } 
+            }
+            // This implicitly assumes that the ResourceResolver provided by the configuration allows 
+            // r/w access to the jobResource.
             ModifiableValueMap mvm = jobResource.adaptTo(ModifiableValueMap.class);
             if (mvm == null){
-                this.configuration.getMainLogger().debug("Cannot adapt resource {} to ModifiableValueMap", job.getResourcePath());
+                this.configuration.getMainLogger().debug("Cannot adapt resource {} to ModifiableValueMap, no write permissions?", job.getResourcePath());
                 return false;  
             }
             return func.apply(jobResource,mvm);
