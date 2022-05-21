@@ -18,17 +18,10 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Dictionary;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -42,16 +35,25 @@ import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
 import org.apache.sling.testing.tools.retry.RetryLoop;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
+
 @RunWith(PaxExam.class)
-public class ClassloadingTest extends AbstractJobHandlingTest {
+@ExamReactorStrategy(PerMethod.class)
+public class ClassloadingIT extends AbstractJobHandlingIT {
 
     private static final int CONDITION_INTERVAL_MILLIS = 50;
     private static final int CONDITION_TIMEOUT_SECONDS = 5;
@@ -59,26 +61,17 @@ public class ClassloadingTest extends AbstractJobHandlingTest {
     private static final String QUEUE_NAME = "cltest";
     private static final String TOPIC = "sling/cltest";
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        // create ignore test queue
-        final org.osgi.service.cm.Configuration orderedConfig = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        final Dictionary<String, Object> orderedProps = new Hashtable<String, Object>();
-        orderedProps.put(ConfigurationConstants.PROP_NAME, QUEUE_NAME);
-        orderedProps.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name());
-        orderedProps.put(ConfigurationConstants.PROP_TOPICS, TOPIC);
-        orderedConfig.update(orderedProps);
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration(),
+            // create ignore test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, QUEUE_NAME)
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
+                .put(ConfigurationConstants.PROP_TOPICS, TOPIC)
+                .asOption()
+        );
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
@@ -103,7 +96,6 @@ public class ClassloadingTest extends AbstractJobHandlingTest {
                         latch.countDown();
                     }
                 });
-        final JobManager jobManager = this.getJobManager();
 
         final List<String> list = new ArrayList<String>();
         list.add("1");
@@ -160,7 +152,6 @@ public class ClassloadingTest extends AbstractJobHandlingTest {
                         finishedEvents.add(event);
                     }
                 });
-        final JobManager jobManager = this.getJobManager();
 
         // dao is an invisible class for the dynamic class loader as it is not public
         // therefore scheduling this job should fail!

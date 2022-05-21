@@ -18,18 +18,9 @@
  */
 package org.apache.sling.event.it;
 
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Dictionary;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,41 +35,46 @@ import org.apache.sling.event.jobs.consumer.JobConsumer;
 import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.apache.sling.event.jobs.consumer.JobExecutor;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
 @RunWith(PaxExam.class)
-public class JobHandlingTest extends AbstractJobHandlingTest {
+@ExamReactorStrategy(PerMethod.class)
+public class JobHandlingIT extends AbstractJobHandlingIT {
 
     public static final String TOPIC = "sling/test";
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-        // create test queue
-        final org.osgi.service.cm.Configuration config = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        Dictionary<String, Object> props = new Hashtable<String, Object>();
-        props.put(ConfigurationConstants.PROP_NAME, "test");
-        props.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name());
-        props.put(ConfigurationConstants.PROP_TOPICS, new String[] {TOPIC, TOPIC + "2"});
-        props.put(ConfigurationConstants.PROP_RETRIES, 2);
-        props.put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L);
-        config.update(props);
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration(),
+            // create test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, "test")
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
+                .put(ConfigurationConstants.PROP_TOPICS, new String[]{TOPIC, TOPIC + "2"})
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .asOption()
+        );
     }
 
     /**
@@ -99,7 +95,7 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
                     }
                  });
 
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         assertTrue("No event received in the given time.", cb.block(5));
         cb.reset();
         assertFalse("Unexpected event received in the given time.", cb.block(5));
@@ -123,7 +119,7 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
                     }
                 });
 
-        this.getJobManager().addJob(TOPIC, null);
+        jobManager.addJob(TOPIC, null);
         assertTrue("No event received in the given time.", cb.block(5));
         cb.reset();
         assertFalse("Unexpected event received in the given time.", cb.block(5));
@@ -152,13 +148,13 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
         // we start "some" jobs
         final int COUNT = 300;
         for(int i = 0; i < COUNT; i++ ) {
-            this.getJobManager().addJob(TOPIC, null);
+            jobManager.addJob(TOPIC, null);
         }
         while ( count.get() < COUNT ) {
             this.sleep(50);
         }
         assertEquals("Finished count", COUNT, count.get());
-        assertEquals("Finished count", COUNT, this.getJobManager().getStatistics().getNumberOfFinishedJobs());
+        assertEquals("Finished count", COUNT, jobManager.getStatistics().getNumberOfFinishedJobs());
     }
 
     /**
@@ -186,7 +182,6 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
         jobPropertiesAsArray[0] = jobProperties;
 
         // create job
-        final JobManager jobManager = this.getJobManager();
         jobManager.addJob(TOPIC, jobProperties);
         cb.block();
 
@@ -231,7 +226,6 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
                         return JobResult.OK;
                     }
                 });
-        final JobManager jobManager = this.getJobManager();
         final Job j = jobManager.addJob(TOPIC, null);
         cb.block();
 
@@ -270,7 +264,6 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
                     }
                 });
 
-        final JobManager jobManager = this.getJobManager();
         final Job job = jobManager.addJob(TOPIC, null);
 
         assertTrue("No event received in the given time.", cb.block(5));
@@ -374,8 +367,6 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
                     }
                 });
 
-        final JobManager jobManager = this.getJobManager();
-
         jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"1"));
         jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"2"));
         jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"3"));
@@ -404,19 +395,19 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
     public void testNoJobProcessor() throws Exception {
         final AtomicInteger count = new AtomicInteger(0);
 
+        log.info("testNoJobProcessor : registering job consumer");
         this.registerJobConsumer(TOPIC,
                 new JobConsumer() {
 
             @Override
             public JobResult process(final Job job) {
-                count.incrementAndGet();
-
+                final int got = count.incrementAndGet();
+                log.info("testNoJobProcessor.process : got " + got + " jobs");
                 return JobResult.OK;
             }
          });
 
-        final JobManager jobManager = this.getJobManager();
-
+        log.info("testNoJobProcessor : starting 20 jobs, 10 on " + TOPIC + " and 10 on " + TOPIC + "2");
         // we start 20 jobs, every second job has no processor
         final int COUNT = 20;
         for(int i = 0; i < COUNT; i++ ) {
@@ -424,6 +415,8 @@ public class JobHandlingTest extends AbstractJobHandlingTest {
 
             jobManager.addJob(jobTopic, null);
         }
+
+        log.info("testNoJobProcessor : waiting for jobs to be received ...");
         while ( jobManager.getStatistics().getNumberOfFinishedJobs() < COUNT / 2) {
             this.sleep(50);
         }

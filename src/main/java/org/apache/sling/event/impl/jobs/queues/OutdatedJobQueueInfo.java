@@ -16,27 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.sling.event.impl.jobs.stats;
+package org.apache.sling.event.impl.jobs.queues;
 
-import org.apache.sling.event.jobs.TopicStatistics;
+import java.util.concurrent.Semaphore;
 
 /**
- * Implementation of the statistics.
+ * Encapsulates data required to survive queue outdating
  */
-public class TopicStatisticsImpl extends BaseStatisticsImpl implements TopicStatistics {
+class OutdatedJobQueueInfo {
 
-    private final String topic;
+    private final Semaphore available;
+    private final int maxParallel;
+    private final Semaphore drainage;
 
-    /** Constructor. */
-    public TopicStatisticsImpl(final String topic) {
-        this.topic = topic;
+    OutdatedJobQueueInfo(Semaphore available, int maxParallel, Semaphore drainage) {
+        this.available = available;
+        this.maxParallel = maxParallel;
+        this.drainage = drainage;
     }
 
-    /**
-     * @see org.apache.sling.event.jobs.TopicStatistics#getTopic()
-     */
-    @Override
-    public String getTopic() {
-        return this.topic;
+    final Semaphore getAvailable() {
+        return available;
+    }
+
+    final int getMaxParallel() {
+        return maxParallel;
+    }
+
+    final Semaphore getDrainage() {
+        return drainage;
     }
 }

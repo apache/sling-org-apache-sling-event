@@ -37,7 +37,6 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ValueMap;
-import org.apache.sling.event.impl.EnvironmentComponent;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
@@ -50,7 +49,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 
@@ -197,6 +196,13 @@ public class JobHandlerTest {
         
         when (configuration.createResourceResolver()).thenReturn(resolver);
         
+        // these are mocked because it's easier than invoking the activate method
+        when (configuration.getJobsBasePathWithSlash()).thenReturn("/var/events/");
+        when (configuration.getStoredCancelledJobsPath()).thenReturn("/var/events/cancelled");
+        when (configuration.getStoredSuccessfulJobsPath()).thenReturn("/var/events/finished");
+        when (configuration.getAssginedJobsPath()).thenReturn("/var/events/assigned");
+        when (configuration.getUnassignedJobsPath()).thenReturn("/var/events/unassigned");
+
         // just simple mocks for all dependencies for the JobManagerConfiguration and provide
         // stubs when required
         ServiceUserMapped sum = mock (ServiceUserMapped.class);
@@ -204,23 +210,18 @@ public class JobHandlerTest {
 
         QueueConfigurationManager qcm = mock (QueueConfigurationManager.class);
         when (qcm.getQueueInfo(Mockito.anyString())).thenReturn(null);
-        
+
         TopologyCapabilities caps = mock (TopologyCapabilities.class);
-        when(caps.detectTarget(Mockito.matches(JOB_TOPIC), Matchers.<Map<String,Object>>any(), 
-                Matchers.<QueueConfigurationManager.QueueInfo>any())).thenReturn("targetId");
+        when(caps.detectTarget(Mockito.matches(JOB_TOPIC), ArgumentMatchers.<Map<String,Object>>any(), 
+                ArgumentMatchers.<QueueConfigurationManager.QueueInfo>any())).thenReturn("targetId");
         when(configuration.getTopologyCapabilities()).thenReturn(caps);
         
-        context.registerService(qcm);
-        
-        EnvironmentComponent ec = mock (EnvironmentComponent.class);
-        context.registerService(ec);
+        when(configuration.getQueueConfigurationManager()).thenReturn(qcm);
 
-        // register this service and return
-        context.registerInjectActivateService(configuration);
-        return context.getService(JobManagerConfiguration.class);
+        return configuration;
         
     }
-    
+
     private JobExecutor buildJobExecutor() {
         return mock (JobExecutor.class);
     }

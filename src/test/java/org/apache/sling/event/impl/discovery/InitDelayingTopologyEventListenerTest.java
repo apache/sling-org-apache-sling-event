@@ -299,7 +299,7 @@ public class InitDelayingTopologyEventListenerTest {
     @Test
     public void testProperties() throws Exception {
         final TestListener delegate = new TestListener();
-        InitDelayingTopologyEventListener listener = new InitDelayingTopologyEventListener(1, delegate);
+        InitDelayingTopologyEventListener listener = new InitDelayingTopologyEventListener(2, delegate);
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_INIT));
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_CHANGING));
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_CHANGED));

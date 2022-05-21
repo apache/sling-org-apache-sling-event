@@ -101,7 +101,7 @@ public class WebConsolePlugin extends HttpServlet implements JobConsumer {
     private String getQueueErrorMessage(final HttpServletRequest req, final String command) {
         final String name = req.getParameter(PAR_QUEUE);
         if ( name == null || name.length() == 0 ) {
-            return "Queue parameter missing for opertation " + command;
+            return "Queue parameter missing for operation " + command;
         }
         return "Queue with name '" + name + "' not found for operation " + command;
     }

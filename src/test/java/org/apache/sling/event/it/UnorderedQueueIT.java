@@ -18,15 +18,8 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,55 +27,53 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.sling.event.impl.Barrier;
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.Job;
-import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.Queue;
 import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 
-@RunWith(PaxExam.class)
-public class RoundRobinQueueTest extends AbstractJobHandlingTest {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
-    private static final String QUEUE_NAME = "roundrobintest";
-    private static final String TOPIC = "sling/roundrobintest";
+@RunWith(PaxExam.class)
+@ExamReactorStrategy(PerMethod.class)
+public class UnorderedQueueIT extends AbstractJobHandlingIT {
+
+    private static final String QUEUE_NAME = "unorderedtestqueue";
+    private static final String TOPIC = "sling/unorderedtest";
     private static int MAX_PAR = 5;
     private static int NUM_JOBS = 300;
 
-    @Override
-    @Before
-    public void setup() throws IOException {
-        super.setup();
-
-        // create round robin test queue
-        final org.osgi.service.cm.Configuration rrConfig = this.configAdmin.createFactoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration", null);
-        final Dictionary<String, Object> rrProps = new Hashtable<String, Object>();
-        rrProps.put(ConfigurationConstants.PROP_NAME, QUEUE_NAME);
-        rrProps.put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name());
-        rrProps.put(ConfigurationConstants.PROP_TOPICS, TOPIC + "/*");
-        rrProps.put(ConfigurationConstants.PROP_RETRIES, 2);
-        rrProps.put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L);
-        rrProps.put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PAR);
-        rrConfig.update(rrProps);
-
-        this.sleep(1000L);
-    }
-
-    @Override
-    @After
-    public void cleanup() {
-        super.cleanup();
+    @Configuration
+    public Option[] configuration() {
+        return options(
+            baseConfiguration(),
+            // create round robin test queue
+            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                .put(ConfigurationConstants.PROP_NAME, QUEUE_NAME)
+                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
+                .put(ConfigurationConstants.PROP_TOPICS, TOPIC + "/*")
+                .put(ConfigurationConstants.PROP_RETRIES, 2)
+                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PAR)
+                .asOption()
+        );
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
-    public void testRoundRobinQueue() throws Exception {
-        final JobManager jobManager = this.getJobManager();
+    public void testUnorderedQueue() throws Exception {
 
         final Barrier cb = new Barrier(2);
 

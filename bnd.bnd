@@ -1,24 +1,28 @@
-Bundle-Category: sling
-
-Bundle-DocURL: http://sling.apache.org
-
-Import-Package:javax.servlet;javax.servlet.http;resolution:=optional,\
-  org.apache.felix.inventory;resolution:=optional,*
-
-Export-Package: org.apache.sling.event.jobs;-split-package:=merge-first,\
-  org.apache.sling.event.jobs.consumer;-split-package:=merge-first,\
-  org.apache.sling.event.jobs.jmx;-split-package:=merge-first
-
-DynamicImport-Package: javax.servlet, javax.servlet.http, org.apache.felix.inventory
-
+Sling-Namespaces: slingevent=http://sling.apache.org/jcr/event/1.0
 Sling-Nodetypes: SLING-INF/nodetypes/event.cnd
 
-Sling-Namespaces: slingevent=http://sling.apache.org/jcr/event/1.0
+# javax.annotation import for build compatibility with Java 11
+Import-Package: \
+    javax.servlet.http;resolution:=optional,\
+    org.apache.felix.inventory;resolution:=optional,\
+    javax.servlet;resolution:=optional,\
+    javax.annotation;version="[0.0,2)",\
+    *
+Export-Package: \
+    org.apache.sling.event.jobs,\
+    org.apache.sling.event.jobs.consumer,\
+    org.apache.sling.event.jobs.jmx
 
-Embed-Dependency: jackrabbit-jcr-commons;inline="org/apache/jackrabbit/util/ISO9075.*|org/apache/jackrabbit/util/ISO8601.*|org/apache/jackrabbit/util/XMLChar.*",\
-  org.apache.sling.commons.osgi;inline="org/apache/sling/commons/osgi/PropertiesUtil.*",\
-  quartz;inline="org/quartz/CronExpression.*|org/quartz/ValueSet.*",\
-  org.apache.sling.event.api 
-  
--exportcontents: ${packages;VERSIONED}
--snapshot: ${tstamp;yyyyMMddHHmmssSSS}
+-conditionalpackage: \
+    org.apache.jackrabbit.util,\
+    org.apache.sling.commons.osgi,\
+    org.apache.sling.event.api
+
+-includeresource:\
+    org.apache.sling.event.api-1.0.0.jar=org.apache.sling.event.api-1.0.0.jar;lib:=true,\
+    @quartz-[0-9.]*.jar!/org/quartz/CronExpression.class,\
+    @quartz-[0-9.]*.jar!/org/quartz/ValueSet.class,\
+    @org.apache.sling.commons.osgi-[0-9.]*.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
+    @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/ISO9075.class,\
+    @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/ISO8601.class,\
+    @jackrabbit-jcr-commons-[0-9.]*.jar!/org/apache/jackrabbit/util/XMLChar.class

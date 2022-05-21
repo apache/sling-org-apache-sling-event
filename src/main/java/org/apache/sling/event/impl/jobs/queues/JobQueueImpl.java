@@ -107,6 +107,12 @@ public class JobQueueImpl
     /** Semaphore for handling the max number of jobs. */
     private final Semaphore available;
 
+    /** original value of maxParallel with which the queue was created */
+    private final int maxParallel;
+
+    /** Semaphore for handling reduced number of available slots that are yet to drain */
+    private final Semaphore drainage;
+
     /** Guard for having only one thread executing start jobs. */
     private final AtomicBoolean startJobsGuard = new AtomicBoolean(false);
 
@@ -123,18 +129,35 @@ public class JobQueueImpl
      * @param config The queue configuration
      * @param services The queue services
      * @param topics The topics handled by this queue
+     * @param outdatedQueueInfo
+     * @param haltedTopics reference to pass newly halted topics back
      *
      * @return {@code JobQueueImpl} if there are jobs to process, {@code null} otherwise.
      */
     public static JobQueueImpl createQueue(final String name,
                         final InternalQueueConfiguration config,
                         final QueueServices services,
-                        final Set<String> topics) {
+                        final Set<String> topics,
+                        final Set<String> haltedTopicsBackRef,
+                        final OutdatedJobQueueInfo outdatedQueueInfo) {
         final QueueJobCache cache = new QueueJobCache(services.configuration, name, services.statisticsManager, config.getType(), topics);
+        // the cache might contain newly halted topics.
+        // these we need to retain, to avoid scanning them going forward.
+        // but since the cache might be empty and thus discarded,
+        // we pass them back explicitly in provided haltedTopicsRef
+        if ( !cache.getNewlyHaltedTopics().isEmpty() ) {
+            for (String haltedTopic : cache.getNewlyHaltedTopics() ) {
+                if (haltedTopicsBackRef.add(haltedTopic)) {
+                    LoggerFactory.getLogger(JobQueueImpl.class.getName() + '.' + name)
+                            .warn("createQueue : topic halted due to ClassNotFoundExceptions : "
+                                    + haltedTopic);
+                }
+            }
+        }
         if ( cache.isEmpty() ) {
             return null;
         }
-        return new JobQueueImpl(name, config, services, cache);
+        return new JobQueueImpl(name, config, services, cache, outdatedQueueInfo);
     }
 
     /**
@@ -144,11 +167,13 @@ public class JobQueueImpl
      * @param config The queue configuration
      * @param services The queue services
      * @param cache The job cache
+     * @param outdatedQueue
      */
     private JobQueueImpl(final String name,
                         final InternalQueueConfiguration config,
                         final QueueServices services,
-                        final QueueJobCache cache) {
+                        final QueueJobCache cache,
+                        final OutdatedJobQueueInfo outdatedQueue) {
         if ( config.getOwnThreadPoolSize() > 0 ) {
             this.threadPool = new EventingThreadPool(services.threadPoolManager, config.getOwnThreadPoolSize());
         } else {
@@ -160,7 +185,40 @@ public class JobQueueImpl
         this.logger = LoggerFactory.getLogger(this.getClass().getName() + '.' + name);
         this.running = true;
         this.cache = cache;
-        this.available = new Semaphore(config.getMaxParallel(), true);
+        this.maxParallel = config.getMaxParallel();
+        if (outdatedQueue == null) {
+            // queue is created the first time
+            this.available = new Semaphore(this.maxParallel, true);
+            this.drainage = new Semaphore(0, true);
+        } else {
+            // queue was previously outdated - let's reuse available and drainage
+            this.available = outdatedQueue.getAvailable();
+            this.drainage = outdatedQueue.getDrainage();
+            int oldMaxParallel = outdatedQueue.getMaxParallel();
+            int maxParallelDiff = this.maxParallel - oldMaxParallel;
+            int drainedOldDrainage = 0;
+            int drainedOldAvailable = 0;
+            if (maxParallelDiff != 0) {
+                // config change
+                drainedOldDrainage = this.drainage.drainPermits();
+                drainedOldAvailable = this.available.drainPermits();
+                int netNewPermits = drainedOldAvailable - drainedOldDrainage + maxParallelDiff;
+                if (netNewPermits > 0) {
+                    this.available.release(netNewPermits);
+                } else if (netNewPermits < 0) {
+                    // special case : maxparallel got reduced since last outdating,
+                    // resulting in effectively negative number of currently available permits.
+                    // to account for that, jobs try to drain first before re-adding to available
+                    // to trigger this behaviour, releasing the permit-diff to drainage
+                    this.drainage.release(-netNewPermits);
+                }
+            }
+            logger.info("<init> reused outdated queue info: queueName : {}"
+                    + ", old available : {}, old drainage : {}, old maxParallel : {}"
+                    + ", new available : {}, new drainage : {}, new maxParallel : {}",
+                    queueName, drainedOldAvailable, drainedOldDrainage, oldMaxParallel,
+                    available.availablePermits(), drainage.availablePermits(), this.maxParallel);
+        }
         logger.info("Starting job queue {}", queueName);
         logger.debug("Configuration for job queue={}", configuration);
     }
@@ -330,7 +388,18 @@ public class JobQueueImpl
                 this.logger.error("Exception during job processing.", re);
             }
         } finally {
-            this.available.release();
+            // try draining first
+            if (this.drainage.tryAcquire()) {
+                // special case : if drainage is used, this means maxparallel
+                // got reconfigured and we are not releasing a permit to
+                // available here, but instead reduce drainage.
+                final int approxPermits = this.drainage.availablePermits();
+                this.logger.debug("startJobHandler: drained 1 permit for {}, approx left to drain: {}",
+                        queueName, approxPermits);
+            } else {
+                // otherwise release as usual
+                this.available.release();
+            }
         }
     }
 
@@ -711,6 +780,14 @@ public class JobQueueImpl
             // put directly into queue
             this.requeue(handler);
         }
+    }
+
+    QueueJobCache getCache() {
+        return cache;
+    }
+
+    OutdatedJobQueueInfo getOutdatedJobQueueInfo() {
+        return new OutdatedJobQueueInfo(available, maxParallel, drainage);
     }
 }
 

@@ -22,13 +22,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.codahale.metrics.MetricRegistry;
 import org.apache.sling.event.impl.jobs.InternalJobState;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.jobs.Statistics;
 import org.apache.sling.event.jobs.TopicStatistics;
 import org.osgi.framework.Constants;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.*;
+
 
 /**
  * The statistics manager keeps track of all statistics related tasks.
@@ -42,6 +43,12 @@ public class StatisticsManager {
     /** The job manager configuration. */
     @Reference
     private JobManagerConfiguration configuration;
+
+    /**
+     * The sling metric registry
+     */
+    @Reference(target = "(name=sling)", cardinality = ReferenceCardinality.OPTIONAL)
+    private MetricRegistry metricRegistry;
 
     /** Global statistics. */
     private final StatisticsImpl globalStatistics = new StatisticsImpl() {
@@ -57,8 +64,14 @@ public class StatisticsManager {
 
     };
 
+    /** Gauges for the global job statistics. */
+    private GaugeSupport globalGauges;
+
     /** Statistics per topic. */
     private final ConcurrentMap<String, TopicStatistics> topicStatistics = new ConcurrentHashMap<>();
+
+    /** Gauges for the statistics per topic. */
+    private final ConcurrentMap<String, GaugeSupport> queueGauges = new ConcurrentHashMap<>();
 
     /** Statistics per queue. */
     private final ConcurrentMap<String, Statistics> queueStatistics = new ConcurrentHashMap<>();
@@ -105,6 +118,12 @@ public class StatisticsManager {
         if ( queueStats == null ) {
             queueStatistics.putIfAbsent(queueName, new StatisticsImpl());
             queueStats = (StatisticsImpl)queueStatistics.get(queueName);
+            if (metricRegistry != null) {
+                GaugeSupport gaugeSupport = new GaugeSupport(queueName, queueStats, metricRegistry);
+                if (queueGauges.putIfAbsent(queueName, gaugeSupport) == null) {
+                    gaugeSupport.initialize();
+                }
+            }
         }
         return queueStats;
     }
@@ -122,26 +141,25 @@ public class StatisticsManager {
         }
 
         if ( state == InternalJobState.CANCELLED ) {
-            ts.addCancelled();
+            ts.cancelledJob();;
             this.globalStatistics.cancelledJob();
             if ( queueStats != null ) {
                 queueStats.cancelledJob();
             }
 
         } else if ( state == InternalJobState.FAILED ) {
-            ts.addFailed();
+            ts.failedJob();
             this.globalStatistics.failedJob();
             if ( queueStats != null ) {
                 queueStats.failedJob();
             }
 
         } else if ( state == InternalJobState.SUCCEEDED ) {
-            ts.addFinished(processingTime);
+            ts.finishedJob(processingTime);
             this.globalStatistics.finishedJob(processingTime);
             if ( queueStats != null ) {
                 queueStats.finishedJob(processingTime);
             }
-
         }
     }
 
@@ -156,7 +174,7 @@ public class StatisticsManager {
             ts = (TopicStatisticsImpl)this.topicStatistics.get(topic);
         }
 
-        ts.addActivated(queueTime);
+        ts.addActive(queueTime);
         this.globalStatistics.addActive(queueTime);
         if ( queueStats != null ) {
             queueStats.addActive(queueTime);
@@ -179,6 +197,24 @@ public class StatisticsManager {
         this.globalStatistics.decQueued();
         if ( queueStats != null ) {
             queueStats.decQueued();
+        }
+    }
+
+    @Activate
+    protected void activate() {
+        if (metricRegistry != null) {
+            globalGauges = new GaugeSupport(globalStatistics, metricRegistry);
+            globalGauges.initialize();
+        }
+    }
+
+    @Deactivate
+    protected void deactivate() {
+        if (globalGauges != null) {
+            globalGauges.shutdown();
+        }
+        for (GaugeSupport gaugeSupport : queueGauges.values()) {
+            gaugeSupport.shutdown();
         }
     }
 }

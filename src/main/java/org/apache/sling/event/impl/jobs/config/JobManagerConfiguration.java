@@ -117,6 +117,16 @@ public class JobManagerConfiguration {
     /** Configuration property for the scheduled jobs path. */
     public static final String PROPERTY_SCHEDULED_JOBS_PATH = "job.scheduled.jobs.path";
 
+    static JobManagerConfiguration newForTest(ResourceResolverFactory resourceResolverFactory,
+            QueueConfigurationManager queueConfigurationManager,
+            Map<String, Object> activateProps, Config config) {
+        final JobManagerConfiguration jobMgrConfig = new JobManagerConfiguration();
+        jobMgrConfig.resourceResolverFactory = resourceResolverFactory;
+        jobMgrConfig.queueConfigManager = queueConfigurationManager;
+        jobMgrConfig.activate(activateProps, config);
+        return jobMgrConfig;
+    }
+
     /** The jobs base path with a slash. */
     private String jobsBasePathWithSlash;
 
@@ -351,11 +361,11 @@ public class JobManagerConfiguration {
         final String topicName = topic.replace('/', '.');
         final StringBuilder sb = new StringBuilder();
         if ( targetId != null ) {
-            sb.append(this.assignedJobsPath);
+            sb.append(this.getAssginedJobsPath());
             sb.append('/');
             sb.append(targetId);
         } else {
-            sb.append(this.unassignedJobsPath);
+            sb.append(this.getUnassignedJobsPath());
         }
         sb.append('/');
         sb.append(topicName);
@@ -431,9 +441,9 @@ public class JobManagerConfiguration {
         final String topicName = topic.replace('/', '.');
         final StringBuilder sb = new StringBuilder();
         if ( isSuccess ) {
-            sb.append(this.storedSuccessfulJobsPath);
+            sb.append(this.getStoredSuccessfulJobsPath());
         } else {
-            sb.append(this.storedCancelledJobsPath);
+            sb.append(this.getStoredCancelledJobsPath());
         }
         sb.append('/');
         sb.append(topicName);
