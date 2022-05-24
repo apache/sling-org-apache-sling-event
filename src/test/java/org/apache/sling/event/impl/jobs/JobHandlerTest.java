@@ -52,25 +52,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-
 public class JobHandlerTest {
-    
     public static final String JOB_TOPIC = "job/topic";
     public static final String JOB_ID = "12345";
     public static final String JOB_PATH = "/var/eventing/jobs/path/to/my/job";
-    
-    
+
     @Rule
     public SlingContext context = new SlingContext();
-    
-    
+
     ResourceResolver resolver; // a spy to the context.resourceResolver()
-    
+
     JobManagerConfiguration config;
     JobImpl job;
     JobHandler handler;
-    
-    
+
     @Before
     public void setup() throws Exception {
         Environment.APPLICATION_ID = "slingId"; // oh, really hacky ...
@@ -79,8 +74,7 @@ public class JobHandlerTest {
         job = buildJobImpl();
         handler = new JobHandler (job, buildJobExecutor(), config);
     }
-    
-    
+
     @Test
     public void rescheduleWithNonExistingJobPath() throws Exception {
         
@@ -89,7 +83,7 @@ public class JobHandlerTest {
         assertFalse(handler.reschedule());
         Mockito.verify(resolver, Mockito.never()).commit();
     }
-    
+
     @Test
     public void rescheduleWithExistingJobPath() throws Exception {
         context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
@@ -98,64 +92,61 @@ public class JobHandlerTest {
         assertTrue(handler.reschedule());
         Mockito.verify(resolver, Mockito.times(1)).commit();
     }
-    
+
     @Test
     public void finishedKeepHistory () throws Exception {
         context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
-        
+
         Job.JobState state = Job.JobState.SUCCEEDED;
         handler.finished(state,true, 1000L);
-        
+
         // check that the jobpath has been deleted
         ArgumentCaptor<Resource> captor = ArgumentCaptor.forClass(Resource.class);
         Mockito.verify (resolver,Mockito.atLeast(1)).delete(captor.capture());
         assertEquals(JOB_PATH,captor.getValue().getPath());
-        
+
         // check that the history resource is present
         String historyPath = config.getStoragePath(job.getTopic(), job.getId(), true);
         assertNotNull(resolver.getResource(historyPath)); 
     }
-    
+
     @Test
     public void finishedDropHistory () throws Exception {
         context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
-        
         Job.JobState state = Job.JobState.SUCCEEDED;
-        
         handler.finished(state,false, 1000L);
-        
+
         // check that the jobpath has been deleted
         ArgumentCaptor<Resource> captor = ArgumentCaptor.forClass(Resource.class);
         Mockito.verify (resolver,Mockito.atLeast(1)).delete(captor.capture());
         assertEquals(JOB_PATH,captor.getValue().getPath());
-        
+
         // check that the history resource is not present
         String historyPath = config.getStoragePath(job.getTopic(), job.getId(), true);
         assertNull(resolver.getResource(historyPath)); 
     }
-    
-    
+
     @Test
     public void reassign () throws Exception {
         context.build().resource(JOB_PATH, Collections.emptyMap()).commit();
         // resolver.commit is used internally a few times, reset this spy before we actually start testing
         Mockito.reset(resolver); 
         handler.reassign();
-        
+
         // check that the old jobpath has been deleted
         ArgumentCaptor<Resource> captor = ArgumentCaptor.forClass(Resource.class);
         Mockito.verify (resolver,Mockito.atLeast(1)).delete(captor.capture());
         assertEquals(JOB_PATH,captor.getValue().getPath());
-        
+
         // check that the reassigned job is present
         String newJobPath = config.getUniquePath("targetId", job.getTopic(), job.getId(), job.getProperties());
         assertNotNull(resolver.getResource(newJobPath)); 
     }
-    
+
     @Test
     public void persistJobPropertiesTest() {
         
@@ -163,26 +154,22 @@ public class JobHandlerTest {
         props.put("prop1", "value1");
         props.put("toBeUpdated", "value2");
         props.put("toBeRemoved","value3");
-        
+
         context.build().resource(JOB_PATH, props).commit();
-        
         assertTrue(handler.persistJobProperties());
         assertTrue(handler.persistJobProperties(null));
-        
+
         assertTrue(handler.persistJobProperties("toBeUpdated","toBeRemoved"));
         Resource jobResource = resolver.getResource(JOB_PATH);
         assertNotNull(jobResource);
         ValueMap vm = jobResource.adaptTo(ValueMap.class);
         assertNotNull(vm);
-        
+
         assertEquals("value1",vm.get("prop1"));
         assertEquals("updatedValue2",vm.get("toBeUpdated"));
         assertNull(vm.get("toBeRemoved"));
-        
-        
     }
-    
-    
+
     // supporting methods
     
     private JobManagerConfiguration buildConfiguration () throws LoginException {
@@ -190,12 +177,12 @@ public class JobHandlerTest {
         JobManagerConfiguration originalConfiguration = new JobManagerConfiguration ();
         JobManagerConfiguration configuration = spy (originalConfiguration);
         ResourceResolverFactory rrf = context.getService(ResourceResolverFactory.class);
-        
+
         // we don't care what type of resolver we use for these tests
         resolver = spy (rrf.getAdministrativeResourceResolver(null));
-        
+
         when (configuration.createResourceResolver()).thenReturn(resolver);
-        
+
         // these are mocked because it's easier than invoking the activate method
         when (configuration.getJobsBasePathWithSlash()).thenReturn("/var/events/");
         when (configuration.getStoredCancelledJobsPath()).thenReturn("/var/events/cancelled");
@@ -215,33 +202,25 @@ public class JobHandlerTest {
         when(caps.detectTarget(Mockito.matches(JOB_TOPIC), ArgumentMatchers.<Map<String,Object>>any(), 
                 ArgumentMatchers.<QueueConfigurationManager.QueueInfo>any())).thenReturn("targetId");
         when(configuration.getTopologyCapabilities()).thenReturn(caps);
-        
         when(configuration.getQueueConfigurationManager()).thenReturn(qcm);
 
         return configuration;
-        
     }
 
     private JobExecutor buildJobExecutor() {
         return mock (JobExecutor.class);
     }
-    
+
     private JobImpl buildJobImpl() {
-        
+
         Map<String,Object> props = new HashMap<>();
         props.put(JobImpl.PROPERTY_RESOURCE_PATH, JOB_PATH);
         props.put(Job.PROPERTY_RESULT_MESSAGE,"result message");
         props.put(Job.PROPERTY_JOB_STARTED_TIME, Calendar.getInstance());
-        
+
         props.put("toBeUpdated", "updatedValue2");
         props.put("toBeRemoved",null);
-        
         JobImpl job =  new JobImpl(JOB_TOPIC,JOB_ID, props);;
-        
         return job;
     }
-    
-    
-
-    
 }
