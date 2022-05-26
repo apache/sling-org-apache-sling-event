@@ -144,7 +144,7 @@ public class JobHandler {
             } catch (final PersistenceException pe) {
                 this.configuration.getMainLogger().warn("Unable to finish job " + job.getId(), pe);
             }
-            return false;
+            return false; // this return value is ignored
         });
     }
     
@@ -181,7 +181,7 @@ public class JobHandler {
             } catch (final PersistenceException pe) {
                 this.configuration.getMainLogger().warn("Unable to reassign job " + job.getId(), pe);
             }
-            return true;
+            return true; // this return value is ignored
         });
     }
 
