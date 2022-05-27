@@ -397,7 +397,7 @@ public class CleanUpTest {
 
     @Test
     public void testUnassignedSimple() throws PersistenceException {
-        Calendar calendar = getCalendarInstance(2022,4,17,17,30); // 2022, May 17
+        Calendar calendar = getCalendarInstance(2022,4,17,17,30); // 2022 May 17, 17:30
         Resource job = createJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
         calendar.add(Calendar.DAY_OF_YEAR,-1);
         createEmptyJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
@@ -430,7 +430,7 @@ public class CleanUpTest {
         assertEquals(11, countFolders(UNASSIGNED_JOBS_JCR_PATH));
         deleteResource(job);
 
-        // 24 hours => now it's 2022
+        // 72 hours later => now it's 2022
         for( int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
