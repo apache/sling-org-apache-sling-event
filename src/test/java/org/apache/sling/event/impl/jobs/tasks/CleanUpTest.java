@@ -396,7 +396,16 @@ public class CleanUpTest {
     }
 
     @Test
-    public void testUnassignedSimple() throws PersistenceException {
+    public void testUnassignedSimple_deleteJob() throws PersistenceException {
+        doTestUnassignedSimple(true, 4); // unassigned/test/2022/05
+    }
+
+    @Test
+    public void testUnassignedSimple_noDeleteJob() throws PersistenceException {
+        doTestUnassignedSimple(false, 8); // unassigned/test/2022/05/17/17/30/test-job
+    }
+
+    private void doTestUnassignedSimple(boolean deleteJob, int expectedFolders) throws PersistenceException {
         Calendar calendar = getCalendarInstance(2022,4,17,17,30); // 2022 May 17, 17:30
         Resource job = createJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
         calendar.add(Calendar.DAY_OF_YEAR,-1);
@@ -411,14 +420,14 @@ public class CleanUpTest {
         // so counter is still the same
         assertEquals(8, countFolders(UNASSIGNED_JOBS_JCR_PATH));
 
-        deleteResource(job);
+        if (deleteJob) deleteResource(job);
 
         // additional 72 hours
         for( int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
 
-        assertEquals(4, countFolders(UNASSIGNED_JOBS_JCR_PATH)); // unassigned/test/2022/05
+        assertEquals(expectedFolders, countFolders(UNASSIGNED_JOBS_JCR_PATH));
     }
 
     @Test
