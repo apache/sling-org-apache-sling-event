@@ -56,6 +56,8 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CleanUpTest {
@@ -141,15 +143,11 @@ public class CleanUpTest {
 
     @Before
     public void setUp() {
-        // let's use a fixed calendar which we can fast-forward as needed
-        Calendar realCalendar = Calendar.getInstance();
-        clock = new DynamicClock(Clock.fixed(realCalendar.toInstant(), ZoneId.systemDefault()), null);
-
         setupConfiguration();
         setUpTask();
+        getCalendarInstance();
         createResource(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH);
 
-        task.setClock(clock);
     }
     public static DefaultInstanceDescription createInstanceDescription(
             String instanceId, boolean isLocal, ClusterView clusterView) {
@@ -231,10 +229,19 @@ public class CleanUpTest {
         return ctx.create().resource(rootPath);
     }
 
-    // new calendar based on the (test) clock
+    // new calendar based on current date
     private Calendar getCalendarInstance() {
+        Calendar cal = Calendar.getInstance();
+        return getCalendarInstance(cal.get(Calendar.YEAR),cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH),
+                cal.get(Calendar.HOUR),cal.get(Calendar.MINUTE));
+    }
+
+    // new calendar based on provided data
+    private Calendar getCalendarInstance(int year, int month, int day, int hour, int minute) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(clock.millis());
+        calendar.set(year,month,day,hour,minute);
+        this.clock = new DynamicClock(Clock.fixed(calendar.toInstant(), ZoneId.systemDefault()), null);
+        task.setClock(clock);
         return calendar;
     }
 
@@ -390,7 +397,7 @@ public class CleanUpTest {
 
     @Test
     public void testUnassignedSimple() throws PersistenceException {
-        Calendar calendar = getCalendarInstance();
+        Calendar calendar = getCalendarInstance(2022,4,17,17,30); // 2022 May 17, 17:30
         Resource job = createJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
         calendar.add(Calendar.DAY_OF_YEAR,-1);
         createEmptyJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
@@ -400,20 +407,33 @@ public class CleanUpTest {
         // so let's simulate an hour
         simulate(60, Duration.ofMinutes(1));
 
-        // after the first run it will just have marked the folder for deletion, but not deleted, so counter is still the same
-        assertEquals(8, countFolders(UNASSIGNED_JOBS_JCR_PATH));
-
-        // simulate 72 hours
-        for( int i = 0; i < 72; i++) {
-            simulate(60, Duration.ofMinutes(1));
-        }
+        // after the first run it will just have marked the folder for deletion, but not deleted, 
+        // so counter is still the same
         assertEquals(8, countFolders(UNASSIGNED_JOBS_JCR_PATH));
 
         deleteResource(job);
 
+        // additional 72 hours
         for( int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
-        assertEquals(4, countFolders(UNASSIGNED_JOBS_JCR_PATH));
+
+        assertEquals(4, countFolders(UNASSIGNED_JOBS_JCR_PATH)); // unassigned/test/2022/05
+    }
+
+    @Test
+    public void testUnassignedDec31() throws PersistenceException {
+        Calendar calendar = getCalendarInstance(2021,11,31,17,30); // 2021 Dec 31, 17:30
+        Resource job = createJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
+        calendar.add(Calendar.DAY_OF_YEAR,-1);
+        createEmptyJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
+        assertEquals(11, countFolders(UNASSIGNED_JOBS_JCR_PATH));
+        deleteResource(job);
+
+        // 72 hours later => now it's 2022
+        for( int i = 0; i < 72; i++) {
+            simulate(60, Duration.ofMinutes(1));
+        }
+        assertEquals(2, countFolders(UNASSIGNED_JOBS_JCR_PATH)); // unassigned/test
     }
 }
