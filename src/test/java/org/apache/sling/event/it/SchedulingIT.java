@@ -18,6 +18,7 @@
  */
 package org.apache.sling.event.it;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,6 +78,9 @@ public class SchedulingIT extends AbstractJobHandlingIT {
         assertNotNull(info2);
         final ScheduledJobInfo info3 = jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
         assertNotNull(info3);
+        // This is a duplicate and won't be scheduled, as it is identical to the 3rd job
+        final ScheduledJobInfo info4 = jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
+        assertNotNull(info4);
 
         assertEquals(3, jobManager.getScheduledJobs().size()); // scheduled jobs
         info3.unschedule();
@@ -106,7 +110,9 @@ public class SchedulingIT extends AbstractJobHandlingIT {
         });
         for(int i=0; i<NUM_ITERATIONS; i++) {
             logger.info("schedulingLoadTest: loop-" + i);
-            jobManager.createJob(ownTopic).schedule().at(new Date(System.currentTimeMillis() + 2500)).add();
+            jobManager.createJob(ownTopic)
+                .properties(Collections.singletonMap("prop", i))
+                .schedule().at(new Date(System.currentTimeMillis() + 2500)).add();
             Thread.sleep(1);
         }
         logger.info("schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules", counter.get(), jobManager.getScheduledJobs().size());
