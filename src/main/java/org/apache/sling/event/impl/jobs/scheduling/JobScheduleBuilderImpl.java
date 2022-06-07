@@ -35,7 +35,7 @@ import org.apache.sling.event.jobs.ScheduledJobInfo;
  */
 public final class JobScheduleBuilderImpl implements ScheduleBuilder {
     
-    private static final Logger logger = LoggerFactory.getLogger(JobScheduleBuilderImpl.class);
+    private final Logger logger = LoggerFactory.getLogger(JobScheduleBuilderImpl.class);
 
     private final String topic;
 
@@ -149,7 +149,7 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
         // append all schedules
         sb.append("schedules=").append(schedules);
 
-        String hashCode = new String("" + sb.toString().hashCode());
+        String hashCode = String.valueOf(sb.toString().hashCode());
         logger.debug("calculated hash [{}] for unspecified scheduleName, calculated as {}",hashCode, sb.toString());
         return hashCode;
     }
