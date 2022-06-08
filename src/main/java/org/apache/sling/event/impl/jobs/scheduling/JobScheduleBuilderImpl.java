@@ -19,18 +19,23 @@
 package org.apache.sling.event.impl.jobs.scheduling;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.sling.event.impl.support.ScheduleInfoImpl;
 import org.apache.sling.event.jobs.JobBuilder.ScheduleBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.sling.event.jobs.ScheduledJobInfo;
 
 /**
  * The builder implementation for scheduled jobs.
  */
 public final class JobScheduleBuilderImpl implements ScheduleBuilder {
+    
+    private final Logger logger = LoggerFactory.getLogger(JobScheduleBuilderImpl.class);
 
     private final String topic;
 
@@ -104,9 +109,13 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
 
     @Override
     public ScheduledJobInfo add(final List<String> errors) {
+        String finalScheduleName = scheduleName;
+        if (scheduleName == null) {
+            finalScheduleName = deriveScheduleName();
+        }
         return this.jobScheduler.addScheduledJob(topic,
                 properties,
-                scheduleName,
+                finalScheduleName,
                 suspend,
                 schedules,
                 errors);
@@ -116,5 +125,33 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
     public ScheduleBuilder suspend() {
         this.suspend = true;
         return this;
+    }
+
+    /**
+     * In case a scheduleName was not provided we calculate on based on the available
+     * data so we can detect duplicates.
+     * @return a value which is identical for identical jobs
+     */
+    private String deriveScheduleName() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("topic=").append(topic)
+            .append(",suspend=").append(suspend)
+            .append(",");
+
+        if (properties != null) {
+            // sort the properties and flatten them into a string
+            List<String> keys = new ArrayList<>(properties.keySet());
+            Collections.sort(keys);
+            for (String key: keys) {
+                sb.append(key).append("=").append(properties.get(key)).append(",");
+            }
+        }
+        // append all schedules
+        sb.append("schedules=").append(schedules);
+        String scheduleName = sb.toString();
+
+        String hashCode = String.valueOf(scheduleName.hashCode());
+        logger.debug("calculated scheduleName={}, hash={}", scheduleName, hashCode);
+        return hashCode;
     }
 }

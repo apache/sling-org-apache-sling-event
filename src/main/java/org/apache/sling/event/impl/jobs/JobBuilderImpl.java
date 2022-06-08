@@ -20,7 +20,6 @@ package org.apache.sling.event.impl.jobs;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.sling.event.impl.jobs.scheduling.JobScheduleBuilderImpl;
 import org.apache.sling.event.jobs.Job;
@@ -64,7 +63,7 @@ public class JobBuilderImpl implements JobBuilder {
         return new JobScheduleBuilderImpl(
                 this.topic,
                 this.properties,
-                UUID.randomUUID().toString(),
+                null, // correct value is calculated later
                 this.jobManager.getJobScheduler());
     }
 }
