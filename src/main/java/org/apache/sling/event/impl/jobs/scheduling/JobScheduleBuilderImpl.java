@@ -134,8 +134,8 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
      */
     private String deriveScheduleName() {
         StringBuilder sb = new StringBuilder();
-        sb.append("topic="+topic)
-            .append(",suspend=" + suspend)
+        sb.append("topic=").append(topic)
+            .append(",suspend=").append(suspend)
             .append(",");
 
         if (properties != null) {
@@ -148,9 +148,10 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
         }
         // append all schedules
         sb.append("schedules=").append(schedules);
+        String scheduleName = sb.toString();
 
-        String hashCode = String.valueOf(sb.toString().hashCode());
-        logger.debug("calculated hash [{}] for unspecified scheduleName, calculated as {}",hashCode, sb.toString());
+        String hashCode = String.valueOf(scheduleName.hashCode());
+        logger.debug("calculated scheduleName={}, hash={}", scheduleName, hashCode);
         return hashCode;
     }
 }

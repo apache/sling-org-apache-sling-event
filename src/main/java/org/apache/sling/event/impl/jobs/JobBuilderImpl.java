@@ -20,7 +20,6 @@ package org.apache.sling.event.impl.jobs;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.sling.event.impl.jobs.scheduling.JobScheduleBuilderImpl;
 import org.apache.sling.event.jobs.Job;
