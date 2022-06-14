@@ -403,59 +403,7 @@ public class JobManagerImpl
         final ResourceResolver resolver = this.configuration.createResourceResolver();
         final StringBuilder buf = new StringBuilder(64);
         try {
-
-            buf.append("/jcr:root");
-            buf.append(this.configuration.getJobsBasePathWithSlash());
-            buf.append("/element(*,");
-            buf.append(ResourceHelper.RESOURCE_TYPE_JOB);
-            buf.append(")[@");
-            buf.append(ISO9075.encode(ResourceHelper.PROPERTY_JOB_TOPIC));
-            if (topic != null) {
-                buf.append(" = '");
-                buf.append(topic);
-                buf.append("'");
-            }
-
-            // restricting on the type - history or unfinished
-            if ( isHistoryQuery ) {
-                buf.append(" and @");
-                buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
-                if ( type == QueryType.SUCCEEDED || type == QueryType.DROPPED || type == QueryType.ERROR || type == QueryType.GIVEN_UP || type == QueryType.STOPPED ) {
-                    buf.append(" = '");
-                    buf.append(type.name());
-                    buf.append("'");
-                } else if ( type == QueryType.CANCELLED ) {
-                    buf.append(" and (@");
-                    buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
-                    buf.append(" = '");
-                    buf.append(QueryType.DROPPED.name());
-                    buf.append("' or @");
-                    buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
-                    buf.append(" = '");
-                    buf.append(QueryType.ERROR.name());
-                    buf.append("' or @");
-                    buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
-                    buf.append(" = '");
-                    buf.append(QueryType.GIVEN_UP.name());
-                    buf.append("' or @");
-                    buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
-                    buf.append(" = '");
-                    buf.append(QueryType.STOPPED.name());
-                    buf.append("')");
-                }
-            } else {
-                buf.append(" and not(@");
-                buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
-                buf.append(")");
-                if ( type == QueryType.ACTIVE ) {
-                    buf.append(" and @");
-                    buf.append(ISO9075.encode(Job.PROPERTY_JOB_STARTED_TIME));
-                } else if ( type == QueryType.QUEUED ) {
-                    buf.append(" and not(@");
-                    buf.append(ISO9075.encode(Job.PROPERTY_JOB_STARTED_TIME));
-                    buf.append(")");
-                }
-            }
+            buf.append(buildBaseQuery(this.configuration.getJobsBasePathWithSlash(), topic, type, isHistoryQuery));
 
             if ( templates != null && templates.length > 0 ) {
                 int index = 0;
@@ -558,6 +506,63 @@ public class JobManagerImpl
             resolver.close();
         }
         return result;
+    }
+
+    protected static String buildBaseQuery(final String queryRoot, final String topic, final QueryType type, final boolean isHistoryQuery) {
+        StringBuilder buf = new StringBuilder();
+        buf.append("/jcr:root");
+        buf.append(queryRoot);
+        buf.append("/element(*,");
+        buf.append(ResourceHelper.RESOURCE_TYPE_JOB);
+        buf.append(")[@");
+        buf.append(ISO9075.encode(ResourceHelper.PROPERTY_JOB_TOPIC));
+        if (topic != null) {
+            buf.append(" = '");
+            buf.append(topic.replace("'", "''"));
+            buf.append("'");
+        }
+
+        // restricting on the type - history or unfinished
+        if ( isHistoryQuery ) {
+            buf.append(" and @");
+            buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
+            if ( type == QueryType.SUCCEEDED || type == QueryType.DROPPED || type == QueryType.ERROR || type == QueryType.GIVEN_UP || type == QueryType.STOPPED ) {
+                buf.append(" = '");
+                buf.append(type.name());
+                buf.append("'");
+            } else if ( type == QueryType.CANCELLED ) {
+                buf.append(" and (@");
+                buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
+                buf.append(" = '");
+                buf.append(QueryType.DROPPED.name());
+                buf.append("' or @");
+                buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
+                buf.append(" = '");
+                buf.append(QueryType.ERROR.name());
+                buf.append("' or @");
+                buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
+                buf.append(" = '");
+                buf.append(QueryType.GIVEN_UP.name());
+                buf.append("' or @");
+                buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
+                buf.append(" = '");
+                buf.append(QueryType.STOPPED.name());
+                buf.append("')");
+            }
+        } else {
+            buf.append(" and not(@");
+            buf.append(ISO9075.encode(JobImpl.PROPERTY_FINISHED_STATE));
+            buf.append(")");
+            if ( type == QueryType.ACTIVE ) {
+                buf.append(" and @");
+                buf.append(ISO9075.encode(Job.PROPERTY_JOB_STARTED_TIME));
+            } else if ( type == QueryType.QUEUED ) {
+                buf.append(" and not(@");
+                buf.append(ISO9075.encode(Job.PROPERTY_JOB_STARTED_TIME));
+                buf.append(")");
+            }
+        }
+        return buf.toString();
     }
 
     /**
