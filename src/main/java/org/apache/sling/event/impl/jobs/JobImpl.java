@@ -78,7 +78,6 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      * Create a new job instance
      *
      * @param topic The job topic
-     * @param name  The unique job name (optional)
      * @param jobId The unique (internal) job id
      * @param properties Non-null map of properties, at least containing {@link #PROPERTY_RESOURCE_PATH}
      */

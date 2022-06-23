@@ -130,7 +130,7 @@ public class JobQueueImpl
      * @param services The queue services
      * @param topics The topics handled by this queue
      * @param outdatedQueueInfo
-     * @param haltedTopics reference to pass newly halted topics back
+     * @param haltedTopicsBackRef reference to pass newly halted topics back
      *
      * @return {@code JobQueueImpl} if there are jobs to process, {@code null} otherwise.
      */
