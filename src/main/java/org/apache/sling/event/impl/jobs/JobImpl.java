@@ -319,13 +319,13 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     public String log(final String message, final Object... args) {
         final String logEntry = MessageFormat.format(message, args);
         final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
-        final int progressLogMaxCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class);
+        final int progressLogCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class);
         if ( entries == null ) {
-            final ArrayDeque<String> deque = new ArrayDeque<>(progressLogMaxCount);
+            final ArrayDeque<String> deque = new ArrayDeque<>(4);
             deque.offer(logEntry);
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, deque);
         } else {
-            if (entries.size() == progressLogMaxCount) {
+            if (entries.size() == progressLogCount) {
                 entries.poll();
             }
             entries.offer(logEntry);

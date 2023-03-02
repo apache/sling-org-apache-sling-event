@@ -76,6 +76,5 @@ public class JobsImplTest {
         for (int i = 0; i < 10; i++) {
             assertEquals("message_1" + i, progressLog[i]);
         }
-
     }
 }
