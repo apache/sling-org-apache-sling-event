@@ -322,7 +322,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     public String log(final String message, final Object... args) {
         final String logEntry = MessageFormat.format(message, args);
         final ArrayDeque<String> entries = getProgressLogProperty();
-        final int progressLogCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class);
+        final int progressLogCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.MAX_VALUE);
         if ( entries == null ) {
             final ArrayDeque<String> deque = new ArrayDeque<>(Math.min(progressLogCount, 4));
             addLog(logEntry, deque, progressLogCount);

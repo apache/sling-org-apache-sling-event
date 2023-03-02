@@ -137,7 +137,6 @@ public class JobsImplTest {
     @Test
     public void testProgressLogCountWithOldJob() {
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 20);
         properties.put(Job.PROPERTY_JOB_PROGRESS_LOG, new String[0]);
 
         final JobImpl job = new JobImpl("test", "hello_1", properties);
