@@ -53,8 +53,7 @@ public class JobManagerConfigurationTestFactory {
                 return 0;
             }
 
-            @Override
-            public int progresslog_count() {
+            public int progresslog_maxCount() {
                 return 0;
             }
         });

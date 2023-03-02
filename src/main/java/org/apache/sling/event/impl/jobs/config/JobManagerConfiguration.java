@@ -97,7 +97,7 @@ public class JobManagerConfiguration {
                 description = "Max number of log messages that can stored by consumer to add information about current state of Job.\n" +
                         "Any attempt to add more information would result into purging of the least recent messages." +
                         "default is -1 (to indicate infinite).")
-        int progresslog_count() default -1;
+        int progresslog_maxCount() default -1;
     }
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger("org.apache.sling.event.impl.jobs");
@@ -159,7 +159,7 @@ public class JobManagerConfiguration {
     /**
      * The max count of job progress log messages
      */
-    private int progressLogCount;
+    private int progressLogMaxCount;
 
     private volatile InitDelayingTopologyEventListener startupDelayListener;
 
@@ -270,10 +270,10 @@ public class JobManagerConfiguration {
         // (as 'startup delay runnable' is already scheduled in activate)
         this.startupDelay = config.startup_delay();
 
-        if (config.progresslog_count() < 0) {
-            this.progressLogCount = Integer.MAX_VALUE;
+        if (config.progresslog_maxCount() < 0) {
+            this.progressLogMaxCount = Integer.MAX_VALUE;
         } else {
-            this.progressLogCount = config.progresslog_count();
+            this.progressLogMaxCount = config.progresslog_maxCount();
         }
 
     }
@@ -431,8 +431,8 @@ public class JobManagerConfiguration {
         return this.jobsBasePathWithSlash;
     }
 
-    public int getProgressLogCount() {
-        return this.progressLogCount;
+    public int getProgressLogMaxCount() {
+        return this.progressLogMaxCount;
     }
 
     public String getPreviousVersionAnonPath() {

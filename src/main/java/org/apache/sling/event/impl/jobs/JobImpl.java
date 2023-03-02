@@ -20,11 +20,14 @@ package org.apache.sling.event.impl.jobs;
 
 import java.text.MessageFormat;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
@@ -318,7 +321,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
 
     public String log(final String message, final Object... args) {
         final String logEntry = MessageFormat.format(message, args);
-        final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
+        final ArrayDeque<String> entries = getProgressLogProperty();
         final int progressLogCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class);
         if ( entries == null ) {
             final ArrayDeque<String> deque = new ArrayDeque<>(Math.min(progressLogCount, 4));
@@ -365,7 +368,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     @Override
     public String[] getProgressLog() {
         final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
-        return entries.toArray(new String[0]);
+        return entries != null ? entries.toArray(new String[0]) : this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
     }
 
     /**
@@ -441,5 +444,28 @@ public class JobImpl implements Job, Comparable<JobImpl> {
         }
 
         entries.offer(logEntry);
+    }
+
+    /**
+     * Return the {@link Job#PROPERTY_JOB_PROGRESS_LOG} property for current job.
+     *
+     * @return the property if available else null
+     */
+    private ArrayDeque<String> getProgressLogProperty() {
+
+        final ArrayDeque<String> propertyDeque = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
+        if (propertyDeque != null) {
+            return propertyDeque;
+        }
+
+        // if property is null, it could be old job created with String Array property.
+        final String[] propertyArr = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
+
+        if (Objects.isNull(propertyArr)) {
+            return null; // property is null i.e. not set
+        } else {
+            // job was created with old property type i.e. string array, convert to ArrayDeque
+            return Arrays.stream(propertyArr).collect(Collectors.toCollection(ArrayDeque::new));
+        }
     }
 }

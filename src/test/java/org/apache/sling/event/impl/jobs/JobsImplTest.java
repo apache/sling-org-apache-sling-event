@@ -19,7 +19,10 @@
 package org.apache.sling.event.impl.jobs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -34,7 +37,7 @@ public class JobsImplTest {
 
     @Test public void testSorting() {
         final Calendar now = Calendar.getInstance();
-        final Map<String, Object> properties = new HashMap<String, Object>();
+        final Map<String, Object> properties = new HashMap<>();
         properties.put(Job.PROPERTY_JOB_CREATED, now);
 
         final JobImpl job1 = new JobImpl("test", "hello_1", properties);
@@ -66,6 +69,9 @@ public class JobsImplTest {
         properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 10);
 
         final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        assertNull(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG));
+        assertNull(job.getProgressLog());
 
         for (int i = 0; i < 20; i++) {
             job.log("message_" + i);
@@ -126,5 +132,27 @@ public class JobsImplTest {
         for (int i = 0; i < 20; i++) {
             assertEquals("message_" + i, progressLog[i]);
         }
+    }
+
+    @Test
+    public void testProgressLogCountWithOldJob() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 20);
+        properties.put(Job.PROPERTY_JOB_PROGRESS_LOG, new String[0]);
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        assertTrue(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG) instanceof String[]);
+
+        for (int i = 0; i < 20; i++) {
+            job.log("message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(20, progressLog.length);
+        for (int i = 0; i < 20; i++) {
+            assertEquals("message_" + i, progressLog[i]);
+        }
+        assertTrue(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG) instanceof ArrayDeque);
     }
 }

@@ -628,7 +628,7 @@ public class JobManagerImpl
     throws PersistenceException {
         final String jobId = this.configuration.getUniqueId(jobTopic);
         final String path = this.configuration.getUniquePath(info.targetId, jobTopic, jobId, jobProperties);
-        final int progressLogCount = this.configuration.getProgressLogCount();
+        final int progressLogMaxCount = this.configuration.getProgressLogMaxCount();
 
         // create properties
         final Map<String, Object> properties = new HashMap<>();
@@ -643,7 +643,7 @@ public class JobManagerImpl
         }
 
         properties.put(ResourceHelper.PROPERTY_JOB_ID, jobId);
-        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, progressLogCount);
+        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, progressLogMaxCount);
         properties.put(ResourceHelper.PROPERTY_JOB_TOPIC, jobTopic);
         properties.put(Job.PROPERTY_JOB_QUEUE_NAME, info.queueConfiguration.getName());
         properties.put(Job.PROPERTY_JOB_RETRY_COUNT, 0);
