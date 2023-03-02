@@ -652,7 +652,7 @@ public class JobQueueImpl
                     for(final String t : topics) {
                         final Resource topicResource = baseResource.getChild(t.replace('/', '.'));
                         if ( topicResource != null ) {
-                            JobTopicTraverser.traverse(logger, topicResource, new JobTopicTraverser.JobCallback() {
+                            JobTopicTraverser.traverse(logger, topicResource, this.services.configuration.getProgressLogMaxCount(), new JobTopicTraverser.JobCallback() {
 
                                 @Override
                                 public boolean handle(final JobImpl job) {

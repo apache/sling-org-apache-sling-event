@@ -174,7 +174,7 @@ public abstract class Utility {
     /**
      * Read a job
      */
-    public static JobImpl readJob(final Logger logger, final Resource resource) {
+    public static JobImpl readJob(final Logger logger, final Resource resource, final int progressLogMaxCount) {
         JobImpl job = null;
         if ( resource != null ) {
             try {
@@ -196,9 +196,6 @@ public abstract class Utility {
                     }
                     if ( vm.get(Job.PROPERTY_JOB_PROGRESS_STEP) != null ) {
                         jobProperties.put(Job.PROPERTY_JOB_PROGRESS_STEP, vm.get(Job.PROPERTY_JOB_PROGRESS_STEP, Integer.class));
-                    }
-                    if (vm.get(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT) != null) {
-                        jobProperties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, vm.get(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class));
                     }
                     @SuppressWarnings("unchecked")
                     final List<Exception> readErrorList = (List<Exception>) jobProperties.get(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
@@ -227,7 +224,7 @@ public abstract class Utility {
                         }
                     }
                     job = new JobImpl(topic,
-                            jobId,
+                            jobId, progressLogMaxCount,
                             jobProperties);
                 } else {
                     if ( errorMessage != null ) {

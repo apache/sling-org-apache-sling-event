@@ -76,43 +76,50 @@ public class JobTopicTraverser {
      * will be processed completely (to ensure correct ordering of jobs) and then the
      * traversal stops.
      *
-     * @param logger        The logger to use for debug logging
-     * @param topicResource The topic resource
-     * @param handler       The callback
+     * @param logger              The logger to use for debug logging
+     * @param topicResource       The topic resource
+     * @param progressLogMaxCount The Max number of log messages for progressLog
+     * @param handler             The callback
      */
     public static void traverse(final Logger logger,
-            final Resource topicResource,
-            final JobCallback handler) {
-        traverse(logger, topicResource, handler, null);
+                                final Resource topicResource,
+                                final int progressLogMaxCount,
+                                final JobCallback handler) {
+        traverse(logger, topicResource, progressLogMaxCount, handler, null);
     }
 
     /**
      * Traverse the topic and call the callback for each found resource.
-     *
+     * <p>
      * Once the callback notifies to stop traversing by returning false, the
      * traversal stops.
      *
-     * @param logger        The logger to use for debug logging
-     * @param topicResource The topic resource
-     * @param handler       The callback
+     * @param logger              The logger to use for debug logging
+     * @param topicResource       The topic resource
+     * @param progressLogMaxCount The Max number of log messages for progressLog
+     * @param handler             The callback
      */
     public static void traverse(final Logger logger,
-            final Resource topicResource,
-            final ResourceCallback handler) {
-        traverse(logger, topicResource, null, handler);
+                                final Resource topicResource,
+                                final int progressLogMaxCount,
+                                final ResourceCallback handler) {
+        traverse(logger, topicResource, progressLogMaxCount, null, handler);
     }
 
     /**
      * Internal method for traversal
-     * @param logger        The logger to use for debug logging
-     * @param topicResource The topic resource
-     * @param jobHandler    The job callback
-     * @param resourceHandler    The resource callback
+     *
+     * @param logger              The logger to use for debug logging
+     * @param topicResource       The topic resource
+     * @param progressLogMaxCount The Max number of log messages for progressLog
+     * @param jobHandler          The job callback
+     * @param resourceHandler     The resource callback
      */
     private static void traverse(final Logger logger,
-            final Resource topicResource,
-            final JobCallback jobHandler,
-            final ResourceCallback resourceHandler) {
+                                 final Resource topicResource,
+                                 final int progressLogMaxCount,
+                                 final JobCallback jobHandler,
+                                 final ResourceCallback resourceHandler) {
         logger.debug("Processing topic {}", topicResource.getName().replace('.', '/'));
         // now years
         for(final Resource yearResource: Utility.getSortedChildren(logger, "year", topicResource)) {
@@ -146,7 +153,7 @@ public class JobTopicTraverser {
                                         return;
                                     }
                                 } else {
-                                    final JobImpl job = Utility.readJob(logger, jobResource);
+                                    final JobImpl job = Utility.readJob(logger, jobResource, progressLogMaxCount);
                                     if ( job != null ) {
                                         logger.debug("Found job {}", jobResource.getName());
                                         jobs.add(job);

@@ -112,7 +112,7 @@ public class UpgradeTask {
             return;
         }
         final QueueInfo info = qcm.getQueueInfo(topicName);
-        JobTopicTraverser.traverse(logger, topicResource, new JobTopicTraverser.ResourceCallback() {
+        JobTopicTraverser.traverse(logger, topicResource, configuration.getProgressLogMaxCount(), new JobTopicTraverser.ResourceCallback() {
 
             @Override
             public boolean handle(final Resource rsrc) {

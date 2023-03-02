@@ -66,9 +66,8 @@ public class JobsImplTest {
     @Test
     public void testProgressLogCount() {
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 10);
 
-        final JobImpl job = new JobImpl("test", "hello_1", properties);
+        final JobImpl job = new JobImpl("test", "hello_1", 10, properties);
 
         assertNull(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG));
         assertNull(job.getProgressLog());
@@ -87,9 +86,8 @@ public class JobsImplTest {
     @Test
     public void testProgressLogCountWithLowerCount() {
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 2);
 
-        final JobImpl job = new JobImpl("test", "hello_1", properties);
+        final JobImpl job = new JobImpl("test", "hello_1", 2, properties);
 
         for (int i = 0; i < 20; i++) {
             job.log("message_" + i);
@@ -104,9 +102,8 @@ public class JobsImplTest {
     @Test
     public void testProgressLogCountWithZeroCount() {
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 0);
 
-        final JobImpl job = new JobImpl("test", "hello_1", properties);
+        final JobImpl job = new JobImpl("test", "hello_1", 0, properties);
 
         for (int i = 0; i < 20; i++) {
             job.log("message_" + i);
@@ -119,7 +116,6 @@ public class JobsImplTest {
     @Test
     public void testProgressLogCountWithInfiniteCount() {
         final Map<String, Object> properties = new HashMap<>();
-        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.MAX_VALUE);
 
         final JobImpl job = new JobImpl("test", "hello_1", properties);
 

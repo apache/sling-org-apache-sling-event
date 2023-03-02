@@ -92,7 +92,7 @@ public class FindUnfinishedJobsTask {
     private void initTopic(final Resource topicResource) {
         logger.debug("Initializing topic {}...", topicResource.getName());
 
-        JobTopicTraverser.traverse(logger, topicResource, new JobTopicTraverser.JobCallback() {
+        JobTopicTraverser.traverse(logger, topicResource, configuration.getProgressLogMaxCount(), new JobTopicTraverser.JobCallback() {
 
             @Override
             public boolean handle(final JobImpl job) {

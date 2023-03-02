@@ -60,11 +60,6 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     public static final String PROPERTY_JOB_QUEUED = "event.job.queued.time";
 
     /**
-     * Max number of log message that can stored by consumer to add information about current state of Job.
-     */
-    public static final String PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT = "slingevent:progressLog:maxCount";
-
-    /**
      * This property contains the finished state of a job once it's marked as finished.
      * The value is either "CANCELLED" or "SUCCEEDED".
      * This property is read-only and can't be specified when the job is created.
@@ -84,18 +79,39 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     private final long counter;
 
     /**
+     * Max number of log message that can stored by consumer to add information about current state of Job.
+     */
+    private final int progressLogMaxCount;
+
+    /**
      * Create a new job instance
      *
      * @param topic The job topic
      * @param jobId The unique (internal) job id
      * @param properties Non-null map of properties, at least containing {@link #PROPERTY_RESOURCE_PATH}
      */
-    @SuppressWarnings("unchecked")
     public JobImpl(final String topic,
                    final String jobId,
                    final Map<String, Object> properties) {
+        this(topic, jobId, Integer.MAX_VALUE, properties);
+    }
+
+    /**
+     * Create a new job instance
+     *
+     * @param topic The job topic
+     * @param jobId The unique (internal) job id
+     * @param progressLogMaxCount Max number of log messages for progressLog
+     * @param properties Non-null map of properties, at least containing {@link #PROPERTY_RESOURCE_PATH}
+     */
+    @SuppressWarnings("unchecked")
+    public JobImpl(final String topic,
+                   final String jobId,
+                   final int progressLogMaxCount,
+                   final Map<String, Object> properties) {
         this.topic = topic;
         this.jobId = jobId;
+        this.progressLogMaxCount = progressLogMaxCount;
         this.path = (String)properties.remove(PROPERTY_RESOURCE_PATH);
         this.readErrorList = (List<Exception>) properties.remove(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
 
@@ -146,6 +162,15 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      */
     public Map<String, Object> getProperties() {
         return this.properties;
+    }
+
+    /**
+     * Get the progressLogMaxCount configured for this Job
+     *
+     * @return progressLogMaxCount
+     */
+    public int getProgressLogMaxCount() {
+        return progressLogMaxCount;
     }
 
     /**
@@ -322,13 +347,12 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     public String log(final String message, final Object... args) {
         final String logEntry = MessageFormat.format(message, args);
         final ArrayDeque<String> entries = getProgressLogProperty();
-        final int progressLogCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.MAX_VALUE);
         if ( entries == null ) {
-            final ArrayDeque<String> deque = new ArrayDeque<>(Math.min(progressLogCount, 4));
-            addLog(logEntry, deque, progressLogCount);
+            final ArrayDeque<String> deque = new ArrayDeque<>(Math.min(progressLogMaxCount, 4));
+            addLog(logEntry, deque, progressLogMaxCount);
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, deque);
         } else {
-            addLog(logEntry, entries, progressLogCount);
+            addLog(logEntry, entries, progressLogMaxCount);
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, entries);
         }
         return Job.PROPERTY_JOB_PROGRESS_LOG;
