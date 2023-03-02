@@ -52,7 +52,11 @@ public class JobManagerConfigurationTestFactory {
             public int cleanup_period() {
                 return 0;
             }
-            
+
+            @Override
+            public int progresslog_count() {
+                return 0;
+            }
         });
         return real;
     }

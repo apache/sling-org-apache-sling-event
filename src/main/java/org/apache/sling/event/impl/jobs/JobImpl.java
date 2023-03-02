@@ -19,6 +19,7 @@
 package org.apache.sling.event.impl.jobs;
 
 import java.text.MessageFormat;
+import java.util.ArrayDeque;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -54,6 +55,11 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      * Internal job property specifying when the job was put into the queue.
      */
     public static final String PROPERTY_JOB_QUEUED = "event.job.queued.time";
+
+    /**
+     * Max number of log message that can stored by consumer to add information about current state of Job.
+     */
+    public static final String PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT = "slingevent:progressLog:maxCount";
 
     /**
      * This property contains the finished state of a job once it's marked as finished.
@@ -312,14 +318,18 @@ public class JobImpl implements Job, Comparable<JobImpl> {
 
     public String log(final String message, final Object... args) {
         final String logEntry = MessageFormat.format(message, args);
-        final String[] entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
+        final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
+        final int progressLogMaxCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class);
         if ( entries == null ) {
-            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, new String[] {logEntry});
+            final ArrayDeque<String> deque = new ArrayDeque<>(progressLogMaxCount);
+            deque.offer(logEntry);
+            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, deque);
         } else {
-            final String[] newEntries = new String[entries.length + 1];
-            System.arraycopy(entries, 0, newEntries, 0, entries.length);
-            newEntries[entries.length] = logEntry;
-            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, newEntries);
+            if (entries.size() == progressLogMaxCount) {
+                entries.poll();
+            }
+            entries.offer(logEntry);
+            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, entries);
         }
         return Job.PROPERTY_JOB_PROGRESS_LOG;
     }
@@ -357,7 +367,8 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      */
     @Override
     public String[] getProgressLog() {
-        return this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
+        final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
+        return entries.toArray(new String[0]);
     }
 
     /**

@@ -59,4 +59,23 @@ public class JobsImplTest {
         assertEquals(job5, list.get(4));
 
     }
+
+    @Test
+    public void testProgressLogCount() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 10);
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 20; i++) {
+            job.log("message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(10, progressLog.length);
+        for (int i = 0; i < 10; i++) {
+            assertEquals("message_1" + i, progressLog[i]);
+        }
+
+    }
 }
