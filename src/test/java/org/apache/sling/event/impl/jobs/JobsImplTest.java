@@ -131,7 +131,7 @@ public class JobsImplTest {
     }
 
     @Test
-    public void testProgressLogCountWithOldJob() {
+    public void testProgressLogCountMigrationFromOldJob() {
         final Map<String, Object> properties = new HashMap<>();
         properties.put(Job.PROPERTY_JOB_PROGRESS_LOG, new String[0]);
 
@@ -149,5 +149,17 @@ public class JobsImplTest {
             assertEquals("message_" + i, progressLog[i]);
         }
         assertTrue(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG) instanceof ArrayDeque);
+
+
+        // now create a new Job with Max Count
+        final JobImpl newJob = new JobImpl("test", "hello_1", 10, properties);
+        for (int i = 0; i < 20; i++) {
+            newJob.log("newMessage_" + i);
+        }
+        final String[] newProgressLog = newJob.getProgressLog();
+        assertEquals(10, newProgressLog.length);
+        for (int i = 0; i < 10; i++) {
+            assertEquals("newMessage_1" + i, newProgressLog[i]);
+        }
     }
 }

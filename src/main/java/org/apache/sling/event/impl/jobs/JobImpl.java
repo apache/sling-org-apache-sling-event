@@ -463,7 +463,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
             return;
         }
 
-        if (entries.size() == maxSize) {
+        while (entries.size() >= maxSize) {
             entries.poll();
         }
 
