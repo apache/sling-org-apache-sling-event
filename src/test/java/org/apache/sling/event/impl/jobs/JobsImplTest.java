@@ -77,4 +77,54 @@ public class JobsImplTest {
             assertEquals("message_1" + i, progressLog[i]);
         }
     }
+
+    @Test
+    public void testProgressLogCountWithLowerCount() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 2);
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 20; i++) {
+            job.log("message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(2, progressLog.length);
+        assertEquals("message_18", progressLog[0]);
+        assertEquals("message_19", progressLog[1]);
+    }
+
+    @Test
+    public void testProgressLogCountWithZeroCount() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, 0);
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 20; i++) {
+            job.log("message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(0, progressLog.length);
+    }
+
+    @Test
+    public void testProgressLogCountWithInfiniteCount() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.MAX_VALUE);
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 20; i++) {
+            job.log("message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(20, progressLog.length);
+        for (int i = 0; i < 20; i++) {
+            assertEquals("message_" + i, progressLog[i]);
+        }
+    }
 }

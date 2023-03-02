@@ -321,14 +321,11 @@ public class JobImpl implements Job, Comparable<JobImpl> {
         final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
         final int progressLogCount = this.getProperty(JobImpl.PROPERTY_JOB_PROGRESS_LOG_MAX_COUNT, Integer.class);
         if ( entries == null ) {
-            final ArrayDeque<String> deque = new ArrayDeque<>(4);
-            deque.offer(logEntry);
+            final ArrayDeque<String> deque = new ArrayDeque<>(Math.min(progressLogCount, 4));
+            addLog(logEntry, deque, progressLogCount);
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, deque);
         } else {
-            if (entries.size() == progressLogCount) {
-                entries.poll();
-            }
-            entries.offer(logEntry);
+            addLog(logEntry, entries, progressLogCount);
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, entries);
         }
         return Job.PROPERTY_JOB_PROGRESS_LOG;
@@ -430,5 +427,19 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     public String toString() {
         return "JobImpl [properties=" + properties + ", topic=" + topic
                 + ", path=" + path + ", jobId=" + jobId + "]";
+    }
+
+    // helper methods
+    private void addLog(final String logEntry, final ArrayDeque<String> entries, final int maxSize) {
+
+        if (maxSize == 0) {
+            return;
+        }
+
+        if (entries.size() == maxSize) {
+            entries.poll();
+        }
+
+        entries.offer(logEntry);
     }
 }
