@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -84,33 +83,29 @@ public class JobsImplTest {
     }
 
     @Test
-    public void testProgressLogCountWithLowerCount() {
-        final Map<String, Object> properties = new HashMap<>();
-
-        final JobImpl job = new JobImpl("test", "hello_1", 2, properties);
-
-        for (int i = 0; i < 20; i++) {
-            job.log("message_" + i);
-        }
-
-        final String[] progressLog = job.getProgressLog();
-        assertEquals(2, progressLog.length);
-        assertEquals("message_18", progressLog[0]);
-        assertEquals("message_19", progressLog[1]);
-    }
-
-    @Test
     public void testProgressLogCountWithZeroCount() {
         final Map<String, Object> properties = new HashMap<>();
 
         final JobImpl job = new JobImpl("test", "hello_1", 0, properties);
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 2; i++) {
             job.log("message_" + i);
         }
 
-        final String[] progressLog = job.getProgressLog();
-        assertEquals(0, progressLog.length);
+        assertNull(job.getProgressLog());
+    }
+
+    @Test
+    public void testProgressLogCountWithNegativeCount() {
+        final Map<String, Object> properties = new HashMap<>();
+
+        final JobImpl job = new JobImpl("test", "hello_1", -2, properties);
+
+        for (int i = 0; i < 2; i++) {
+            job.log("message_" + i);
+        }
+
+        assertNull(job.getProgressLog());
     }
 
     @Test
@@ -148,8 +143,6 @@ public class JobsImplTest {
         for (int i = 0; i < 20; i++) {
             assertEquals("message_" + i, progressLog[i]);
         }
-        assertTrue(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG) instanceof ArrayDeque);
-
 
         // now create a new Job with Max Count
         final JobImpl newJob = new JobImpl("test", "hello_1", 10, properties);

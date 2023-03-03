@@ -19,15 +19,11 @@
 package org.apache.sling.event.impl.jobs;
 
 import java.text.MessageFormat;
-import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
@@ -345,15 +341,18 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     }
 
     public String log(final String message, final Object... args) {
+
+        if (progressLogMaxCount <= 0) {
+            this.properties.remove(Job.PROPERTY_JOB_PROGRESS_LOG);
+            return Job.PROPERTY_JOB_PROGRESS_LOG;
+        }
+
         final String logEntry = MessageFormat.format(message, args);
-        final ArrayDeque<String> entries = getProgressLogProperty();
+        final String[] entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
         if ( entries == null ) {
-            final ArrayDeque<String> deque = new ArrayDeque<>(Math.min(progressLogMaxCount, 4));
-            addLog(logEntry, deque, progressLogMaxCount);
-            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, deque);
+            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, new String[] {logEntry});
         } else {
             addLog(logEntry, entries, progressLogMaxCount);
-            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, entries);
         }
         return Job.PROPERTY_JOB_PROGRESS_LOG;
     }
@@ -391,8 +390,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      */
     @Override
     public String[] getProgressLog() {
-        final ArrayDeque<String> entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
-        return entries != null ? entries.toArray(new String[0]) : this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
+        return this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
     }
 
     /**
@@ -457,39 +455,19 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     }
 
     // helper methods
-    private void addLog(final String logEntry, final ArrayDeque<String> entries, final int maxSize) {
+    private void addLog(final String logEntry, final String[] entries, final int maxSize) {
 
-        if (maxSize == 0) {
-            return;
-        }
-
-        while (entries.size() >= maxSize) {
-            entries.poll();
-        }
-
-        entries.offer(logEntry);
-    }
-
-    /**
-     * Return the {@link Job#PROPERTY_JOB_PROGRESS_LOG} property for current job.
-     *
-     * @return the property if available else null
-     */
-    private ArrayDeque<String> getProgressLogProperty() {
-
-        final ArrayDeque<String> propertyDeque = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, ArrayDeque.class);
-        if (propertyDeque != null) {
-            return propertyDeque;
-        }
-
-        // if property is null, it could be old job created with String Array property.
-        final String[] propertyArr = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
-
-        if (Objects.isNull(propertyArr)) {
-            return null; // property is null i.e. not set
+        final String[] newEntries;
+        if (entries.length >= maxSize) {
+            newEntries = new String[maxSize];
+            System.arraycopy(entries, entries.length - maxSize + 1, newEntries, 0, maxSize - 1);
+            newEntries[maxSize - 1] = logEntry;
         } else {
-            // job was created with old property type i.e. string array, convert to ArrayDeque
-            return Arrays.stream(propertyArr).collect(Collectors.toCollection(ArrayDeque::new));
+            newEntries = new String[entries.length + 1];
+            System.arraycopy(entries, 0, newEntries, 0, entries.length);
+            newEntries[entries.length] = logEntry;
+
         }
+        this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, newEntries);
     }
 }
