@@ -77,9 +77,10 @@ public class JobsImplTest {
 
         final String[] progressLog = job.getProgressLog();
         assertEquals(10, progressLog.length);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 9; i++) {
             assertEquals("message_1" + i, progressLog[i]);
         }
+        assertEquals("message_19" + JobImpl.TRUNCATED_LOG, progressLog[9]);
     }
 
     @Test
@@ -151,8 +152,9 @@ public class JobsImplTest {
         }
         final String[] newProgressLog = newJob.getProgressLog();
         assertEquals(10, newProgressLog.length);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 9; i++) {
             assertEquals("newMessage_1" + i, newProgressLog[i]);
         }
+        assertEquals("newMessage_19" + JobImpl.TRUNCATED_LOG, newProgressLog[9]);
     }
 }
