@@ -132,7 +132,7 @@ public class CheckTopologyTask {
                                 }
                                 final QueueInfo info = qcm.getQueueInfo(topicName);
 				logger.info ("Start reassigning stale jobs");
-                                JobTopicTraverser.traverse(this.logger, topicResource, configuration.getProgressLogMaxCount(), new JobTopicTraverser.ResourceCallback() {
+                                JobTopicTraverser.traverse(this.logger, topicResource, new JobTopicTraverser.ResourceCallback() {
 
                                     @Override
                                     public boolean handle(final Resource rsrc) {
@@ -241,7 +241,7 @@ public class CheckTopologyTask {
                 final QueueInfo info = qcm.getQueueInfo(topicName);
                 logger.debug("Found queue {} for {}", info.queueConfiguration, topicName);
 
-                JobTopicTraverser.traverse(this.logger, topicResource, configuration.getProgressLogMaxCount(), new JobTopicTraverser.ResourceCallback() {
+                JobTopicTraverser.traverse(this.logger, topicResource, new JobTopicTraverser.ResourceCallback() {
 
                     @Override
                     public boolean handle(final Resource rsrc) {
@@ -280,7 +280,7 @@ public class CheckTopologyTask {
             // now unassign if there are still jobs
             if ( caps.isActive() && unassign ) {
                 // we have to move everything to the unassigned area
-                JobTopicTraverser.traverse(this.logger, topicResource, configuration.getProgressLogMaxCount(), new JobTopicTraverser.ResourceCallback() {
+                JobTopicTraverser.traverse(this.logger, topicResource, new JobTopicTraverser.ResourceCallback() {
 
                     @Override
                     public boolean handle(final Resource rsrc) {

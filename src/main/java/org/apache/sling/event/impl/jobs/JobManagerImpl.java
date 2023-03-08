@@ -331,7 +331,7 @@ public class JobManagerImpl
                 final Resource jobResource = result.next();
                 // sanity check for the path
                 if ( this.configuration.isJob(jobResource.getPath()) ) {
-                    final JobImpl job = Utility.readJob(logger, jobResource, configuration.getProgressLogMaxCount());
+                    final JobImpl job = Utility.readJob(logger, jobResource);
                     if ( job != null ) {
                         if ( logger.isDebugEnabled() ) {
                             logger.debug("Found job with id {} = {}", id, Utility.toString(job));
@@ -493,7 +493,7 @@ public class JobManagerImpl
                 final Resource jobResource = iter.next();
                 // sanity check for the path
                 if ( this.configuration.isJob(jobResource.getPath()) ) {
-                    final JobImpl job = Utility.readJob(logger, jobResource, configuration.getProgressLogMaxCount());
+                    final JobImpl job = Utility.readJob(logger, jobResource);
                     if ( job != null ) {
                         count++;
                         result.add(job);

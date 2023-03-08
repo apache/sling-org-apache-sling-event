@@ -285,7 +285,7 @@ public class QueueJobCache {
         final AtomicBoolean scanTopic = new AtomicBoolean(false);
         final AtomicBoolean haltTopic = new AtomicBoolean(false);
 
-        JobTopicTraverser.traverse(logger, topicResource, configuration.getProgressLogMaxCount(), new JobTopicTraverser.JobCallback() {
+        JobTopicTraverser.traverse(logger, topicResource, new JobTopicTraverser.JobCallback() {
 
             @Override
             public boolean handle(final JobImpl job) {

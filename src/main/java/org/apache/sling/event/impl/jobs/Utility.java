@@ -174,7 +174,7 @@ public abstract class Utility {
     /**
      * Read a job
      */
-    public static JobImpl readJob(final Logger logger, final Resource resource, final int progressLogMaxCount) {
+    public static JobImpl readJob(final Logger logger, final Resource resource) {
         JobImpl job = null;
         if ( resource != null ) {
             try {
