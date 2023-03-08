@@ -66,13 +66,13 @@ public class JobsImplTest {
     public void testProgressLogCount() {
         final Map<String, Object> properties = new HashMap<>();
 
-        final JobImpl job = new JobImpl("test", "hello_1", 10, properties);
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
 
         assertNull(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG));
         assertNull(job.getProgressLog());
 
         for (int i = 0; i < 20; i++) {
-            job.log("message_" + i);
+            job.log(10, "message_" + i);
         }
 
         final String[] progressLog = job.getProgressLog();
@@ -86,10 +86,10 @@ public class JobsImplTest {
     public void testProgressLogCountWithZeroCount() {
         final Map<String, Object> properties = new HashMap<>();
 
-        final JobImpl job = new JobImpl("test", "hello_1", 0, properties);
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
 
         for (int i = 0; i < 2; i++) {
-            job.log("message_" + i);
+            job.log(0, "message_" + i);
         }
 
         assertNull(job.getProgressLog());
@@ -99,10 +99,10 @@ public class JobsImplTest {
     public void testProgressLogCountWithNegativeCount() {
         final Map<String, Object> properties = new HashMap<>();
 
-        final JobImpl job = new JobImpl("test", "hello_1", -2, properties);
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
 
         for (int i = 0; i < 2; i++) {
-            job.log("message_" + i);
+            job.log(-2, "message_" + i);
         }
 
         assertNull(job.getProgressLog());
@@ -115,7 +115,7 @@ public class JobsImplTest {
         final JobImpl job = new JobImpl("test", "hello_1", properties);
 
         for (int i = 0; i < 20; i++) {
-            job.log("message_" + i);
+            job.log(Integer.MAX_VALUE, "message_" + i);
         }
 
         final String[] progressLog = job.getProgressLog();
@@ -135,7 +135,7 @@ public class JobsImplTest {
         assertTrue(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG) instanceof String[]);
 
         for (int i = 0; i < 20; i++) {
-            job.log("message_" + i);
+            job.log(Integer.MAX_VALUE, "message_" + i);
         }
 
         final String[] progressLog = job.getProgressLog();
@@ -145,9 +145,9 @@ public class JobsImplTest {
         }
 
         // now create a new Job with Max Count
-        final JobImpl newJob = new JobImpl("test", "hello_1", 10, properties);
+        final JobImpl newJob = new JobImpl("test", "hello_1", properties);
         for (int i = 0; i < 20; i++) {
-            newJob.log("newMessage_" + i);
+            newJob.log(10, "newMessage_" + i);
         }
         final String[] newProgressLog = newJob.getProgressLog();
         assertEquals(10, newProgressLog.length);

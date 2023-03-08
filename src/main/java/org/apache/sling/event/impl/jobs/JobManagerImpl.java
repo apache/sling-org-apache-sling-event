@@ -667,7 +667,7 @@ public class JobManagerImpl
 
         // update property types - priority, add path and create job
         properties.put(JobImpl.PROPERTY_RESOURCE_PATH, path);
-        return new JobImpl(jobTopic, jobId, this.configuration.getProgressLogMaxCount(), properties);
+        return new JobImpl(jobTopic, jobId, properties);
     }
 
     /**

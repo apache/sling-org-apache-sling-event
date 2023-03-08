@@ -51,6 +51,11 @@ public class JobHandler {
 
     private final JobManagerConfiguration configuration;
 
+    /**
+     * Max number of log message that can stored by consumer to add information about current state of Job.
+     */
+    private final int progressLogMaxCount;
+
     private final JobExecutor consumer;
 
     public JobHandler(final JobImpl job,
@@ -59,10 +64,15 @@ public class JobHandler {
         this.job = job;
         this.consumer = consumer;
         this.configuration = configuration;
+        this.progressLogMaxCount = configuration.getProgressLogMaxCount();
     }
 
     public JobImpl getJob() {
         return this.job;
+    }
+
+    public int getProgressLogMaxCount() {
+        return progressLogMaxCount;
     }
 
     public JobExecutor getConsumer() {
@@ -281,5 +291,5 @@ public class JobHandler {
         }
         
     }
-    
+
 }

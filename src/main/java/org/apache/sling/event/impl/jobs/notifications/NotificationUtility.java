@@ -43,7 +43,7 @@ public abstract class NotificationUtility {
             final Long time) {
         if ( eventAdmin != null ) {
             // create new copy of job object
-            final Job jobCopy = new JobImpl(job.getTopic(), job.getId(), ((JobImpl) job).getProgressLogMaxCount(), ((JobImpl)job).getProperties());
+            final Job jobCopy = new JobImpl(job.getTopic(), job.getId(), ((JobImpl)job).getProperties());
             sendNotificationInternal(eventAdmin, eventTopic, jobCopy, time);
         }
     }

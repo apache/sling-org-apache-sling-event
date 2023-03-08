@@ -224,7 +224,7 @@ public abstract class Utility {
                         }
                     }
                     job = new JobImpl(topic,
-                            jobId, progressLogMaxCount,
+                            jobId,
                             jobProperties);
                 } else {
                     if ( errorMessage != null ) {
