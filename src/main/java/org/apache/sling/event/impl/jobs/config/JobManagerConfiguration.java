@@ -96,7 +96,7 @@ public class JobManagerConfiguration {
         @AttributeDefinition(name = "Progress Log message's max count",
                 description = "Max number of log messages that can stored by consumer to add information about current state of Job.\n" +
                         "Any attempt to add more information would result into purging of the least recent messages." +
-                        "default is -1 (to indicate infinite).")
+                        "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
         int progresslog_maxCount() default -1;
     }
     /** Logger. */
