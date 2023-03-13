@@ -54,7 +54,7 @@ public class JobManagerConfigurationTestFactory {
             }
 
             public int progresslog_maxCount() {
-                return 0;
+                return Integer.MAX_VALUE;
             }
         });
         return real;
