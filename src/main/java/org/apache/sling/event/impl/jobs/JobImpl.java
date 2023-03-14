@@ -435,7 +435,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
             System.arraycopy(entries, entries.length - maxSize + 1, newEntries, 0, maxSize - 2);
             final String prevLastLog = entries[entries.length - 1];
             newEntries[maxSize - 2] = prevLastLog.endsWith(TRUNCATED_LOG) ? prevLastLog.replace(TRUNCATED_LOG, "") : prevLastLog;
-            newEntries[maxSize - 1] = logEntry + TRUNCATED_LOG;
+            newEntries[maxSize - 1] = logEntry.endsWith(TRUNCATED_LOG) ? logEntry : logEntry + TRUNCATED_LOG;
         } else {
             newEntries = new String[entries.length + 1];
             System.arraycopy(entries, 0, newEntries, 0, entries.length);
