@@ -62,6 +62,8 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      */
     public static final String PROPERTY_FINISHED_STATE = "slingevent:finishedState";
 
+    static final String TRUNCATED_LOG = "...truncated log";
+
     private final ValueMap properties;
 
     private final String topic;
@@ -310,16 +312,19 @@ public class JobImpl implements Job, Comparable<JobImpl> {
         return Job.PROPERTY_JOB_PROGRESS_ETA;
     }
 
-    public String log(final String message, final Object... args) {
+    public String log(final int logMaxCount, final String message, final Object... args) {
+
+        if (logMaxCount <= 0) {
+            this.properties.remove(Job.PROPERTY_JOB_PROGRESS_LOG);
+            return Job.PROPERTY_JOB_PROGRESS_LOG;
+        }
+
         final String logEntry = MessageFormat.format(message, args);
         final String[] entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
         if ( entries == null ) {
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, new String[] {logEntry});
         } else {
-            final String[] newEntries = new String[entries.length + 1];
-            System.arraycopy(entries, 0, newEntries, 0, entries.length);
-            newEntries[entries.length] = logEntry;
-            this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, newEntries);
+            addLog(logEntry, entries, logMaxCount);
         }
         return Job.PROPERTY_JOB_PROGRESS_LOG;
     }
@@ -419,5 +424,24 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     public String toString() {
         return "JobImpl [properties=" + properties + ", topic=" + topic
                 + ", path=" + path + ", jobId=" + jobId + "]";
+    }
+
+    // helper methods
+    private void addLog(final String logEntry, final String[] entries, final int maxSize) {
+
+        final String[] newEntries;
+        if (entries.length >= maxSize) {
+            newEntries = new String[maxSize];
+            System.arraycopy(entries, entries.length - maxSize + 1, newEntries, 0, maxSize - 2);
+            final String prevLastLog = entries[entries.length - 1];
+            newEntries[maxSize - 2] = prevLastLog.endsWith(TRUNCATED_LOG) ? prevLastLog.replace(TRUNCATED_LOG, "") : prevLastLog;
+            newEntries[maxSize - 1] = logEntry.endsWith(TRUNCATED_LOG) ? logEntry : logEntry + TRUNCATED_LOG;
+        } else {
+            newEntries = new String[entries.length + 1];
+            System.arraycopy(entries, 0, newEntries, 0, entries.length);
+            newEntries[entries.length] = logEntry;
+
+        }
+        this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, newEntries);
     }
 }

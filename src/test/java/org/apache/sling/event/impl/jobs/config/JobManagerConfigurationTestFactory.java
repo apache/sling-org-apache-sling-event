@@ -52,7 +52,10 @@ public class JobManagerConfigurationTestFactory {
             public int cleanup_period() {
                 return 0;
             }
-            
+
+            public int progresslog_maxCount() {
+                return Integer.MAX_VALUE;
+            }
         });
         return real;
     }

@@ -19,6 +19,8 @@
 package org.apache.sling.event.impl.jobs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -34,7 +36,7 @@ public class JobsImplTest {
 
     @Test public void testSorting() {
         final Calendar now = Calendar.getInstance();
-        final Map<String, Object> properties = new HashMap<String, Object>();
+        final Map<String, Object> properties = new HashMap<>();
         properties.put(Job.PROPERTY_JOB_CREATED, now);
 
         final JobImpl job1 = new JobImpl("test", "hello_1", properties);
@@ -58,5 +60,101 @@ public class JobsImplTest {
         assertEquals(job4, list.get(3));
         assertEquals(job5, list.get(4));
 
+    }
+
+    @Test
+    public void testProgressLogCount() {
+        final Map<String, Object> properties = new HashMap<>();
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        assertNull(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG));
+        assertNull(job.getProgressLog());
+
+        for (int i = 0; i < 20; i++) {
+            job.log(10, "message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(10, progressLog.length);
+        for (int i = 0; i < 9; i++) {
+            assertEquals("message_1" + i, progressLog[i]);
+        }
+        assertEquals("message_19" + JobImpl.TRUNCATED_LOG, progressLog[9]);
+    }
+
+    @Test
+    public void testProgressLogCountWithZeroCount() {
+        final Map<String, Object> properties = new HashMap<>();
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 2; i++) {
+            job.log(0, "message_" + i);
+        }
+
+        assertNull(job.getProgressLog());
+    }
+
+    @Test
+    public void testProgressLogCountWithNegativeCount() {
+        final Map<String, Object> properties = new HashMap<>();
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 2; i++) {
+            job.log(-2, "message_" + i);
+        }
+
+        assertNull(job.getProgressLog());
+    }
+
+    @Test
+    public void testProgressLogCountWithInfiniteCount() {
+        final Map<String, Object> properties = new HashMap<>();
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        for (int i = 0; i < 20; i++) {
+            job.log(Integer.MAX_VALUE, "message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(20, progressLog.length);
+        for (int i = 0; i < 20; i++) {
+            assertEquals("message_" + i, progressLog[i]);
+        }
+    }
+
+    @Test
+    public void testProgressLogCountMigrationFromOldJob() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(Job.PROPERTY_JOB_PROGRESS_LOG, new String[0]);
+
+        final JobImpl job = new JobImpl("test", "hello_1", properties);
+
+        assertTrue(job.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG) instanceof String[]);
+
+        for (int i = 0; i < 20; i++) {
+            job.log(Integer.MAX_VALUE, "message_" + i);
+        }
+
+        final String[] progressLog = job.getProgressLog();
+        assertEquals(20, progressLog.length);
+        for (int i = 0; i < 20; i++) {
+            assertEquals("message_" + i, progressLog[i]);
+        }
+
+        // now create a new Job with Max Count
+        final JobImpl newJob = new JobImpl("test", "hello_1", properties);
+        for (int i = 0; i < 20; i++) {
+            newJob.log(10, "newMessage_" + i);
+        }
+        final String[] newProgressLog = newJob.getProgressLog();
+        assertEquals(10, newProgressLog.length);
+        for (int i = 0; i < 9; i++) {
+            assertEquals("newMessage_1" + i, newProgressLog[i]);
+        }
+        assertEquals("newMessage_19" + JobImpl.TRUNCATED_LOG, newProgressLog[9]);
     }
 }

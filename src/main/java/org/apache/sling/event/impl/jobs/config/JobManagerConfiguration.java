@@ -92,6 +92,12 @@ public class JobManagerConfiguration {
             description = "Specify the periodic interval in minutes (default is 48h - use 0 to disable) after which " +
                     "removed jobs (ERROR or DROPPED) should be cleaned from the repository.")
         int cleanup_period() default 2880;
+
+        @AttributeDefinition(name = "Progress Log message's max count",
+                description = "Max number of log messages that can stored by consumer to add information about current state of Job.\n" +
+                        "Any attempt to add more information would result into purging of the least recent messages." +
+                        "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
+        int progresslog_maxCount() default -1;
     }
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger("org.apache.sling.event.impl.jobs");
@@ -149,6 +155,11 @@ public class JobManagerConfiguration {
     private volatile long backgroundLoadDelay;
 
     private volatile long startupDelay;
+
+    /**
+     * The max count of job progress log messages
+     */
+    private int progressLogMaxCount;
 
     private volatile InitDelayingTopologyEventListener startupDelayListener;
 
@@ -258,6 +269,13 @@ public class JobManagerConfiguration {
         // an immediate effect - it will only have an effect on next activation.
         // (as 'startup delay runnable' is already scheduled in activate)
         this.startupDelay = config.startup_delay();
+
+        if (config.progresslog_maxCount() < 0) {
+            this.progressLogMaxCount = Integer.MAX_VALUE;
+        } else {
+            this.progressLogMaxCount = config.progresslog_maxCount();
+        }
+
     }
 
     /**
@@ -411,6 +429,10 @@ public class JobManagerConfiguration {
 
     public String getJobsBasePathWithSlash() {
         return this.jobsBasePathWithSlash;
+    }
+
+    public int getProgressLogMaxCount() {
+        return this.progressLogMaxCount;
     }
 
     public String getPreviousVersionAnonPath() {
