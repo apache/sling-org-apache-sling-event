@@ -25,11 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import org.apache.sling.event.impl.Barrier;
+import org.apache.sling.event.impl.TestUtil;
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.Job.JobState;
@@ -449,22 +446,11 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
 
             Predicate<String> matcher = (line) -> line.contains(
                     "Persisting job Sling Job [topic=no/consumer/registered] into queue <main queue> with no assigned target");
-            assertTrue(containsLine(outContent.toByteArray(), matcher));
+            assertTrue(TestUtil.containsLine(outContent, matcher));
 
         } finally {
             System.setOut(originalOut);
         }
     }
 
-    private boolean containsLine(byte[] data, Predicate<String> matcher) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data)))) {
-            while (reader.ready()) {
-                String line = reader.readLine();
-                if (matcher.test(line)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 }
