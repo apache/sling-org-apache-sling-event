@@ -18,7 +18,13 @@
  */
 package org.apache.sling.event.impl;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.util.function.Predicate;
 
 public class TestUtil {
 
@@ -49,5 +55,17 @@ public class TestUtil {
 
     public static Object getFieldValue(final Object obj, final String fieldName) {
         return getSetField(obj, fieldName, true, null);
+    }
+
+    public static boolean containsLine(ByteArrayOutputStream os, Predicate<String> matcher) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(os.toByteArray())))) {
+            while (reader.ready()) {
+                String line = reader.readLine();
+                if (matcher.test(line)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

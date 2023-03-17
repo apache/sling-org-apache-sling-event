@@ -580,12 +580,12 @@ public class JobManagerImpl
         final TopologyCapabilities caps = this.configuration.getTopologyCapabilities();
         info.targetId = (caps == null ? null : caps.detectTarget(jobTopic, jobProperties, info));
 
-        if ( logger.isDebugEnabled() ) {
-            if ( info.targetId != null ) {
-                logger.debug("Persisting job {} into queue {}, target={}", new Object[] {Utility.toString(jobTopic, jobProperties), info.queueName, info.targetId});
-            } else {
-                logger.debug("Persisting job {} into queue {}", Utility.toString(jobTopic, jobProperties), info.queueName);
-            }
+        if (info.targetId == null && logger.isInfoEnabled()) {
+            logger.info("Persisting job {} into queue {} with no assigned target",
+                    Utility.toString(jobTopic, jobProperties), info.queueName);
+        } else if (info.targetId != null && logger.isDebugEnabled()) {
+            logger.debug("Persisting job {} into queue {}, target={}",
+                    Utility.toString(jobTopic, jobProperties), info.queueName, info.targetId);
         }
         final ResourceResolver resolver = this.configuration.createResourceResolver();
         try {

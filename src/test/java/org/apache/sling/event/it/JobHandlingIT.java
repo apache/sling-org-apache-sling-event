@@ -18,16 +18,28 @@
  */
 package org.apache.sling.event.it;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import org.apache.sling.event.impl.Barrier;
+import org.apache.sling.event.impl.TestUtil;
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.Job;
+import org.apache.sling.event.jobs.Job.JobState;
 import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.QueueConfiguration;
@@ -46,13 +58,6 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.ops4j.pax.exam.CoreOptions.options;
-import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
@@ -426,4 +431,26 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
         assertEquals("Unprocessed count", 0, jobManager.getStatistics().getNumberOfJobs());
         assertEquals("Finished count", COUNT / 2, jobManager.getStatistics().getNumberOfFinishedJobs());
     }
+
+    @Test(timeout = DEFAULT_TEST_TIMEOUT)
+    public void testNoJobProcessorLog() throws Exception {
+
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+
+        try {
+            System.setOut(new PrintStream(outContent));
+
+            Job job = jobManager.addJob("no/consumer/registered", null);
+            assertEquals(JobState.QUEUED, job.getJobState());
+
+            Predicate<String> matcher = (line) -> line.contains(
+                    "Persisting job Sling Job [topic=no/consumer/registered] into queue <main queue> with no assigned target");
+            assertTrue(TestUtil.containsLine(outContent, matcher));
+
+        } finally {
+            System.setOut(originalOut);
+        }
+    }
+
 }
