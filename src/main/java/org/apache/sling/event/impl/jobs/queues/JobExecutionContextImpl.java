@@ -85,6 +85,12 @@ public class JobExecutionContextImpl implements JobExecutionContext {
     }
 
     @Override
+    public void setProperty(final String name, final Object value) {
+        handler.getJob().setProperty(name, value);
+        handler.persistJobProperties(name);
+    }
+
+    @Override
     public void log(final String message, Object... args) {
         final int logMaxCount = handler.getProgressLogMaxCount();
         handler.persistJobProperties(handler.getJob().log(logMaxCount, message, args));
