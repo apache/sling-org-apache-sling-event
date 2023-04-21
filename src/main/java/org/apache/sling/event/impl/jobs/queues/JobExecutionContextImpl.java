@@ -86,6 +86,16 @@ public class JobExecutionContextImpl implements JobExecutionContext {
 
     @Override
     public void setProperty(final String name, final Object value) {
+        if ( name == null ) {
+            throw new IllegalArgumentException("Name must not be null");
+        }
+        if ( value == null ) {
+            throw new IllegalArgumentException("Value must not be null");
+        }
+        if ( name.startsWith("slingevent:") || name.startsWith(":slingevent:")) {
+            throw new IllegalArgumentException("Property name must not start with slingevent: " + name);
+        }
+
         handler.getJob().setProperty(name, value);
         handler.persistJobProperties(name);
     }

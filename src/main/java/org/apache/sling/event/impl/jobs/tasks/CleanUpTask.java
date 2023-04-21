@@ -182,6 +182,11 @@ public class CleanUpTask {
                         }
 
                         @Override
+                        public void setProperty(String name, Object value) {
+
+                        }
+
+                        @Override
                         public ResultBuilder result() {
                             return new ResultBuilderImpl();
                         }
@@ -436,7 +441,7 @@ public class CleanUpTask {
                 for(final Resource r : toDelete) {
                     if ( caps.isActive() ) {
                         resolver.delete(r);
-                        resolver.commit();    
+                        resolver.commit();
                     }
                 }
             }
