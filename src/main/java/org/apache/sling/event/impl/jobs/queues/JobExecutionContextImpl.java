@@ -93,7 +93,7 @@ public class JobExecutionContextImpl implements JobExecutionContext {
             throw new IllegalArgumentException("Value must not be null");
         }
         if ( name.startsWith("slingevent:") || name.startsWith(":slingevent:")) {
-            throw new IllegalArgumentException("Property name must not start with slingevent: " + name);
+            throw new IllegalArgumentException("Property name must not start with slingevent: or :slingevent: " + name);
         }
 
         handler.getJob().setProperty(name, value);

@@ -150,6 +150,10 @@ public class CleanUpTask {
             HistoryCleanUpTask.cleanup(
                     since,
                     resolver,
+                    /**
+                     * We use a dummy context here as we are running it as a
+                     * scheduled task and not as a job.
+                     */
                     new JobExecutionContext() {
                         @Override
                         public void asyncProcessingFinished(JobExecutionResult result) {
