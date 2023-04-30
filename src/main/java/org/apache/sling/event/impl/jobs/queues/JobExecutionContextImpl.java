@@ -24,6 +24,7 @@ import org.apache.sling.event.impl.jobs.JobHandler;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.event.jobs.consumer.JobExecutionResult;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of the job execution context passed to
@@ -85,7 +86,7 @@ public class JobExecutionContextImpl implements JobExecutionContext {
     }
 
     @Override
-    public void setProperty(final String name, final Object value) {
+    public void setProperty(@NotNull final String name, final Object value) {
         if ( name == null ) {
             throw new IllegalArgumentException("Name must not be null");
         }
@@ -101,7 +102,7 @@ public class JobExecutionContextImpl implements JobExecutionContext {
     }
 
     @Override
-    public void log(final String message, Object... args) {
+    public void log(@NotNull final String message, Object... args) {
         final int logMaxCount = handler.getProgressLogMaxCount();
         handler.persistJobProperties(handler.getJob().log(logMaxCount, message, args));
     }
