@@ -150,6 +150,10 @@ public class CleanUpTask {
             HistoryCleanUpTask.cleanup(
                     since,
                     resolver,
+                    /**
+                     * We use a dummy context here as we are running it as a
+                     * scheduled task and not as a job.
+                     */
                     new JobExecutionContext() {
                         @Override
                         public void asyncProcessingFinished(JobExecutionResult result) {
@@ -178,6 +182,11 @@ public class CleanUpTask {
 
                         @Override
                         public void log(String message, Object... args) {
+
+                        }
+
+                        @Override
+                        public void setProperty(String name, Object value) {
 
                         }
 
@@ -436,7 +445,7 @@ public class CleanUpTask {
                 for(final Resource r : toDelete) {
                     if ( caps.isActive() ) {
                         resolver.delete(r);
-                        resolver.commit();    
+                        resolver.commit();
                     }
                 }
             }
