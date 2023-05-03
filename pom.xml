@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>org.apache.sling.event</artifactId>
-    <version>4.3.10</version>
+    <version>4.3.11-SNAPSHOT</version>
 
     <name>Apache Sling Event</name>
     <description>Support for eventing.</description>
@@ -38,7 +38,7 @@
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</developerConnection>
         <url>https://gitbox.apache.org/repos/asf?p=sling-org-apache-sling-event.git</url>
-        <tag>org.apache.sling.event-4.3.10</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
@@ -46,7 +46,7 @@
         <org.ops4j.pax.exam.version>4.13.3</org.ops4j.pax.exam.version>
         <min.port>37000</min.port>
         <max.port>37999</max.port>
-        <project.build.outputTimestamp>2023-05-03T18:56:41Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2023-05-03T19:08:22Z</project.build.outputTimestamp>
     </properties>
 
 
