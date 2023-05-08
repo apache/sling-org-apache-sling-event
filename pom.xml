@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>org.apache.sling.event</artifactId>
-    <version>4.3.13-SNAPSHOT</version>
+    <version>4.3.11-SNAPSHOT</version>
 
     <name>Apache Sling Event</name>
     <description>Support for eventing.</description>
