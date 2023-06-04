@@ -76,18 +76,23 @@ public class JobConsumerManager {
                     + "only used on the current instance. This option should always be disabled!")
         boolean org_apache_sling_installer_configuration_persist() default false;
 
-        @AttributeDefinition(name = "Topic Whitelist",
+        @AttributeDefinition(name = "Topic Allow List",
               description="This is a list of topics which currently should be "
                         + "processed by this instance. Leaving it empty, all job consumers are disabled. Putting a '*' as "
                         + "one entry, enables all job consumers. Adding separate topics enables job consumers for exactly "
                         + "this topic.")
-        String[] job_consumermanager_whitelist() default "*";
+        String[] job_consumermanager_allowlist();
 
-        @AttributeDefinition(name = "Topic Blacklist",
+        @AttributeDefinition(name = "Topic Deny List",
               description="This is a list of topics which currently shouldn't be "
                         + "processed by this instance. Leaving it empty, all job consumers are enabled. Putting a '*' as "
                         + "one entry, disables all job consumers. Adding separate topics disables job consumers for exactly "
                         + "this topic.")
+        String[] job_consumermanager_denylist();
+    }
+
+    public @interface DeprecatedConfig {
+        String[] job_consumermanager_whitelist();
         String[] job_consumermanager_blacklist();
     }
 
@@ -101,9 +106,9 @@ public class JobConsumerManager {
 
     private String topics;
 
-    private TopicMatcher[] whitelistMatchers;
+    private TopicMatcher[] allowListMatchers;
 
-    private TopicMatcher[] blacklistMatchers;
+    private TopicMatcher[] denyListMatchers;
 
     private volatile long changeCount;
 
@@ -123,18 +128,54 @@ public class JobConsumerManager {
     }
 
     @Activate
-    protected void activate(final BundleContext bc, final Config config) {
+    protected void activate(final BundleContext bc, final Config config, final DeprecatedConfig deprecatedConfig) {
         this.bundleContext = bc;
-        this.modified(bc, config);
+        this.modified(bc, config, deprecatedConfig);
+    }
+
+    private boolean isDefined(final String[] value) {
+        return value != null && value.length > 0;
+    }
+
+    private String[] getAllowListConfig(final Config config, final DeprecatedConfig deprecatedConfig) {
+        if (isDefined(config.job_consumermanager_allowlist()) && isDefined(deprecatedConfig.job_consumermanager_whitelist()) ) {
+            logger.error("Both properties, job.consumermanager.allowlist and job.consumermanager.whitelist"
+                + ", were defined. Using job.consumermanager.allowlist for configuring job consumers."
+                + "Please remove the other property from your configuration.");
+            return config.job_consumermanager_allowlist();
+        } else if (isDefined(config.job_consumermanager_allowlist())) {
+            return config.job_consumermanager_allowlist();
+        } else if (isDefined(deprecatedConfig.job_consumermanager_whitelist())) {
+            logger.warn("The property job.consumermanager.allowlist is not set. Using the provided property " +
+                "job.consumermanager.whitelist instead. Please update your configuration to use job.consumermanager.allowlist.");
+            return deprecatedConfig.job_consumermanager_whitelist();
+        }
+        return new String[] {"*"}; // default
+    }
+
+    private String[] getDenyListConfig(final Config config, final DeprecatedConfig deprecatedConfig) {
+        if (isDefined(config.job_consumermanager_denylist()) && isDefined(deprecatedConfig.job_consumermanager_blacklist()) ) {
+            logger.error("Both properties, job.consumermanager.denylist and job.consumermanager.blacklist"
+                + ", were defined. Using job.consumermanager.denylist for configuring job consumers."
+                + "Please remove the other property from your configuration.");
+            return config.job_consumermanager_denylist();
+        } else if (isDefined(config.job_consumermanager_denylist())) {
+            return config.job_consumermanager_denylist();
+        } else if (isDefined(deprecatedConfig.job_consumermanager_blacklist())) {
+            logger.warn("The property job.consumermanager.denylist is not set. Using the provided property " +
+                "job.consumermanager.blacklist instead. Please update your configuration to use job.consumermanager.denylist.");
+            return deprecatedConfig.job_consumermanager_blacklist();
+        }
+        return null; // default
     }
 
     @Modified
-    protected void modified(final BundleContext bc, final Config config) {
+    protected void modified(final BundleContext bc, final Config config, final DeprecatedConfig deprecatedConfig) {
         final boolean wasEnabled = this.propagationService != null;
-        this.whitelistMatchers = TopicMatcherHelper.buildMatchers(config.job_consumermanager_whitelist());
-        this.blacklistMatchers = TopicMatcherHelper.buildMatchers(config.job_consumermanager_blacklist());
+        this.allowListMatchers = TopicMatcherHelper.buildMatchers(getAllowListConfig(config, deprecatedConfig));
+        this.denyListMatchers = TopicMatcherHelper.buildMatchers(getDenyListConfig(config, deprecatedConfig));
 
-        final boolean enable = this.whitelistMatchers != null && this.blacklistMatchers != TopicMatcherHelper.MATCH_ALL;
+        final boolean enable = this.allowListMatchers != null && this.denyListMatchers != TopicMatcherHelper.MATCH_ALL;
         if ( wasEnabled != enable ) {
             synchronized ( this.topicToConsumerMap ) {
                 this.calculateTopics(enable);
@@ -371,10 +412,10 @@ public class JobConsumerManager {
             // is always the same for the same topics.
             final List<String> topicList = new ArrayList<>();
             for(final String topic : this.topicToConsumerMap.keySet() ) {
-                // check whitelist
-                if ( this.match(topic, this.whitelistMatchers) ) {
-                    // and blacklist
-                    if ( this.blacklistMatchers == null || !this.match(topic, this.blacklistMatchers) ) {
+                // check allow list
+                if ( this.match(topic, this.allowListMatchers) ) {
+                    // and deny list
+                    if ( this.denyListMatchers == null || !this.match(topic, this.denyListMatchers) ) {
                         topicList.add(topic);
                     }
                 }
