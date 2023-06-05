@@ -48,8 +48,28 @@ public class JobConsumerManagerTest {
             }
 
             @Override
-            public String[] job_consumermanager_whitelist() {
+            public String[] job_consumermanager_allowlist() {
                 return new String[] {"*"};
+            }
+
+            @Override
+            public String[] job_consumermanager_denylist() {
+                return null;
+            }
+        };
+    }
+
+    private JobConsumerManager.DeprecatedConfig getDeprecatedConfig() {
+        return new JobConsumerManager.DeprecatedConfig() {
+                
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return JobConsumerManager.DeprecatedConfig.class;
+            }
+
+            @Override
+            public String[] job_consumermanager_whitelist() {
+                return null;
             }
 
             @Override
@@ -58,10 +78,11 @@ public class JobConsumerManagerTest {
             }
         };
     }
+
     @Test public void testSimpleMappingConsumer() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobConsumer jc1 = Mockito.mock(JobConsumer.class);
         final ServiceReference ref1 = Mockito.mock(ServiceReference.class);
@@ -80,7 +101,7 @@ public class JobConsumerManagerTest {
     @Test public void testCategoryMappingConsumer() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobConsumer jc1 = Mockito.mock(JobConsumer.class);
         final ServiceReference ref1 = Mockito.mock(ServiceReference.class);
@@ -99,7 +120,7 @@ public class JobConsumerManagerTest {
     @Test public void testSubCategoryMappingConsumer() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobConsumer jc1 = Mockito.mock(JobConsumer.class);
         final ServiceReference ref1 = Mockito.mock(ServiceReference.class);
@@ -118,7 +139,7 @@ public class JobConsumerManagerTest {
     @Test public void testSimpleMappingExecutor() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobExecutor jc1 = Mockito.mock(JobExecutor.class);
         final ServiceReference ref1 = Mockito.mock(ServiceReference.class);
@@ -137,7 +158,7 @@ public class JobConsumerManagerTest {
     @Test public void testCategoryMappingExecutor() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobExecutor jc1 = Mockito.mock(JobExecutor.class);
         final ServiceReference ref1 = Mockito.mock(ServiceReference.class);
@@ -156,7 +177,7 @@ public class JobConsumerManagerTest {
     @Test public void testSubCategoryMappingExecutor() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobExecutor jc1 = Mockito.mock(JobExecutor.class);
         final ServiceReference ref1 = Mockito.mock(ServiceReference.class);
@@ -175,7 +196,7 @@ public class JobConsumerManagerTest {
     @Test public void testRanking() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
-        jcs.activate(bc, getDefaultConfig());
+        jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
         final JobExecutor jc1 = Mockito.mock(JobExecutor.class);
         final JobExecutor jc2 = Mockito.mock(JobExecutor.class);
