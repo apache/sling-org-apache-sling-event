@@ -155,9 +155,10 @@ class GaugeSupport {
             gaugeMetricNames.add(metricName);
         } catch (IllegalArgumentException e) {
             if (queueName != null && count <= 10) {
+                logger.debug("Failed to register suffix {} for the queue {}, attempt {}, retrying.", suffix, queueName, count, e);
                 registerWithSuffix(suffix, count + 1, value);
             } else {
-                logger.debug("Failed to register suffix {} for the queue {}, attempt {}", suffix, queueName, count, e);
+                logger.error("Failed to register suffix {} for the queue {}, attempt {}, giving up.", suffix, queueName, count, e);
             }
         }
     }
