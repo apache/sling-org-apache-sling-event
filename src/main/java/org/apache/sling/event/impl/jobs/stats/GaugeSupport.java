@@ -21,6 +21,8 @@ package org.apache.sling.event.impl.jobs.stats;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.sling.event.jobs.Statistics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +49,8 @@ class GaugeSupport {
     private final Map<String, Gauge<Long>> gaugeList = new HashMap<>();
     private final Set<String> gaugeMetricNames = new HashSet<>();
     private final String queueName;
+
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     /**
      * Create a new GaugeSupport instance for the global queue.
@@ -150,8 +154,11 @@ class GaugeSupport {
             metricRegistry.register(metricName, value);
             gaugeMetricNames.add(metricName);
         } catch (IllegalArgumentException e) {
-            if (queueName != null) {
+            if (queueName != null && count <= 10) {
+                logger.debug("Failed to register suffix {} for the queue {}, attempt {}, retrying.", suffix, queueName, count, e);
                 registerWithSuffix(suffix, count + 1, value);
+            } else {
+                logger.error("Failed to register suffix {} for the queue {}, attempt {}, giving up.", suffix, queueName, count, e);
             }
         }
     }
