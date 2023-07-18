@@ -16,3 +16,4 @@ maven-eclipse.xml
 jcr.log
 atlassian-ide-plugin.xml
 .vscode
+.java-version
