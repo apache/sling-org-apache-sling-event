@@ -18,7 +18,6 @@
  */
 package org.apache.sling.event.it;
 
-import java.util.Objects;
 
 import javax.inject.Inject;
 
@@ -27,8 +26,6 @@ import org.apache.sling.event.jobs.JobManager;
 import org.apache.sling.testing.paxexam.TestSupport;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.options.ModifiableCompositeOption;
-import org.ops4j.pax.exam.options.OptionalCompositeOption;
-import org.ops4j.pax.exam.options.extra.VMOption;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +36,6 @@ import static org.apache.sling.testing.paxexam.SlingOptions.versionResolver;
 import static org.ops4j.pax.exam.CoreOptions.composite;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
-import static org.ops4j.pax.exam.CoreOptions.vmOption;
-import static org.ops4j.pax.exam.CoreOptions.when;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
 
 public abstract class JobsTestSupport extends TestSupport {
@@ -83,8 +78,7 @@ public abstract class JobsTestSupport extends TestSupport {
             // testing
             mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.testing.tools").versionAsInProject(),
             mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.commons.json").versionAsInProject(),
-            junitBundles(),
-            jacoco() // remove with Testing PaxExam 4.0
+            junitBundles()
         ).remove(
             mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.event").version(versionResolver)
         );
@@ -97,12 +91,4 @@ public abstract class JobsTestSupport extends TestSupport {
             slingQuickstartOakTar(workingDirectory, httpPort)
         );
     }
-
-    // remove with Testing PaxExam 4.0
-    protected OptionalCompositeOption jacoco() {
-        final String jacocoCommand = System.getProperty("jacoco.command");
-        final VMOption option = Objects.nonNull(jacocoCommand) && !jacocoCommand.trim().isEmpty() ? vmOption(jacocoCommand) : null;
-        return when(Objects.nonNull(option)).useOptions(option);
-    }
-
 }
