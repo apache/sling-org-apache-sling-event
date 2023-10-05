@@ -29,6 +29,7 @@ import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.apache.sling.event.jobs.consumer.JobExecutor;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -71,6 +72,11 @@ public class HistoryIT extends AbstractJobHandlingIT {
         final Map<String, Object> props = new HashMap<String, Object>();
         props.put(PROP_COUNTER, counter);
         return jobManager.addJob(TOPIC, props );
+    }
+
+    @Before
+    public void additionalStartupDelay() throws InterruptedException {
+        Thread.sleep(2000);
     }
 
     /**
