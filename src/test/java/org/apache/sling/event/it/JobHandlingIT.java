@@ -47,6 +47,7 @@ import org.apache.sling.event.jobs.consumer.JobConsumer;
 import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.apache.sling.event.jobs.consumer.JobExecutor;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -80,6 +81,11 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
                 .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
                 .asOption()
         );
+    }
+
+    @Before
+    public void additionalStartupDelay() throws InterruptedException {
+        Thread.sleep(2000);
     }
 
     /**
