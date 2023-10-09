@@ -29,6 +29,7 @@ import org.apache.sling.event.jobs.NotificationConstants;
 import org.apache.sling.event.jobs.Queue;
 import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -63,6 +64,11 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
                 .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
                 .asOption()
         );
+    }
+
+    @Before
+    public void additionalStartupDelay() throws InterruptedException {
+        Thread.sleep(2000);
     }
 
     /**
