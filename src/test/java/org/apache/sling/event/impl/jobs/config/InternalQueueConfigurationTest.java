@@ -31,21 +31,28 @@ import java.util.Map;
 
 public class InternalQueueConfigurationTest {
 
-    private InternalQueueConfiguration.Config createConfig(final double maxParallel) {
+    static InternalQueueConfiguration.Config createConfig(final double maxParallel) {
         return createConfig(null, "QueueConfigurationTest", maxParallel);
     }
 
-    private InternalQueueConfiguration.Config createConfig(final String[] topics) {
+    static InternalQueueConfiguration.Config createConfig(final String[] topics) {
         return createConfig(topics, "QueueConfigurationTest", ConfigurationConstants.DEFAULT_MAX_PARALLEL);
     }
 
-    private InternalQueueConfiguration.Config createConfig(final String[] topics, final String name) {
+    static InternalQueueConfiguration.Config createConfig(final String[] topics, final String name) {
         return createConfig(topics, name, ConfigurationConstants.DEFAULT_MAX_PARALLEL);
     }
 
-    private InternalQueueConfiguration.Config createConfig(final String[] topics,
+    static InternalQueueConfiguration.Config createConfig(final String[] topics,
             final String name,
             final double maxParallel) {
+        return createConfig(topics, name, maxParallel, 0);
+    }
+    
+    static InternalQueueConfiguration.Config createConfig(final String[] topics,
+            final String name,
+            final double maxParallel,
+            final int ranking) {
         return new InternalQueueConfiguration.Config() {
 
             @Override
@@ -105,7 +112,7 @@ public class InternalQueueConfigurationTest {
 
             @Override
             public int service_ranking() {
-                return 0;
+                return ranking;
             }
 
             @Override
