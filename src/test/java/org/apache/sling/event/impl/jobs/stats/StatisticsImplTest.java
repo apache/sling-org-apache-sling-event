@@ -18,14 +18,15 @@
  */
 package org.apache.sling.event.impl.jobs.stats;
 
+import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
-
 public class StatisticsImplTest {
 
-    @Test public void testInitNoStartTime() {
+    @Test
+    public void testInitNoStartTime() {
         final long now = System.currentTimeMillis();
         final StatisticsImpl s = new StatisticsImpl();
         assertTrue(s.getStartTime() >= now);
@@ -43,7 +44,8 @@ public class StatisticsImplTest {
         assertEquals(0, s.getAverageProcessingTime());
     }
 
-    @Test public void testInitStartTime() {
+    @Test
+    public void testInitStartTime() {
         final StatisticsImpl s = new StatisticsImpl(7000);
         assertEquals(7000L, s.getStartTime());
         assertEquals(0, s.getNumberOfFinishedJobs());
@@ -59,7 +61,8 @@ public class StatisticsImplTest {
         assertEquals(0, s.getAverageProcessingTime());
     }
 
-    @Test public void reset() {
+    @Test
+    public void reset() {
         final StatisticsImpl s = new StatisticsImpl(7000);
         final long now = System.currentTimeMillis();
         s.reset();
@@ -78,7 +81,8 @@ public class StatisticsImplTest {
         assertEquals(0, s.getAverageProcessingTime());
     }
 
-    @Test public void testJobFinished() {
+    @Test
+    public void testJobFinished() {
         final StatisticsImpl s = new StatisticsImpl();
 
         final long now = System.currentTimeMillis();
@@ -112,7 +116,8 @@ public class StatisticsImplTest {
         assertTrue(s.getLastActivatedJobTime() <= System.currentTimeMillis());
     }
 
-    @Test public void testJobFailed() {
+    @Test
+    public void testJobFailed() {
         final StatisticsImpl s = new StatisticsImpl();
 
         final long now = System.currentTimeMillis();
@@ -146,7 +151,8 @@ public class StatisticsImplTest {
         assertTrue(s.getLastActivatedJobTime() <= System.currentTimeMillis());
     }
 
-    @Test public void testJobCancelled() {
+    @Test
+    public void testJobCancelled() {
         final StatisticsImpl s = new StatisticsImpl();
 
         final long now = System.currentTimeMillis();

@@ -80,9 +80,7 @@ public class JobTopicTraverser {
      * @param topicResource The topic resource
      * @param handler       The callback
      */
-    public static void traverse(final Logger logger,
-            final Resource topicResource,
-            final JobCallback handler) {
+    public static void traverse(final Logger logger, final Resource topicResource, final JobCallback handler) {
         traverse(logger, topicResource, handler, null);
     }
 
@@ -96,9 +94,7 @@ public class JobTopicTraverser {
      * @param topicResource The topic resource
      * @param handler       The callback
      */
-    public static void traverse(final Logger logger,
-            final Resource topicResource,
-            final ResourceCallback handler) {
+    public static void traverse(final Logger logger, final Resource topicResource, final ResourceCallback handler) {
         traverse(logger, topicResource, null, handler);
     }
 
@@ -109,29 +105,31 @@ public class JobTopicTraverser {
      * @param jobHandler    The job callback
      * @param resourceHandler    The resource callback
      */
-    private static void traverse(final Logger logger,
+    private static void traverse(
+            final Logger logger,
             final Resource topicResource,
             final JobCallback jobHandler,
             final ResourceCallback resourceHandler) {
         logger.debug("Processing topic {}", topicResource.getName().replace('.', '/'));
         // now years
-        for(final Resource yearResource: Utility.getSortedChildren(logger, "year", topicResource)) {
+        for (final Resource yearResource : Utility.getSortedChildren(logger, "year", topicResource)) {
             logger.debug("Processing year {}", yearResource.getName());
 
             // now months
-            for(final Resource monthResource: Utility.getSortedChildren(logger, "month", yearResource)) {
+            for (final Resource monthResource : Utility.getSortedChildren(logger, "month", yearResource)) {
                 logger.debug("Processing month {}", monthResource.getName());
 
                 // now days
-                for(final Resource dayResource: Utility.getSortedChildren(logger, "day", monthResource)) {
+                for (final Resource dayResource : Utility.getSortedChildren(logger, "day", monthResource)) {
                     logger.debug("Processing day {}", dayResource.getName());
 
                     // now hours
-                    for(final Resource hourResource: Utility.getSortedChildren(logger, "hour", dayResource)) {
+                    for (final Resource hourResource : Utility.getSortedChildren(logger, "hour", dayResource)) {
                         logger.debug("Processing hour {}", hourResource.getName());
 
                         // now minutes
-                        for(final Resource minuteResource: Utility.getSortedChildren(logger, "minute", hourResource)) {
+                        for (final Resource minuteResource :
+                                Utility.getSortedChildren(logger, "minute", hourResource)) {
                             logger.debug("Processing minute {}", minuteResource.getName());
 
                             // now jobs
@@ -139,31 +137,31 @@ public class JobTopicTraverser {
                             // we use an iterator to skip removed entries
                             // see SLING-4073
                             final Iterator<Resource> jobIter = minuteResource.listChildren();
-                            while ( jobIter.hasNext() ) {
+                            while (jobIter.hasNext()) {
                                 final Resource jobResource = jobIter.next();
-                                if ( resourceHandler != null ) {
-                                    if ( !resourceHandler.handle(jobResource) ) {
+                                if (resourceHandler != null) {
+                                    if (!resourceHandler.handle(jobResource)) {
                                         return;
                                     }
                                 } else {
                                     final JobImpl job = Utility.readJob(logger, jobResource);
-                                    if ( job != null ) {
+                                    if (job != null) {
                                         logger.debug("Found job {}", jobResource.getName());
                                         jobs.add(job);
                                     }
                                 }
                             }
 
-                            if ( jobHandler != null ) {
+                            if (jobHandler != null) {
                                 Collections.sort(jobs);
 
                                 boolean stop = false;
-                                for(final JobImpl job : jobs) {
-                                    if ( !jobHandler.handle(job) ) {
+                                for (final JobImpl job : jobs) {
+                                    if (!jobHandler.handle(job)) {
                                         stop = true;
                                     }
                                 }
-                                if ( stop ) {
+                                if (stop) {
                                     return;
                                 }
                             }

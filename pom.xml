@@ -48,96 +48,6 @@
         <sling.java.version>11</sling.java.version>
         <project.build.outputTimestamp>2023-10-05T16:16:32Z</project.build.outputTimestamp>
     </properties>
-
-
-    <build>
-        <plugins>
-            <!-- plain unit tests -->
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>reserve-network-port</id>
-                        <goals>
-                            <goal>reserve-network-port</goal>
-                        </goals>
-                        <phase>pre-integration-test</phase>
-                        <configuration>
-                            <portNames>
-                                <portName>http.port</portName>
-                            </portNames>
-                            <minPortNumber>${min.port}</minPortNumber>
-                            <maxPortNumber>${max.port}</maxPortNumber>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- integration tests run with pax-exam -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>integration-test</goal>
-                            <goal>verify</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    <systemPropertyVariables combine.children="append">
-                        <bundle.filename>${basedir}/target/${project.build.finalName}.jar</bundle.filename>
-                    </systemPropertyVariables>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.servicemix.tooling</groupId>
-                <artifactId>depends-maven-plugin</artifactId>
-            </plugin>
-            <plugin><!-- workaround for https://issues.apache.org/jira/browse/SM-5021 -->
-                <groupId>com.google.code.maven-replacer-plugin</groupId>
-                <artifactId>replacer</artifactId>
-                <version>1.5.3</version>
-                <executions>
-                    <execution>
-                        <id>fix-depends-RB</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>replace</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <file>${project.build.directory}/classes/META-INF/maven/dependencies.properties</file>
-                    <replacements>
-                        <replacement>
-                            <token># Generated at: .+</token>
-                            <value>#</value>
-                        </replacement>
-                    </replacements>
-                    <regex>true</regex>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-    <profiles>
-        <profile>
-            <id>port-java8</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-                <jdk>1.8</jdk>
-            </activation>
-            <properties>
-                <min.port>38000</min.port>
-                <max.port>38999</max.port>
-            </properties>
-        </profile>
-    </profiles>
     <dependencies>
         <dependency>
             <groupId>org.osgi</groupId>
@@ -218,9 +128,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <version>3.2.4</version>
-            <groupId>io.dropwizard.metrics</groupId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -377,4 +287,94 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- plain unit tests -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>reserve-network-port</id>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <portNames>
+                                <portName>http.port</portName>
+                            </portNames>
+                            <minPortNumber>${min.port}</minPortNumber>
+                            <maxPortNumber>${max.port}</maxPortNumber>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- integration tests run with pax-exam -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <systemPropertyVariables combine.children="append">
+                        <bundle.filename>${basedir}/target/${project.build.finalName}.jar</bundle.filename>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <!-- workaround for https://issues.apache.org/jira/browse/SM-5021 -->
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <configuration>
+                    <file>${project.build.directory}/classes/META-INF/maven/dependencies.properties</file>
+                    <replacements>
+                        <replacement>
+                            <token># Generated at: .+</token>
+                            <value>#</value>
+                        </replacement>
+                    </replacements>
+                    <regex>true</regex>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>fix-depends-RB</id>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>port-java8</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <min.port>38000</min.port>
+                <max.port>38999</max.port>
+            </properties>
+        </profile>
+    </profiles>
 </project>

@@ -30,14 +30,12 @@ import org.apache.sling.event.jobs.TopicStatistics;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.*;
 
-
 /**
  * The statistics manager keeps track of all statistics related tasks.
  */
-@Component(service=StatisticsManager.class,
-    property = {
-        Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-})
+@Component(
+        service = StatisticsManager.class,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 public class StatisticsManager {
 
     /** The job manager configuration. */
@@ -57,11 +55,10 @@ public class StatisticsManager {
         public synchronized void reset() {
             super.reset();
             topicStatistics.clear();
-            for(final Statistics s : queueStatistics.values()) {
+            for (final Statistics s : queueStatistics.values()) {
                 s.reset();
             }
         }
-
     };
 
     /** Gauges for the global job statistics. */
@@ -99,7 +96,7 @@ public class StatisticsManager {
      */
     public Statistics getQueueStatistics(final String queueName) {
         Statistics queueStats = queueStatistics.get(queueName);
-        if ( queueStats == null ) {
+        if (queueStats == null) {
             queueStats = new StatisticsImpl();
         }
         return queueStats;
@@ -111,13 +108,13 @@ public class StatisticsManager {
      * @return The statistics or {@code null} if queue name is {@code null}.
      */
     private StatisticsImpl getStatisticsForQueue(final String queueName) {
-        if ( queueName == null ) {
+        if (queueName == null) {
             return null;
         }
-        StatisticsImpl queueStats = (StatisticsImpl)queueStatistics.get(queueName);
-        if ( queueStats == null ) {
+        StatisticsImpl queueStats = (StatisticsImpl) queueStatistics.get(queueName);
+        if (queueStats == null) {
             queueStatistics.putIfAbsent(queueName, new StatisticsImpl());
-            queueStats = (StatisticsImpl)queueStatistics.get(queueName);
+            queueStats = (StatisticsImpl) queueStatistics.get(queueName);
             if (metricRegistry != null) {
                 GaugeSupport gaugeSupport = new GaugeSupport(queueName, queueStats, metricRegistry);
                 if (queueGauges.putIfAbsent(queueName, gaugeSupport) == null) {
@@ -128,65 +125,61 @@ public class StatisticsManager {
         return queueStats;
     }
 
-    public void jobEnded(final String queueName,
-            final String topic,
-            final InternalJobState state,
-            final long processingTime) {
+    public void jobEnded(
+            final String queueName, final String topic, final InternalJobState state, final long processingTime) {
         final StatisticsImpl queueStats = getStatisticsForQueue(queueName);
 
-        TopicStatisticsImpl ts = (TopicStatisticsImpl)this.topicStatistics.get(topic);
-        if ( ts == null ) {
+        TopicStatisticsImpl ts = (TopicStatisticsImpl) this.topicStatistics.get(topic);
+        if (ts == null) {
             this.topicStatistics.putIfAbsent(topic, new TopicStatisticsImpl(topic));
-            ts = (TopicStatisticsImpl)this.topicStatistics.get(topic);
+            ts = (TopicStatisticsImpl) this.topicStatistics.get(topic);
         }
 
-        if ( state == InternalJobState.CANCELLED ) {
-            ts.cancelledJob();;
+        if (state == InternalJobState.CANCELLED) {
+            ts.cancelledJob();
+            ;
             this.globalStatistics.cancelledJob();
-            if ( queueStats != null ) {
+            if (queueStats != null) {
                 queueStats.cancelledJob();
             }
 
-        } else if ( state == InternalJobState.FAILED ) {
+        } else if (state == InternalJobState.FAILED) {
             ts.failedJob();
             this.globalStatistics.failedJob();
-            if ( queueStats != null ) {
+            if (queueStats != null) {
                 queueStats.failedJob();
             }
 
-        } else if ( state == InternalJobState.SUCCEEDED ) {
+        } else if (state == InternalJobState.SUCCEEDED) {
             ts.finishedJob(processingTime);
             this.globalStatistics.finishedJob(processingTime);
-            if ( queueStats != null ) {
+            if (queueStats != null) {
                 queueStats.finishedJob(processingTime);
             }
         }
     }
 
-    public void jobStarted(final String queueName,
-            final String topic,
-            final long queueTime) {
+    public void jobStarted(final String queueName, final String topic, final long queueTime) {
         final StatisticsImpl queueStats = getStatisticsForQueue(queueName);
 
-        TopicStatisticsImpl ts = (TopicStatisticsImpl)this.topicStatistics.get(topic);
-        if ( ts == null ) {
+        TopicStatisticsImpl ts = (TopicStatisticsImpl) this.topicStatistics.get(topic);
+        if (ts == null) {
             this.topicStatistics.putIfAbsent(topic, new TopicStatisticsImpl(topic));
-            ts = (TopicStatisticsImpl)this.topicStatistics.get(topic);
+            ts = (TopicStatisticsImpl) this.topicStatistics.get(topic);
         }
 
         ts.addActive(queueTime);
         this.globalStatistics.addActive(queueTime);
-        if ( queueStats != null ) {
+        if (queueStats != null) {
             queueStats.addActive(queueTime);
         }
     }
 
-    public void jobQueued(final String queueName,
-            final String topic) {
+    public void jobQueued(final String queueName, final String topic) {
         final StatisticsImpl queueStats = getStatisticsForQueue(queueName);
 
         this.globalStatistics.incQueued();
-        if ( queueStats != null ) {
+        if (queueStats != null) {
             queueStats.incQueued();
         }
     }
@@ -195,7 +188,7 @@ public class StatisticsManager {
         final StatisticsImpl queueStats = getStatisticsForQueue(queueName);
 
         this.globalStatistics.decQueued();
-        if ( queueStats != null ) {
+        if (queueStats != null) {
             queueStats.decQueued();
         }
     }

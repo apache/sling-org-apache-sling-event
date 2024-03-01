@@ -18,6 +18,16 @@
  */
 package org.apache.sling.event.impl.jobs.config;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -48,55 +58,56 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Configuration of the job handling
  *
  */
-@Component(immediate=true,
-           service=JobManagerConfiguration.class,
-           name="org.apache.sling.event.impl.jobs.jcr.PersistenceHandler",
-           property = {
-                   Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
-                   JobManagerConfiguration.PROPERTY_REPOSITORY_PATH + "=" + JobManagerConfiguration.DEFAULT_REPOSITORY_PATH,
-                   JobManagerConfiguration.PROPERTY_SCHEDULED_JOBS_PATH + "=" + JobManagerConfiguration.DEFAULT_SCHEDULED_JOBS_PATH,
-                   JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY + ":Long=" + JobManagerConfiguration.DEFAULT_BACKGROUND_LOAD_DELAY
-})
+@Component(
+        immediate = true,
+        service = JobManagerConfiguration.class,
+        name = "org.apache.sling.event.impl.jobs.jcr.PersistenceHandler",
+        property = {
+            Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
+            JobManagerConfiguration.PROPERTY_REPOSITORY_PATH + "=" + JobManagerConfiguration.DEFAULT_REPOSITORY_PATH,
+            JobManagerConfiguration.PROPERTY_SCHEDULED_JOBS_PATH + "="
+                    + JobManagerConfiguration.DEFAULT_SCHEDULED_JOBS_PATH,
+            JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY + ":Long="
+                    + JobManagerConfiguration.DEFAULT_BACKGROUND_LOAD_DELAY
+        })
 @Designate(ocd = JobManagerConfiguration.Config.class)
 public class JobManagerConfiguration {
 
-    @ObjectClassDefinition(name = "Apache Sling Job Manager",
-            description="This is the central service of the job handling.")
+    @ObjectClassDefinition(
+            name = "Apache Sling Job Manager",
+            description = "This is the central service of the job handling.")
     public @interface Config {
 
-        @AttributeDefinition(name = "Disable Distribution",
-        description="If the distribution is disabled, all jobs will be processed on the leader only! "
-                + "Please use this switch with care.")
+        @AttributeDefinition(
+                name = "Disable Distribution",
+                description = "If the distribution is disabled, all jobs will be processed on the leader only! "
+                        + "Please use this switch with care.")
         boolean job_consumermanager_disableDistribution() default false;
 
-        @AttributeDefinition(name = "Startup Delay",
-              description="Specify amount in seconds that job manager waits on startup before starting with job handling. "
-                        + "This can be used to allow enough time to restart a cluster before jobs are eventually reassigned.")
+        @AttributeDefinition(
+                name = "Startup Delay",
+                description =
+                        "Specify amount in seconds that job manager waits on startup before starting with job handling. "
+                                + "This can be used to allow enough time to restart a cluster before jobs are eventually reassigned.")
         long startup_delay() default 30;
 
-        @AttributeDefinition(name = "Clean-up removed jobs period",
-            description = "Specify the periodic interval in minutes (default is 48h - use 0 to disable) after which " +
-                    "removed jobs (ERROR or DROPPED) should be cleaned from the repository.")
+        @AttributeDefinition(
+                name = "Clean-up removed jobs period",
+                description =
+                        "Specify the periodic interval in minutes (default is 48h - use 0 to disable) after which "
+                                + "removed jobs (ERROR or DROPPED) should be cleaned from the repository.")
         int cleanup_period() default 2880;
 
-        @AttributeDefinition(name = "Progress Log message's max count",
-                description = "Max number of log messages that can stored by consumer to add information about current state of Job.\n" +
-                        "Any attempt to add more information would result into purging of the least recent messages." +
-                        "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
+        @AttributeDefinition(
+                name = "Progress Log message's max count",
+                description =
+                        "Max number of log messages that can stored by consumer to add information about current state of Job.\n"
+                                + "Any attempt to add more information would result into purging of the least recent messages."
+                                + "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
         int progresslog_maxCount() default -1;
     }
     /** Logger. */
@@ -123,9 +134,11 @@ public class JobManagerConfiguration {
     /** Configuration property for the scheduled jobs path. */
     public static final String PROPERTY_SCHEDULED_JOBS_PATH = "job.scheduled.jobs.path";
 
-    static JobManagerConfiguration newForTest(ResourceResolverFactory resourceResolverFactory,
+    static JobManagerConfiguration newForTest(
+            ResourceResolverFactory resourceResolverFactory,
             QueueConfigurationManager queueConfigurationManager,
-            Map<String, Object> activateProps, Config config) {
+            Map<String, Object> activateProps,
+            Config config) {
         final JobManagerConfiguration jobMgrConfig = new JobManagerConfiguration();
         jobMgrConfig.resourceResolverFactory = resourceResolverFactory;
         jobMgrConfig.queueConfigManager = queueConfigurationManager;
@@ -184,13 +197,13 @@ public class JobManagerConfiguration {
     @Reference
     private EnvironmentComponent environment;
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private ResourceResolverFactory resourceResolverFactory;
 
     @Reference
     private QueueConfigurationManager queueConfigManager;
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private ServiceUserMapped serviceUserMapped;
 
     /** Is this still active? */
@@ -208,8 +221,8 @@ public class JobManagerConfiguration {
     @Activate
     protected void activate(final Map<String, Object> props, final Config config) {
         this.update(props, config);
-        this.jobsBasePathWithSlash = PropertiesUtil.toString(props.get(PROPERTY_REPOSITORY_PATH),
-                DEFAULT_REPOSITORY_PATH) + '/';
+        this.jobsBasePathWithSlash =
+                PropertiesUtil.toString(props.get(PROPERTY_REPOSITORY_PATH), DEFAULT_REPOSITORY_PATH) + '/';
 
         // create initial resources
         this.assignedJobsPath = this.jobsBasePathWithSlash + "assigned";
@@ -224,8 +237,8 @@ public class JobManagerConfiguration {
         this.storedCancelledJobsPath = this.jobsBasePathWithSlash + "cancelled";
         this.storedSuccessfulJobsPath = this.jobsBasePathWithSlash + "finished";
 
-        this.scheduledJobsPath = PropertiesUtil.toString(props.get(PROPERTY_SCHEDULED_JOBS_PATH),
-            DEFAULT_SCHEDULED_JOBS_PATH);
+        this.scheduledJobsPath =
+                PropertiesUtil.toString(props.get(PROPERTY_SCHEDULED_JOBS_PATH), DEFAULT_SCHEDULED_JOBS_PATH);
         this.scheduledJobsPathWithSlash = this.scheduledJobsPath + "/";
 
         this.historyCleanUpRemovedJobs = config.cleanup_period();
@@ -235,7 +248,7 @@ public class JobManagerConfiguration {
         try {
             ResourceHelper.getOrCreateBasePath(resolver, this.getLocalJobsPath());
             ResourceHelper.getOrCreateBasePath(resolver, this.getUnassignedJobsPath());
-        } catch ( final PersistenceException pe ) {
+        } catch (final PersistenceException pe) {
             logger.error("Unable to create default paths: " + pe.getMessage(), pe);
             throw new RuntimeException(pe);
         } finally {
@@ -246,15 +259,19 @@ public class JobManagerConfiguration {
         // SLING-5560 : use an InitDelayingTopologyEventListener
         if (this.startupDelay > 0) {
             logger.debug("activate: job manager will start in {} sec. ({})", this.startupDelay, config.startup_delay());
-            this.startupDelayListener = new InitDelayingTopologyEventListener(startupDelay, new TopologyEventListener() {
+            this.startupDelayListener =
+                    new InitDelayingTopologyEventListener(startupDelay, new TopologyEventListener() {
 
-                @Override
-                public void handleTopologyEvent(TopologyEvent event) {
-                    doHandleTopologyEvent(event);
-                }
-            });
+                        @Override
+                        public void handleTopologyEvent(TopologyEvent event) {
+                            doHandleTopologyEvent(event);
+                        }
+                    });
         } else {
-            logger.debug("activate: job manager will start without delay. ({}:{})", config.startup_delay(), this.startupDelay);
+            logger.debug(
+                    "activate: job manager will start without delay. ({}:{})",
+                    config.startup_delay(),
+                    this.startupDelay);
         }
     }
 
@@ -264,7 +281,8 @@ public class JobManagerConfiguration {
     @Modified
     protected void update(final Map<String, Object> props, final Config config) {
         this.disabledDistribution = config.job_consumermanager_disableDistribution();
-        this.backgroundLoadDelay = PropertiesUtil.toLong(props.get(PROPERTY_BACKGROUND_LOAD_DELAY), DEFAULT_BACKGROUND_LOAD_DELAY);
+        this.backgroundLoadDelay =
+                PropertiesUtil.toLong(props.get(PROPERTY_BACKGROUND_LOAD_DELAY), DEFAULT_BACKGROUND_LOAD_DELAY);
         // SLING-5560: note that currently you can't change the startupDelay to have
         // an immediate effect - it will only have an effect on next activation.
         // (as 'startup delay runnable' is already scheduled in activate)
@@ -275,7 +293,6 @@ public class JobManagerConfiguration {
         } else {
             this.progressLogMaxCount = config.progresslog_maxCount();
         }
-
     }
 
     /**
@@ -284,7 +301,7 @@ public class JobManagerConfiguration {
     @Deactivate
     protected void deactivate() {
         this.active.set(false);
-        if ( this.startupDelayListener != null) {
+        if (this.startupDelayListener != null) {
             this.startupDelayListener.dispose();
             this.startupDelayListener = null;
         }
@@ -307,17 +324,17 @@ public class JobManagerConfiguration {
      * The resolver needs to be closed by the client.
      * This ResourceResolver provides read and write access to all resources relevant for the event
      * and job handling.
-     * 
+     *
      * @return A resource resolver or {@code null} if the component is already deactivated.
      * @throws RuntimeException if the resolver can't be created.
      */
     public ResourceResolver createResourceResolver() {
         ResourceResolver resolver = null;
         final ResourceResolverFactory factory = this.resourceResolverFactory;
-        if ( factory != null ) {
+        if (factory != null) {
             try {
                 resolver = this.resourceResolverFactory.getServiceResourceResolver(null);
-            } catch ( final LoginException le) {
+            } catch (final LoginException le) {
                 logger.error("Unable to create new resource resolver: " + le.getMessage(), le);
                 throw new RuntimeException(le);
             }
@@ -375,13 +392,11 @@ public class JobManagerConfiguration {
     /**
      * Create a unique job path (folder and name) for the job.
      */
-    public String getUniquePath(final String targetId,
-            final String topic,
-            final String jobId,
-            final Map<String, Object> jobProperties) {
+    public String getUniquePath(
+            final String targetId, final String topic, final String jobId, final Map<String, Object> jobProperties) {
         final String topicName = topic.replace('/', '.');
         final StringBuilder sb = new StringBuilder();
-        if ( targetId != null ) {
+        if (targetId != null) {
             sb.append(this.getAssginedJobsPath());
             sb.append('/');
             sb.append(targetId);
@@ -465,7 +480,7 @@ public class JobManagerConfiguration {
     public String getStoragePath(final String topic, final String jobId, final boolean isSuccess) {
         final String topicName = topic.replace('/', '.');
         final StringBuilder sb = new StringBuilder();
-        if ( isSuccess ) {
+        if (isSuccess) {
             sb.append(this.getStoredSuccessfulJobsPath());
         } else {
             sb.append(this.getStoredCancelledJobsPath());
@@ -476,7 +491,6 @@ public class JobManagerConfiguration {
         sb.append(jobId);
 
         return sb.toString();
-
     }
 
     /**
@@ -502,7 +516,7 @@ public class JobManagerConfiguration {
         logger.debug("Stopping job processing...");
         final TopologyCapabilities caps = this.topologyCapabilities;
 
-        if ( caps != null ) {
+        if (caps != null) {
             // deactivate old capabilities - this stops all background processes
             caps.deactivate();
             this.topologyCapabilities = null;
@@ -524,7 +538,7 @@ public class JobManagerConfiguration {
         this.topologyCapabilities = newCaps;
 
         // before we propagate the new topology we do some maintenance
-        if ( eventType == Type.TOPOLOGY_INIT ) {
+        if (eventType == Type.TOPOLOGY_INIT) {
             final UpgradeTask task = new UpgradeTask(this);
             task.run();
 
@@ -539,21 +553,22 @@ public class JobManagerConfiguration {
             // and run checker again in some seconds (if leader)
             // notify listeners afterwards
             final Timer timer = new Timer();
-            timer.schedule(new TimerTask()
-            {
+            timer.schedule(
+                    new TimerTask() {
 
-                @Override
-                public void run() {
-                    if ( newCaps == topologyCapabilities && newCaps.isActive()) {
-                        // start listeners
-                        notifyListeners();
-                        if ( newCaps.isLeader() && newCaps.isActive() ) {
-                            final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
-                            mt.fullRun();
+                        @Override
+                        public void run() {
+                            if (newCaps == topologyCapabilities && newCaps.isActive()) {
+                                // start listeners
+                                notifyListeners();
+                                if (newCaps.isLeader() && newCaps.isActive()) {
+                                    final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
+                                    mt.fullRun();
+                                }
+                            }
                         }
-                    }
-                }
-            }, this.backgroundLoadDelay * 1000);
+                    },
+                    this.backgroundLoadDelay * 1000);
         }
         logger.debug("Job processing started");
     }
@@ -562,9 +577,9 @@ public class JobManagerConfiguration {
      * Notify all listeners
      */
     private void notifyListeners() {
-        synchronized ( this.listeners ) {
+        synchronized (this.listeners) {
             final TopologyCapabilities caps = this.topologyCapabilities;
-            for(final ConfigurationChangeListener l : this.listeners) {
+            for (final ConfigurationChangeListener l : this.listeners) {
                 l.configurationChanged(caps != null);
             }
         }
@@ -576,7 +591,7 @@ public class JobManagerConfiguration {
      * @see org.apache.sling.discovery.TopologyEventListener#handleTopologyEvent(org.apache.sling.discovery.TopologyEvent)
      */
     public void handleTopologyEvent(TopologyEvent event) {
-        if ( this.startupDelayListener != null ) {
+        if (this.startupDelayListener != null) {
             // with startup.delay > 0
             this.startupDelayListener.handleTopologyEvent(event);
         } else {
@@ -591,9 +606,9 @@ public class JobManagerConfiguration {
         // check if there is a change of properties which doesn't affect us
         // but we need to use the new view !
         boolean stopProcessing = true;
-        if ( event.getType() == Type.PROPERTIES_CHANGED ) {
+        if (event.getType() == Type.PROPERTIES_CHANGED) {
             final Map<String, String> newAllInstances = TopologyCapabilities.getAllInstancesMap(event.getNewView());
-            if ( this.topologyCapabilities != null && this.topologyCapabilities.isSame(newAllInstances) ) {
+            if (this.topologyCapabilities != null && this.topologyCapabilities.isSame(newAllInstances)) {
                 logger.debug("No changes in capabilities - updating topology capabilities with new view");
                 stopProcessing = false;
             }
@@ -601,14 +616,14 @@ public class JobManagerConfiguration {
 
         final TopologyEvent.Type eventType = event.getType();
 
-        if ( eventType == Type.TOPOLOGY_CHANGING ) {
-           this.stopProcessing();
+        if (eventType == Type.TOPOLOGY_CHANGING) {
+            this.stopProcessing();
 
-        } else if ( eventType == Type.TOPOLOGY_INIT
-            || event.getType() == Type.TOPOLOGY_CHANGED
-            || event.getType() == Type.PROPERTIES_CHANGED ) {
+        } else if (eventType == Type.TOPOLOGY_INIT
+                || event.getType() == Type.TOPOLOGY_CHANGED
+                || event.getType() == Type.PROPERTIES_CHANGED) {
 
-            if ( stopProcessing ) {
+            if (stopProcessing) {
                 this.stopProcessing();
             }
 
@@ -621,7 +636,7 @@ public class JobManagerConfiguration {
      * @param service Listener to notify about changes.
      */
     public void addListener(final ConfigurationChangeListener service) {
-        synchronized ( this.listeners ) {
+        synchronized (this.listeners) {
             this.listeners.add(service);
             service.configurationChanged(this.topologyCapabilities != null);
         }
@@ -632,7 +647,7 @@ public class JobManagerConfiguration {
      * @param service Listener to notify about changes.
      */
     public void removeListener(final ConfigurationChangeListener service) {
-        synchronized ( this.listeners )  {
+        synchronized (this.listeners) {
             this.listeners.remove(service);
         }
     }
@@ -640,14 +655,14 @@ public class JobManagerConfiguration {
     private final Map<String, Job> retryList = new HashMap<>();
 
     public void addJobToRetryList(final Job job) {
-        synchronized ( retryList ) {
+        synchronized (retryList) {
             retryList.put(job.getId(), job);
         }
     }
 
     public List<Job> clearJobRetryList() {
         final List<Job> result = new ArrayList<>();
-        synchronized ( this.retryList ) {
+        synchronized (this.retryList) {
             result.addAll(retryList.values());
             retryList.clear();
         }
@@ -655,13 +670,13 @@ public class JobManagerConfiguration {
     }
 
     public boolean removeJobFromRetryList(final Job job) {
-        synchronized ( retryList ) {
+        synchronized (retryList) {
             return retryList.remove(job.getId()) != null;
         }
     }
 
     public Job getJobFromRetryList(final String jobId) {
-        synchronized ( retryList ) {
+        synchronized (retryList) {
             return retryList.get(jobId);
         }
     }

@@ -54,16 +54,15 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            // create ordered test queue
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "orderedtest")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
-                .put(ConfigurationConstants.PROP_TOPICS, "sling/orderedtest/*")
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .asOption()
-        );
+                baseConfiguration(),
+                // create ordered test queue
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "orderedtest")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, "sling/orderedtest/*")
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .asOption());
     }
 
     @Before
@@ -81,51 +80,50 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
         final Barrier cb = new Barrier(2);
         final AtomicInteger count = new AtomicInteger(0);
         final AtomicInteger parallelCount = new AtomicInteger(0);
-        this.registerJobConsumer("sling/orderedtest/*",
-                new JobConsumer() {
+        this.registerJobConsumer("sling/orderedtest/*", new JobConsumer() {
 
-                    private volatile int lastCounter = -1;
+            private volatile int lastCounter = -1;
 
-                    @Override
-                    public JobResult process(final Job job) {
-                        final int counter = job.getProperty("counter", -10);
-                        assertNotEquals("Counter property is missing", -10, counter);
-                        assertTrue("Counter should only increment by max of 1 " + counter + " - " + lastCounter,
-                                counter == lastCounter || counter == lastCounter +1);
-                        lastCounter = counter;
-                        if ("sling/orderedtest/start".equals(job.getTopic()) ) {
-                            cb.block();
-                            return JobResult.OK;
-                        }
-                        if ( parallelCount.incrementAndGet() > 1 ) {
-                            parallelCount.decrementAndGet();
-                            return JobResult.FAILED;
-                        }
-                        final String topic = job.getTopic();
-                        if ( topic.endsWith("sub1") ) {
-                            final int i = (Integer)job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT);
-                            if ( i == 0 ) {
-                                parallelCount.decrementAndGet();
-                                return JobResult.FAILED;
-                            }
-                        }
-                        try {
-                            Thread.sleep(30);
-                        } catch (InterruptedException ie) {
-                            // ignore
-                        }
+            @Override
+            public JobResult process(final Job job) {
+                final int counter = job.getProperty("counter", -10);
+                assertNotEquals("Counter property is missing", -10, counter);
+                assertTrue(
+                        "Counter should only increment by max of 1 " + counter + " - " + lastCounter,
+                        counter == lastCounter || counter == lastCounter + 1);
+                lastCounter = counter;
+                if ("sling/orderedtest/start".equals(job.getTopic())) {
+                    cb.block();
+                    return JobResult.OK;
+                }
+                if (parallelCount.incrementAndGet() > 1) {
+                    parallelCount.decrementAndGet();
+                    return JobResult.FAILED;
+                }
+                final String topic = job.getTopic();
+                if (topic.endsWith("sub1")) {
+                    final int i = (Integer) job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT);
+                    if (i == 0) {
                         parallelCount.decrementAndGet();
-                        return JobResult.OK;
+                        return JobResult.FAILED;
                     }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED,
-                new EventHandler() {
+                }
+                try {
+                    Thread.sleep(30);
+                } catch (InterruptedException ie) {
+                    // ignore
+                }
+                parallelCount.decrementAndGet();
+                return JobResult.OK;
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(final Event event) {
-                        count.incrementAndGet();
-                    }
-                });
+            @Override
+            public void handleEvent(final Event event) {
+                count.incrementAndGet();
+            }
+        });
 
         // we first sent one event to get the queue started
         final Map<String, Object> properties = new HashMap<String, Object>();
@@ -144,7 +142,7 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
         final int NUM_JOBS = 30;
 
         // we start "some" jobs:
-        for(int i = 0; i < NUM_JOBS; i++ ) {
+        for (int i = 0; i < NUM_JOBS; i++) {
             final String subTopic = "sling/orderedtest/sub" + (i % 10);
             properties.clear();
             properties.put("counter", i);
@@ -152,7 +150,7 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
         }
         // start the queue
         q.resume();
-        while ( count.get() < NUM_JOBS +1 ) {
+        while (count.get() < NUM_JOBS + 1) {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException ie) {

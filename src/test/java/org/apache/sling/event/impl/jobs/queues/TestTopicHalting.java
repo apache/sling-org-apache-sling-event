@@ -18,9 +18,12 @@
  */
 package org.apache.sling.event.impl.jobs.queues;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import javax.jcr.ItemExistsException;
+import javax.jcr.PathNotFoundException;
+import javax.jcr.RepositoryException;
+import javax.jcr.lock.LockException;
+import javax.jcr.nodetype.ConstraintViolationException;
+import javax.jcr.version.VersionException;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -32,13 +35,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.jcr.ItemExistsException;
-import javax.jcr.PathNotFoundException;
-import javax.jcr.RepositoryException;
-import javax.jcr.lock.LockException;
-import javax.jcr.nodetype.ConstraintViolationException;
-import javax.jcr.version.VersionException;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -78,6 +74,10 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.event.EventAdmin;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+
 /**
  * SLING-9906.
  * This tests a new behaviour of a topic introduced with SLING-9906.
@@ -95,10 +95,10 @@ public class TestTopicHalting {
 
     @Mock
     private JobSchedulerImpl jobScheduler;
-    
+
     @Mock
     private EventAdmin eventAdmin;
-    
+
     @Mock
     private JobConsumerManager jobConsumerManager;
 
@@ -120,7 +120,7 @@ public class TestTopicHalting {
     private JobManagerConfiguration configuration;
 
     private QueuesMBeanImpl queuesMBean;
-    
+
     private String ownSlingId;
 
     private int jobCnt;
@@ -141,20 +141,26 @@ public class TestTopicHalting {
         Environment.APPLICATION_ID = ownSlingId;
         componentContext = MockOsgi.newComponentContext();
         bundleContext = componentContext.getBundleContext();
-        
+
         factory = MockSling.newResourceResolverFactory(ResourceResolverType.JCR_OAK, bundleContext);
 
         queuesMBean = new QueuesMBeanImpl();
         queuesMBean.activate(bundleContext);
 
-        configuration = JobManagerConfigurationTestFactory.create(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH, 
-                factory, queueConfigurationManager);
-        
-        queueManager = QueueManager.newForTest(eventAdmin, jobConsumerManager, 
-                queuesMBean, threadPoolManager, threadPool, configuration, statisticsManager);
+        configuration = JobManagerConfigurationTestFactory.create(
+                JobManagerConfiguration.DEFAULT_REPOSITORY_PATH, factory, queueConfigurationManager);
+
+        queueManager = QueueManager.newForTest(
+                eventAdmin,
+                jobConsumerManager,
+                queuesMBean,
+                threadPoolManager,
+                threadPool,
+                configuration,
+                statisticsManager);
 
         initQueueConfigurationManagerMocks();
-        
+
         queueManager.activate(null);
 
         @SuppressWarnings("deprecation")
@@ -171,37 +177,37 @@ public class TestTopicHalting {
     }
 
     private void initQueueConfigurationManagerMocks() {
-        Mockito.when(queueConfigurationManager.getQueueInfo(Mockito.anyString())).thenAnswer(new Answer<QueueInfo>() {
-            
-            private final Map<String, QueueInfo> queueInfos = new HashMap<>();
+        Mockito.when(queueConfigurationManager.getQueueInfo(Mockito.anyString()))
+                .thenAnswer(new Answer<QueueInfo>() {
 
-            @Override
-            public QueueInfo answer(InvocationOnMock invocation) throws Throwable {
-                final String topic = (String) invocation.getArguments()[0];
-                QueueInfo queueInfo = queueInfos.get(topic);
-                if ( queueInfo == null ) {
-                    queueInfo = createQueueInfo(topic);
-                    queueInfos.put(topic, queueInfo);
-                }
-                return queueInfo;
-            }
+                    private final Map<String, QueueInfo> queueInfos = new HashMap<>();
 
-            private QueueInfo createQueueInfo(final String topic) {
-                final QueueInfo result = new QueueInfo();
-                result.queueName = "Queue for topic=" + topic;
-                Map<String, Object> props = new HashMap<>();
-                Config cconfig = Mockito.mock(Config.class);
-                Mockito.when(cconfig.queue_priority()).thenReturn(ThreadPriority.NORM.name());
-                Mockito.when(cconfig.queue_type()).thenReturn(Type.ORDERED.name());
-                Mockito.when(cconfig.queue_maxparallel()).thenReturn(1.0);
-                result.queueConfiguration = InternalQueueConfiguration.fromConfiguration(props, cconfig);
-                result.targetId = ownSlingId;
-                return result;
-            }
-            
-        });
+                    @Override
+                    public QueueInfo answer(InvocationOnMock invocation) throws Throwable {
+                        final String topic = (String) invocation.getArguments()[0];
+                        QueueInfo queueInfo = queueInfos.get(topic);
+                        if (queueInfo == null) {
+                            queueInfo = createQueueInfo(topic);
+                            queueInfos.put(topic, queueInfo);
+                        }
+                        return queueInfo;
+                    }
+
+                    private QueueInfo createQueueInfo(final String topic) {
+                        final QueueInfo result = new QueueInfo();
+                        result.queueName = "Queue for topic=" + topic;
+                        Map<String, Object> props = new HashMap<>();
+                        Config cconfig = Mockito.mock(Config.class);
+                        Mockito.when(cconfig.queue_priority()).thenReturn(ThreadPriority.NORM.name());
+                        Mockito.when(cconfig.queue_type()).thenReturn(Type.ORDERED.name());
+                        Mockito.when(cconfig.queue_maxparallel()).thenReturn(1.0);
+                        result.queueConfiguration = InternalQueueConfiguration.fromConfiguration(props, cconfig);
+                        result.targetId = ownSlingId;
+                        return result;
+                    }
+                });
     }
-    
+
     @Test
     public void testUnhalting() throws Throwable {
         assertNotNull(queueManager);
@@ -230,7 +236,7 @@ public class TestTopicHalting {
     public void testFullTopicScan() throws Throwable {
         assertNotNull(queueManager);
         assertEquals(0, cnfeCount.get());
-        for( int i = 0; i < 50; i++ ) {
+        for (int i = 0; i < 50; i++) {
             queueManager.fullTopicScan();
             assertEquals(2 * jobCnt, cnfeCount.get());
         }
@@ -245,7 +251,7 @@ public class TestTopicHalting {
         // due to fullTopicScan -> 2 times the jobs are loaded causing a CNFE
         int expectedCnfeCount = 2 * jobCnt;
         assertEquals(expectedCnfeCount, cnfeCount.get());
-        for( int i = 0; i < 50; i++ ) {
+        for (int i = 0; i < 50; i++) {
             // schedulerRuns % 3 == 1
             queueManager.maintain();
             assertEquals(expectedCnfeCount, cnfeCount.get());
@@ -259,7 +265,7 @@ public class TestTopicHalting {
             assertEquals(expectedCnfeCount, cnfeCount.get());
         }
     }
-    
+
     @Test
     public void testConfigurationChanged() throws Throwable {
         assertNotNull(queueManager);
@@ -274,20 +280,28 @@ public class TestTopicHalting {
         assertNotNull(it);
         assertFalse(it.hasNext());
     }
-    
-    private Resource createJob(ContentBuilder contentBuilder, String localSlingId, String topic, int year, int month) throws ItemExistsException, PathNotFoundException, VersionException, ConstraintViolationException, LockException, RepositoryException {
-        // /var/eventing/jobs/assigned/<slingId>/<topic>/2020/10/13/19/26        
+
+    private Resource createJob(ContentBuilder contentBuilder, String localSlingId, String topic, int year, int month)
+            throws ItemExistsException, PathNotFoundException, VersionException, ConstraintViolationException,
+                    LockException, RepositoryException {
+        // /var/eventing/jobs/assigned/<slingId>/<topic>/2020/10/13/19/26
         String applicationId = localSlingId;
         String counter = String.valueOf(jobCnt++);
         String jobId = year + "/" + month + "/1/20/0/" + applicationId + "_" + counter;
-        String path = JobManagerConfiguration.DEFAULT_REPOSITORY_PATH + "/assigned/" + localSlingId + "/" + topic + "/" + jobId;
-        
+        String path = JobManagerConfiguration.DEFAULT_REPOSITORY_PATH + "/assigned/" + localSlingId + "/" + topic + "/"
+                + jobId;
+
         final UnDeserializableDataObject uddao = new UnDeserializableDataObject();
-        return contentBuilder.resource(path, 
-                ResourceHelper.PROPERTY_JOB_TOPIC, topic, 
-                ResourceHelper.PROPERTY_JOB_ID, jobId,
-                Job.PROPERTY_JOB_CREATED, Calendar.getInstance(),
-                "uddao", uddao);
+        return contentBuilder.resource(
+                path,
+                ResourceHelper.PROPERTY_JOB_TOPIC,
+                topic,
+                ResourceHelper.PROPERTY_JOB_ID,
+                jobId,
+                Job.PROPERTY_JOB_CREATED,
+                Calendar.getInstance(),
+                "uddao",
+                uddao);
     }
 
     private static final class UnDeserializableDataObject implements Externalizable {
@@ -296,7 +310,7 @@ public class TestTopicHalting {
         public UnDeserializableDataObject() {
             // we'll allow this one
         }
-        
+
         @Override
         public void writeExternal(ObjectOutput out) throws IOException {
             out.write(42);

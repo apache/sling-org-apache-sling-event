@@ -45,9 +45,7 @@ public class TopicMatchingIT extends AbstractJobHandlingIT {
 
     @Configuration
     public Option[] configuration() {
-        return options(
-            baseConfiguration()
-        );
+        return options(baseConfiguration());
     }
 
     /**
@@ -57,22 +55,20 @@ public class TopicMatchingIT extends AbstractJobHandlingIT {
     public void testSimpleMatching() throws Exception {
         final Barrier barrier = new Barrier(2);
 
-        this.registerJobExecutor("sling/test/*",
-                new JobExecutor() {
+        this.registerJobExecutor("sling/test/*", new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        return context.result().succeeded();
-                    }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED,
-                new EventHandler() {
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                return context.result().succeeded();
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(final Event event) {
-                        barrier.block();
-                    }
-                });
+            @Override
+            public void handleEvent(final Event event) {
+                barrier.block();
+            }
+        });
 
         jobManager.addJob(TOPIC, null);
         barrier.block();
@@ -85,22 +81,20 @@ public class TopicMatchingIT extends AbstractJobHandlingIT {
     public void testDeepMatching() throws Exception {
         final Barrier barrier = new Barrier(2);
 
-        this.registerJobExecutor("sling/**",
-                new JobExecutor() {
+        this.registerJobExecutor("sling/**", new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        return context.result().succeeded();
-                    }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED,
-                new EventHandler() {
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                return context.result().succeeded();
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(final Event event) {
-                        barrier.block();
-                    }
-                });
+            @Override
+            public void handleEvent(final Event event) {
+                barrier.block();
+            }
+        });
 
         jobManager.addJob(TOPIC, null);
         barrier.block();
@@ -115,33 +109,30 @@ public class TopicMatchingIT extends AbstractJobHandlingIT {
         final Barrier barrier2 = new Barrier(2);
         final Barrier barrier3 = new Barrier(2);
 
-        this.registerJobExecutor("sling/**",
-                new JobExecutor() {
+        this.registerJobExecutor("sling/**", new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        barrier1.block();
-                        return context.result().succeeded();
-                    }
-                });
-        final ServiceRegistration<JobExecutor> reg2 = this.registerJobExecutor("sling/test/*",
-                new JobExecutor() {
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                barrier1.block();
+                return context.result().succeeded();
+            }
+        });
+        final ServiceRegistration<JobExecutor> reg2 = this.registerJobExecutor("sling/test/*", new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        barrier2.block();
-                        return context.result().succeeded();
-                    }
-                });
-        final ServiceRegistration<JobExecutor> reg3 = this.registerJobExecutor(TOPIC,
-                new JobExecutor() {
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                barrier2.block();
+                return context.result().succeeded();
+            }
+        });
+        final ServiceRegistration<JobExecutor> reg3 = this.registerJobExecutor(TOPIC, new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        barrier3.block();
-                        return context.result().succeeded();
-                    }
-                });
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                barrier3.block();
+                return context.result().succeeded();
+            }
+        });
 
         // first test, all three registered, reg3 should get the precedence
         jobManager.addJob(TOPIC, null);

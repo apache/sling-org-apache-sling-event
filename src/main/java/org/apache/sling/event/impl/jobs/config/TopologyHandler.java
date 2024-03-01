@@ -36,10 +36,9 @@ import org.slf4j.LoggerFactory;
  * This topology handler is handling the topology change events asynchronously
  * and processes them by queuing them.
  */
-@Component(service = TopologyEventListener.class,
-    property = {
-            Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-    })
+@Component(
+        service = TopologyEventListener.class,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 public class TopologyHandler implements TopologyEventListener, Runnable {
 
     /** The logger. */
@@ -69,7 +68,7 @@ public class TopologyHandler implements TopologyEventListener, Runnable {
         this.queue.clear();
         try {
             this.queue.put(new QueueItem());
-        } catch ( final InterruptedException ie) {
+        } catch (final InterruptedException ie) {
             logger.warn("Thread got interrupted.", ie);
             Thread.currentThread().interrupt();
         }
@@ -81,7 +80,7 @@ public class TopologyHandler implements TopologyEventListener, Runnable {
         item.event = event;
         try {
             this.queue.put(item);
-        } catch ( final InterruptedException ie) {
+        } catch (final InterruptedException ie) {
             logger.warn("Thread got interrupted.", ie);
             Thread.currentThread().interrupt();
         }
@@ -89,18 +88,18 @@ public class TopologyHandler implements TopologyEventListener, Runnable {
 
     @Override
     public void run() {
-        while ( isActive.get() ) {
+        while (isActive.get()) {
             QueueItem item = null;
             try {
                 item = this.queue.take();
-            } catch ( final InterruptedException ie) {
+            } catch (final InterruptedException ie) {
                 logger.warn("Thread got interrupted.", ie);
                 Thread.currentThread().interrupt();
                 isActive.set(false);
             }
-            if ( isActive.get() && item != null && item.event != null ) {
+            if (isActive.get() && item != null && item.event != null) {
                 final JobManagerConfiguration config = this.configuration;
-                if ( config != null ) {
+                if (config != null) {
                     config.handleTopologyEvent(item.event);
                 }
             }

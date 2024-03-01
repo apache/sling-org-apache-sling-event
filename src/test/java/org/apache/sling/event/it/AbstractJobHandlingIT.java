@@ -40,7 +40,7 @@ import org.osgi.service.event.EventHandler;
 
 public abstract class AbstractJobHandlingIT extends JobsTestSupport {
 
-    protected static final int DEFAULT_TEST_TIMEOUT = 1000*60*5;
+    protected static final int DEFAULT_TEST_TIMEOUT = 1000 * 60 * 5;
 
     protected List<ServiceRegistration<?>> registrations = new ArrayList<>();
 
@@ -64,12 +64,11 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
     /**
      * Helper method to register an event handler
      */
-    protected ServiceRegistration<EventHandler> registerEventHandler(final String topic,
-            final EventHandler handler) {
+    protected ServiceRegistration<EventHandler> registerEventHandler(final String topic, final EventHandler handler) {
         final Dictionary<String, Object> props = new Hashtable<>();
         props.put(EventConstants.EVENT_TOPIC, topic);
-        final ServiceRegistration<EventHandler> reg = this.bundleContext.registerService(EventHandler.class,
-                handler, props);
+        final ServiceRegistration<EventHandler> reg =
+                this.bundleContext.registerService(EventHandler.class, handler, props);
         this.registrations.add(reg);
         return reg;
     }
@@ -77,13 +76,17 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
     protected long getConsumerChangeCount() {
         long result = -1;
         try {
-            final Collection<ServiceReference<PropertyProvider>> refs = this.bundleContext.getServiceReferences(PropertyProvider.class, "(changeCount=*)");
+            final Collection<ServiceReference<PropertyProvider>> refs =
+                    this.bundleContext.getServiceReferences(PropertyProvider.class, "(changeCount=*)");
             log.info("GetConsumerChangeCount refs.size = {}", refs.size());
-            if ( !refs.isEmpty() ) {
-                result = refs.stream().mapToLong(r -> (Long) r.getProperty("changeCount")).max().getAsLong();
+            if (!refs.isEmpty()) {
+                result = refs.stream()
+                        .mapToLong(r -> (Long) r.getProperty("changeCount"))
+                        .max()
+                        .getAsLong();
                 log.info("GetConsumerChangeCount changeCount = {} ", result);
             }
-        } catch ( final InvalidSyntaxException ignore ) {
+        } catch (final InvalidSyntaxException ignore) {
             // ignore
         }
         return result;
@@ -92,16 +95,16 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
     protected void waitConsumerChangeCount(final long minimum) {
         do {
             final long cc = getConsumerChangeCount();
-            if ( cc >= minimum ) {
+            if (cc >= minimum) {
                 if (isTopologyInitialized()) {
                     return;
                 }
                 log.info("waitConsumerChangeCount (topology not yet initialized)");
             } else {
-                log.info("waitConsumerChangeCount (is={}, expected={})",cc, minimum);
+                log.info("waitConsumerChangeCount (is={}, expected={})", cc, minimum);
             }
             sleep(50);
-        } while ( true );
+        } while (true);
     }
 
     protected boolean isTopologyInitialized() {
@@ -112,23 +115,23 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
     /**
      * Helper method to register a job consumer
      */
-    protected ServiceRegistration<JobConsumer> registerJobConsumer(final String topic,
-            final JobConsumer handler) {
+    protected ServiceRegistration<JobConsumer> registerJobConsumer(final String topic, final JobConsumer handler) {
         long cc = this.getConsumerChangeCount();
         final Dictionary<String, Object> props = new Hashtable<>();
         props.put(JobConsumer.PROPERTY_TOPICS, topic);
-        final ServiceRegistration<JobConsumer> reg = this.bundleContext.registerService(JobConsumer.class,
-                handler, props);
+        final ServiceRegistration<JobConsumer> reg =
+                this.bundleContext.registerService(JobConsumer.class, handler, props);
         this.registrations.add(reg);
-        log.info("registered JobConsumer for topic {} and changecount={}",topic, cc);
+        log.info("registered JobConsumer for topic {} and changecount={}", topic, cc);
         this.waitConsumerChangeCount(cc + 1);
-        log.info("registered2 JobConsumer for topic {} and changecount={}",topic, cc);
+        log.info("registered2 JobConsumer for topic {} and changecount={}", topic, cc);
         return reg;
     }
 
     protected void registerTopologyListener() {
         final Dictionary<String, Object> props = new Hashtable<>();
-        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(TopologyEventListener.class,
+        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(
+                TopologyEventListener.class,
                 new TopologyEventListener() {
 
                     @Override
@@ -136,27 +139,27 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
                         log.info("handleTopologyEvent : GOT EVENT : " + event);
                         lastTopologyEvent.set(event);
                     }
-                }, props);
+                },
+                props);
         this.registrations.add(reg);
     }
 
     /**
      * Helper method to register a job executor
      */
-    protected ServiceRegistration<JobExecutor> registerJobExecutor(final String topic,
-            final JobExecutor handler) {
+    protected ServiceRegistration<JobExecutor> registerJobExecutor(final String topic, final JobExecutor handler) {
         long cc = this.getConsumerChangeCount();
         final Dictionary<String, Object> props = new Hashtable<>();
         props.put(JobConsumer.PROPERTY_TOPICS, topic);
-        final ServiceRegistration<JobExecutor> reg = this.bundleContext.registerService(JobExecutor.class,
-                handler, props);
+        final ServiceRegistration<JobExecutor> reg =
+                this.bundleContext.registerService(JobExecutor.class, handler, props);
         this.registrations.add(reg);
         this.waitConsumerChangeCount(cc + 1);
         return reg;
     }
 
     protected void unregister(final ServiceRegistration<?> reg) {
-        if ( reg != null ) {
+        if (reg != null) {
             this.registrations.remove(reg);
             reg.unregister();
         }

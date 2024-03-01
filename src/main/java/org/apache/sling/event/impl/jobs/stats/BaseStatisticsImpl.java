@@ -56,7 +56,7 @@ public abstract class BaseStatisticsImpl {
     public long getAverageWaitingTime() {
         final long time = this.waitingTime.get();
         final long count = this.waitingCount.get();
-        if ( count > 1 ) {
+        if (count > 1) {
             return time / count;
         }
         return time;
@@ -68,7 +68,7 @@ public abstract class BaseStatisticsImpl {
     public long getAverageProcessingTime() {
         final long time = this.processingTime.get();
         final long count = this.processingCount.get();
-        if ( count > 1 ) {
+        if (count > 1) {
             return time / count;
         }
         return time;
@@ -116,7 +116,7 @@ public abstract class BaseStatisticsImpl {
     public synchronized void finishedJob(final long jobTime) {
         this.lastFinished.set(System.currentTimeMillis());
         this.processingTime.addAndGet(jobTime);
-        this.processingCount.incrementAndGet();    
+        this.processingCount.incrementAndGet();
         this.finishedJobs.incrementAndGet();
     }
 
@@ -148,11 +148,11 @@ public abstract class BaseStatisticsImpl {
      * Add another statistics information.
      */
     public synchronized void add(final BaseStatisticsImpl other) {
-        synchronized ( other ) {
-            if ( other.lastActivated.get() > this.lastActivated.get() ) {
+        synchronized (other) {
+            if (other.lastActivated.get() > this.lastActivated.get()) {
                 this.lastActivated.set(other.lastActivated.get());
             }
-            if ( other.lastFinished.get() > this.lastFinished.get() ) {
+            if (other.lastFinished.get() > this.lastFinished.get()) {
                 this.lastFinished.set(other.lastFinished.get());
             }
             this.waitingTime.addAndGet(other.waitingTime.get());
@@ -178,7 +178,7 @@ public abstract class BaseStatisticsImpl {
         final long localFinishedJobs;
         final long localFailedJobs;
         final long localCancelledJobs;
-        synchronized ( other ) {
+        synchronized (other) {
             localLastActivated = other.lastActivated.get();
             localLastFinished = other.lastFinished.get();
             localWaitingTime = other.waitingTime.get();
@@ -189,7 +189,7 @@ public abstract class BaseStatisticsImpl {
             localFailedJobs = other.failedJobs.get();
             localCancelledJobs = other.cancelledJobs.get();
         }
-        synchronized ( this ) {
+        synchronized (this) {
             this.lastActivated.set(localLastActivated);
             this.lastFinished.set(localLastFinished);
             this.waitingTime.set(localWaitingTime);

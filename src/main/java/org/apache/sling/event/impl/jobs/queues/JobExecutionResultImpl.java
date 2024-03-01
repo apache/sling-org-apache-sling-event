@@ -27,9 +27,11 @@ import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 public class JobExecutionResultImpl implements JobExecutionResult {
 
     /** Constant object for the success case. */
-    public static final JobExecutionResultImpl SUCCEEDED = new JobExecutionResultImpl(InternalJobState.SUCCEEDED, null, null);
+    public static final JobExecutionResultImpl SUCCEEDED =
+            new JobExecutionResultImpl(InternalJobState.SUCCEEDED, null, null);
     /** Constant object for the cancelled case. */
-    public static final JobExecutionResultImpl CANCELLED = new JobExecutionResultImpl(InternalJobState.CANCELLED, null, null);
+    public static final JobExecutionResultImpl CANCELLED =
+            new JobExecutionResultImpl(InternalJobState.CANCELLED, null, null);
     /** Constant object for the failed case. */
     public static final JobExecutionResultImpl FAILED = new JobExecutionResultImpl(InternalJobState.FAILED, null, null);
 
@@ -48,9 +50,7 @@ public class JobExecutionResultImpl implements JobExecutionResult {
      * @param message Optional Message
      * @param retryDelayInMs Optional retry delay
      */
-    public JobExecutionResultImpl(final InternalJobState state,
-            final String message,
-            final Long retryDelayInMs) {
+    public JobExecutionResultImpl(final InternalJobState state, final String message, final Long retryDelayInMs) {
         this.state = state;
         this.message = message;
         this.retryDelayInMs = retryDelayInMs;
@@ -91,7 +91,7 @@ public class JobExecutionResultImpl implements JobExecutionResult {
 
     @Override
     public String toString() {
-        return "JobExecutionResultImpl [state=" + state + ", message="
-                + message + ", retryDelayInMs=" + retryDelayInMs + "]";
+        return "JobExecutionResultImpl [state=" + state + ", message=" + message + ", retryDelayInMs=" + retryDelayInMs
+                + "]";
     }
 }

@@ -52,15 +52,16 @@ import org.osgi.service.component.annotations.Reference;
  * and the configurations.
  * @since 3.2
  */
-@Component(service={InventoryPrinter.class},
-    property = {
-        Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
-        InventoryPrinter.NAME + "=slingjobs",
-        InventoryPrinter.TITLE + "=Sling Jobs",
-        InventoryPrinter.FORMAT + "=TEXT",
-        InventoryPrinter.FORMAT + "=JSON",
-        InventoryPrinter.WEBCONSOLE + ":Boolean=false"
-})
+@Component(
+        service = {InventoryPrinter.class},
+        property = {
+            Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
+            InventoryPrinter.NAME + "=slingjobs",
+            InventoryPrinter.TITLE + "=Sling Jobs",
+            InventoryPrinter.FORMAT + "=TEXT",
+            InventoryPrinter.FORMAT + "=JSON",
+            InventoryPrinter.WEBCONSOLE + ":Boolean=false"
+        })
 public class InventoryPlugin implements InventoryPrinter {
 
     @Reference
@@ -76,17 +77,20 @@ public class InventoryPlugin implements InventoryPrinter {
      * Format an array.
      */
     private String formatArrayAsText(final String[] array) {
-        if ( array == null || array.length == 0 ) {
+        if (array == null || array.length == 0) {
             return "";
         }
         return Arrays.toString(array);
     }
 
     private String formatType(final QueueConfiguration.Type type) {
-        switch ( type ) {
-            case ORDERED : return "Ordered";
-            case TOPIC_ROUND_ROBIN : return "Topic Round Robin";
-            case UNORDERED : return "Parallel";
+        switch (type) {
+            case ORDERED:
+                return "Ordered";
+            case TOPIC_ROUND_ROBIN:
+                return "Topic Round Robin";
+            case UNORDERED:
+                return "Parallel";
         }
         return type.toString();
     }
@@ -98,7 +102,7 @@ public class InventoryPlugin implements InventoryPrinter {
      * Format a date
      */
     private synchronized String formatDate(final long time) {
-        if ( time == -1 ) {
+        if (time == -1) {
             return "-";
         }
         final Date d = new Date(time);
@@ -109,12 +113,12 @@ public class InventoryPlugin implements InventoryPrinter {
      * Format time (= duration)
      */
     private String formatTime(final long time) {
-        if ( time == 0 ) {
+        if (time == 0) {
             return "-";
         }
-        if ( time < 1000 ) {
+        if (time < 1000) {
             return time + " ms";
-        } else if ( time < 1000 * 60 ) {
+        } else if (time < 1000 * 60) {
             return time / 1000 + " secs";
         }
         final long min = time / 1000 / 60;
@@ -127,9 +131,9 @@ public class InventoryPlugin implements InventoryPrinter {
      */
     @Override
     public void print(final PrintWriter pw, final Format format, final boolean isZip) {
-        if ( format.equals(Format.TEXT) ) {
+        if (format.equals(Format.TEXT)) {
             printText(pw);
-        } else if ( format.equals(Format.JSON) ) {
+        } else if (format.equals(Format.JSON)) {
             printJson(pw);
         }
     }
@@ -139,7 +143,7 @@ public class InventoryPlugin implements InventoryPrinter {
         pw.println("-------------------------");
 
         String topics = this.jobConsumerManager.getTopics();
-        if ( topics == null ) {
+        if (topics == null) {
             topics = "";
         }
 
@@ -162,17 +166,17 @@ public class InventoryPlugin implements InventoryPrinter {
 
         pw.println("Topology Capabilities");
         final TopologyCapabilities cap = this.configuration.getTopologyCapabilities();
-        if ( cap == null ) {
+        if (cap == null) {
             pw.print("No topology information available !");
         } else {
             final Map<String, List<InstanceDescription>> instanceCaps = cap.getInstanceCapabilities();
-            for(final Map.Entry<String, List<InstanceDescription>> entry : instanceCaps.entrySet()) {
+            for (final Map.Entry<String, List<InstanceDescription>> entry : instanceCaps.entrySet()) {
                 final StringBuilder sb = new StringBuilder();
-                for(final InstanceDescription id : entry.getValue()) {
-                    if ( sb.length() > 0 ) {
+                for (final InstanceDescription id : entry.getValue()) {
+                    if (sb.length() > 0) {
                         sb.append(", ");
                     }
-                    if ( id.isLocal() ) {
+                    if (id.isLocal()) {
                         sb.append("local");
                     } else {
                         sb.append(id.getSlingId());
@@ -185,33 +189,43 @@ public class InventoryPlugin implements InventoryPrinter {
 
         pw.println("Scheduled Jobs");
         final Collection<ScheduledJobInfo> infos = this.jobManager.getScheduledJobs();
-        if ( infos.size() == 0 ) {
+        if (infos.size() == 0) {
             pw.print("No jobs currently scheduled");
         } else {
-            for(final ScheduledJobInfo info : infos) {
+            for (final ScheduledJobInfo info : infos) {
                 pw.println("Schedule");
                 pw.printf("Job Topic< : %s%n", info.getJobTopic());
                 pw.print("Schedules : ");
                 boolean first = true;
-                for(final ScheduleInfo si : info.getSchedules() ) {
-                    if ( !first ) {
+                for (final ScheduleInfo si : info.getSchedules()) {
+                    if (!first) {
                         pw.print(", ");
                     }
                     first = false;
-                    switch ( si.getType() ) {
-                    case YEARLY : pw.printf("YEARLY %s %s : %s:%s", si.getMonthOfYear(), si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
-                                  break;
-                    case MONTHLY : pw.printf("MONTHLY %s : %s:%s", si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
-                                  break;
-                    case WEEKLY : pw.printf("WEEKLY %s : %s:%s", si.getDayOfWeek(), si.getHourOfDay(), si.getMinuteOfHour());
-                                  break;
-                    case DAILY : pw.printf("DAILY %s:%s", si.getHourOfDay(), si.getMinuteOfHour());
-                                 break;
-                    case HOURLY : pw.printf("HOURLY %s", si.getMinuteOfHour());
-                                 break;
-                    case CRON : pw.printf("CRON %s", si.getExpression());
-                                 break;
-                    default : pw.printf("AT %s", si.getAt());
+                    switch (si.getType()) {
+                        case YEARLY:
+                            pw.printf(
+                                    "YEARLY %s %s : %s:%s",
+                                    si.getMonthOfYear(), si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
+                            break;
+                        case MONTHLY:
+                            pw.printf(
+                                    "MONTHLY %s : %s:%s", si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
+                            break;
+                        case WEEKLY:
+                            pw.printf("WEEKLY %s : %s:%s", si.getDayOfWeek(), si.getHourOfDay(), si.getMinuteOfHour());
+                            break;
+                        case DAILY:
+                            pw.printf("DAILY %s:%s", si.getHourOfDay(), si.getMinuteOfHour());
+                            break;
+                        case HOURLY:
+                            pw.printf("HOURLY %s", si.getMinuteOfHour());
+                            break;
+                        case CRON:
+                            pw.printf("CRON %s", si.getExpression());
+                            break;
+                        default:
+                            pw.printf("AT %s", si.getAt());
                     }
                 }
                 pw.println();
@@ -221,10 +235,9 @@ public class InventoryPlugin implements InventoryPrinter {
         pw.println();
 
         boolean isEmpty = true;
-        for(final Queue q : this.jobManager.getQueues()) {
+        for (final Queue q : this.jobManager.getQueues()) {
             isEmpty = false;
-            pw.printf("Active JobQueue: %s %s%n", q.getName(),
-                    q.isSuspended() ? "(SUSPENDED)" : "");
+            pw.printf("Active JobQueue: %s %s%n", q.getName(), q.isSuspended() ? "(SUSPENDED)" : "");
 
             s = q.getStatistics();
             final QueueConfiguration c = q.getConfiguration();
@@ -251,12 +264,12 @@ public class InventoryPlugin implements InventoryPrinter {
             pw.printf("Priority : %s%n", c.getThreadPriority());
             pw.println();
         }
-        if ( isEmpty ) {
+        if (isEmpty) {
             pw.println("No active queues.");
             pw.println();
         }
 
-        for(final TopicStatistics ts : this.jobManager.getTopicStatistics()) {
+        for (final TopicStatistics ts : this.jobManager.getTopicStatistics()) {
             pw.printf("Topic Statistics - %s%n", ts.getTopic());
             pw.printf("Last Activated : %s%n", formatDate(ts.getLastActivatedJobTime()));
             pw.printf("Last Finished : %s%n", formatDate(ts.getLastFinishedJobTime()));
@@ -271,16 +284,17 @@ public class InventoryPlugin implements InventoryPrinter {
 
         pw.println("Apache Sling Job Handling - Job Queue Configurations");
         pw.println("----------------------------------------------------");
-        this.printQueueConfiguration(pw, this.configuration.getQueueConfigurationManager().getMainQueueConfiguration());
-        final InternalQueueConfiguration[] configs = this.configuration.getQueueConfigurationManager().getConfigurations();
-        for(final InternalQueueConfiguration c : configs ) {
+        this.printQueueConfiguration(
+                pw, this.configuration.getQueueConfigurationManager().getMainQueueConfiguration());
+        final InternalQueueConfiguration[] configs =
+                this.configuration.getQueueConfigurationManager().getConfigurations();
+        for (final InternalQueueConfiguration c : configs) {
             this.printQueueConfiguration(pw, c);
         }
     }
 
     private void printQueueConfiguration(final PrintWriter pw, final InternalQueueConfiguration c) {
-        pw.printf("Job Queue Configuration: %s%n",
-                c.getName());
+        pw.printf("Job Queue Configuration: %s%n", c.getName());
         pw.printf("Valid : %s%n", c.isValid());
         pw.printf("Type : %s%n", formatType(c.getType()));
         pw.printf("Topics : %s%n", formatArrayAsText(c.getTopics()));
@@ -317,16 +331,17 @@ public class InventoryPlugin implements InventoryPrinter {
         pw.print("  }");
 
         final TopologyCapabilities cap = this.configuration.getTopologyCapabilities();
-        if ( cap != null ) {
+        if (cap != null) {
             pw.println(",");
             pw.println("  \"capabilities\" : [");
             final Map<String, List<InstanceDescription>> instanceCaps = cap.getInstanceCapabilities();
-            final Iterator<Map.Entry<String, List<InstanceDescription>>> iter = instanceCaps.entrySet().iterator();
-            while ( iter.hasNext() ) {
+            final Iterator<Map.Entry<String, List<InstanceDescription>>> iter =
+                    instanceCaps.entrySet().iterator();
+            while (iter.hasNext()) {
                 final Map.Entry<String, List<InstanceDescription>> entry = iter.next();
                 final List<String> instances = new ArrayList<>();
-                for(final InstanceDescription id : entry.getValue()) {
-                    if ( id.isLocal() ) {
+                for (final InstanceDescription id : entry.getValue()) {
+                    if (id.isLocal()) {
                         instances.add("local");
                     } else {
                         instances.add(id.getSlingId());
@@ -334,8 +349,10 @@ public class InventoryPlugin implements InventoryPrinter {
                 }
                 pw.println("    {");
                 pw.printf("       \"topic\" : \"%s\",%n", entry.getKey());
-                pw.printf("       \"instances\" : %s%n", formatArrayAsJson(instances.toArray(new String[instances.size()])));
-                if ( iter.hasNext() ) {
+                pw.printf(
+                        "       \"instances\" : %s%n",
+                        formatArrayAsJson(instances.toArray(new String[instances.size()])));
+                if (iter.hasNext()) {
                     pw.println("    },");
                 } else {
                     pw.println("    }");
@@ -346,9 +363,9 @@ public class InventoryPlugin implements InventoryPrinter {
 
         boolean first = true;
         final Collection<ScheduledJobInfo> infos = this.jobManager.getScheduledJobs();
-        for(final ScheduledJobInfo info : infos) {
+        for (final ScheduledJobInfo info : infos) {
             pw.println(",");
-            if ( first ) {
+            if (first) {
                 pw.println("  \"scheduledJobs\" : [");
                 first = false;
             }
@@ -357,41 +374,44 @@ public class InventoryPlugin implements InventoryPrinter {
             pw.printf("      \"jobTopic\" : \"%s\",%n", info.getJobTopic());
             pw.println("      \"schedules\" : [");
             boolean internalFirst = true;
-            for(final ScheduleInfo si : info.getSchedules() ) {
-                if ( !internalFirst ) {
+            for (final ScheduleInfo si : info.getSchedules()) {
+                if (!internalFirst) {
                     pw.println(", ");
                 }
                 internalFirst = false;
                 pw.println("        {");
-                switch ( si.getType() ) {
-                    case YEARLY :
+                switch (si.getType()) {
+                    case YEARLY:
                         pw.printf("          \"type\" : \"%s\",%n", "YEARLY");
-                        pw.printf("          \"schedule\" : \"%s %s : %s:%s\"%n", si.getMonthOfYear(),
+                        pw.printf(
+                                "          \"schedule\" : \"%s %s : %s:%s\"%n",
+                                si.getMonthOfYear(), si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
+                        break;
+                    case MONTHLY:
+                        pw.printf("          \"type\" : \"%s\",%n", "MONTHLY");
+                        pw.printf(
+                                "          \"schedule\" : \"%s : %s:%s\"%n",
                                 si.getDayOfMonth(), si.getHourOfDay(), si.getMinuteOfHour());
                         break;
-                    case MONTHLY :
-                        pw.printf("          \"type\" : \"%s\",%n", "MONTHLY");
-                        pw.printf("          \"schedule\" : \"%s : %s:%s\"%n", si.getDayOfMonth(), si.getHourOfDay(),
-                                si.getMinuteOfHour());
-                        break;
-                    case WEEKLY :
+                    case WEEKLY:
                         pw.printf("          \"type\" : \"%s\",%n", "WEEKLY");
-                        pw.printf("          \"schedule\" : \"%s : %s:%s\"%n", si.getDayOfWeek(), si.getHourOfDay(),
-                                si.getMinuteOfHour());
+                        pw.printf(
+                                "          \"schedule\" : \"%s : %s:%s\"%n",
+                                si.getDayOfWeek(), si.getHourOfDay(), si.getMinuteOfHour());
                         break;
-                    case DAILY :
+                    case DAILY:
                         pw.printf("          \"type\" : \"%s\",%n", "DAILY");
                         pw.printf("          \"schedule\" : \"%s:%s\"%n", si.getHourOfDay(), si.getMinuteOfHour());
                         break;
-                    case HOURLY :
+                    case HOURLY:
                         pw.printf("          \"type\" : \"%s\",%n", "HOURLY");
                         pw.printf("          \"schedule\" : \"%s\"%n", si.getMinuteOfHour());
                         break;
-                    case CRON :
+                    case CRON:
                         pw.printf("          \"type\" : \"%s\",%n", "CRON");
                         pw.printf("          \"schedule\" : \"%s\"%n", si.getExpression());
                         break;
-                    default :
+                    default:
                         pw.printf("          \"type\" : \"%s\",%n", "AT");
                         pw.printf("          \"schedule\" : \"%s\"%n", si.getAt());
                 }
@@ -401,14 +421,14 @@ public class InventoryPlugin implements InventoryPrinter {
             pw.println("      ]");
             pw.println("    }");
         }
-        if ( !first ) {
+        if (!first) {
             pw.print("  ]");
         }
 
         first = true;
-        for(final Queue q : this.jobManager.getQueues()) {
+        for (final Queue q : this.jobManager.getQueues()) {
             pw.println(",");
-            if ( first ) {
+            if (first) {
                 pw.println("  \"queues\" : [");
                 first = false;
             }
@@ -449,14 +469,14 @@ public class InventoryPlugin implements InventoryPrinter {
             pw.println("      }");
             pw.print("    }");
         }
-        if ( !first ) {
+        if (!first) {
             pw.print("  ]");
         }
 
         first = true;
-        for(final TopicStatistics ts : this.jobManager.getTopicStatistics()) {
+        for (final TopicStatistics ts : this.jobManager.getTopicStatistics()) {
             pw.println(",");
-            if ( first ) {
+            if (first) {
                 pw.println("  \"topicStatistics\" : [");
                 first = false;
             }
@@ -476,15 +496,17 @@ public class InventoryPlugin implements InventoryPrinter {
             pw.printf("      \"averageWaitingTimeText\" : \"%s\"%n", formatTime(ts.getAverageWaitingTime()));
             pw.print("    }");
         }
-        if ( !first ) {
+        if (!first) {
             pw.print("  ]");
         }
 
         pw.println(",");
         pw.println("  \"configurations\" : [");
-        this.printQueueConfigurationJson(pw, this.configuration.getQueueConfigurationManager().getMainQueueConfiguration());
-        final InternalQueueConfiguration[] configs = this.configuration.getQueueConfigurationManager().getConfigurations();
-        for(final InternalQueueConfiguration c : configs ) {
+        this.printQueueConfigurationJson(
+                pw, this.configuration.getQueueConfigurationManager().getMainQueueConfiguration());
+        final InternalQueueConfiguration[] configs =
+                this.configuration.getQueueConfigurationManager().getConfigurations();
+        for (final InternalQueueConfiguration c : configs) {
             pw.println(",");
             this.printQueueConfigurationJson(pw, c);
         }
@@ -511,13 +533,13 @@ public class InventoryPlugin implements InventoryPrinter {
      * Format an array.
      */
     private String formatArrayAsJson(final String[] array) {
-        if ( array == null || array.length == 0 ) {
+        if (array == null || array.length == 0) {
             return "[]";
         }
         final StringBuilder sb = new StringBuilder("[");
         boolean first = true;
-        for(final String s : array) {
-            if ( !first ) {
+        for (final String s : array) {
+            if (!first) {
                 sb.append(", ");
             }
             first = false;

@@ -36,21 +36,20 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
  * This component needs to be immediate to set the global variables
  * (application id and thread pool).
  */
-@Component(immediate=true,
-    property = {
-            Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-    },
-    service={EnvironmentComponent.class})
+@Component(
+        immediate = true,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"},
+        service = {EnvironmentComponent.class})
 public class EnvironmentComponent {
 
     /**
      * Our thread pool.
      */
-    @Reference(service=EventingThreadPool.class, policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(service = EventingThreadPool.class, policyOption = ReferencePolicyOption.GREEDY)
     private ThreadPool threadPool;
 
     /** Sling settings service. */
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private SlingSettingsService settingsService;
 
     /**
@@ -69,7 +68,7 @@ public class EnvironmentComponent {
     @Deactivate
     protected void deactivate() {
         // Unset the thread pool
-        if ( Environment.THREAD_POOL == this.threadPool ) {
+        if (Environment.THREAD_POOL == this.threadPool) {
             Environment.THREAD_POOL = null;
         }
     }
@@ -79,7 +78,7 @@ public class EnvironmentComponent {
     }
 
     protected void unbindThreadPool(final EventingThreadPool etp) {
-        if ( this.threadPool == etp ) {
+        if (this.threadPool == etp) {
             this.threadPool = null;
         }
     }

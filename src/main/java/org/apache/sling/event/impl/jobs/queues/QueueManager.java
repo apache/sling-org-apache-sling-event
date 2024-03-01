@@ -66,25 +66,29 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * Implementation of the queue manager.
  */
-@Component(immediate=true,
-           service={Runnable.class, QueueManager.class, EventHandler.class},
-           property={
-                   Scheduler.PROPERTY_SCHEDULER_PERIOD + ":Long=60",
-                   Scheduler.PROPERTY_SCHEDULER_CONCURRENT + ":Boolean=false",
-                   Scheduler.PROPERTY_SCHEDULER_THREAD_POOL + "=" + ScheduleInfoImpl.EVENTING_THREADPOOL_NAME,
-                   EventConstants.EVENT_TOPIC + "=" + NotificationConstants.TOPIC_JOB_ADDED,
-                   Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-           })
-public class QueueManager
-    implements Runnable, EventHandler, ConfigurationChangeListener {
+@Component(
+        immediate = true,
+        service = {Runnable.class, QueueManager.class, EventHandler.class},
+        property = {
+            Scheduler.PROPERTY_SCHEDULER_PERIOD + ":Long=60",
+            Scheduler.PROPERTY_SCHEDULER_CONCURRENT + ":Boolean=false",
+            Scheduler.PROPERTY_SCHEDULER_THREAD_POOL + "=" + ScheduleInfoImpl.EVENTING_THREADPOOL_NAME,
+            EventConstants.EVENT_TOPIC + "=" + NotificationConstants.TOPIC_JOB_ADDED,
+            Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
+        })
+public class QueueManager implements Runnable, EventHandler, ConfigurationChangeListener {
 
-    static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
-            QueuesMBean queuesMBean, ThreadPoolManager threadPoolManager, ThreadPool threadPool,
-            JobManagerConfiguration configuration, StatisticsManager statisticsManager) {
+    static QueueManager newForTest(
+            EventAdmin eventAdmin,
+            JobConsumerManager jobConsumerManager,
+            QueuesMBean queuesMBean,
+            ThreadPoolManager threadPoolManager,
+            ThreadPool threadPool,
+            JobManagerConfiguration configuration,
+            StatisticsManager statisticsManager) {
         final QueueManager qm = new QueueManager();
         qm.eventAdmin = eventAdmin;
         qm.jobConsumerManager = jobConsumerManager;
@@ -99,7 +103,7 @@ public class QueueManager
     /** Default logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private EventAdmin eventAdmin;
 
     @Reference
@@ -108,13 +112,13 @@ public class QueueManager
     @Reference
     private QueuesMBean queuesMBean;
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private ThreadPoolManager threadPoolManager;
 
     /**
      * Our thread pool.
      */
-    @Reference(service=EventingThreadPool.class)
+    @Reference(service = EventingThreadPool.class)
     private ThreadPool threadPool;
 
     /** The job manager configuration. */
@@ -173,11 +177,11 @@ public class QueueManager
 
         this.configuration.removeListener(this);
         final Iterator<JobQueueImpl> i = this.queues.values().iterator();
-        while ( i.hasNext() ) {
+        while (i.hasNext()) {
             final JobQueueImpl jbq = i.next();
             jbq.close();
             // update mbeans
-            ((QueuesMBeanImpl)queuesMBean).sendEvent(new QueueStatusEvent(null, jbq));
+            ((QueuesMBeanImpl) queuesMBean).sendEvent(new QueueStatusEvent(null, jbq));
         }
         this.queues.clear();
         this.queueServices = null;
@@ -195,36 +199,37 @@ public class QueueManager
         logger.debug("Queue manager maintenance: Starting #{}", this.schedulerRuns);
 
         // queue maintenance
-        if ( this.isActive.get() ) {
-            for(final JobQueueImpl jbq : this.queues.values() ) {
+        if (this.isActive.get()) {
+            for (final JobQueueImpl jbq : this.queues.values()) {
                 jbq.maintain();
             }
         }
 
         // full topic scan is done every third run
-        if ( schedulerRuns % 3 == 0 && this.isActive.get() ) {
+        if (schedulerRuns % 3 == 0 && this.isActive.get()) {
             this.fullTopicScan();
         }
 
         // we only do a full clean up on every fifth run
         final boolean doFullCleanUp = (schedulerRuns % 5 == 0);
 
-        if ( doFullCleanUp ) {
+        if (doFullCleanUp) {
             // check for idle queue
             logger.debug("Checking for idle queues...");
 
-           // we synchronize to avoid creating a queue which is about to be removed during cleanup
-            synchronized ( queuesLock ) {
-                final Iterator<Map.Entry<String, JobQueueImpl>> i = this.queues.entrySet().iterator();
-                while ( i.hasNext() ) {
+            // we synchronize to avoid creating a queue which is about to be removed during cleanup
+            synchronized (queuesLock) {
+                final Iterator<Map.Entry<String, JobQueueImpl>> i =
+                        this.queues.entrySet().iterator();
+                while (i.hasNext()) {
                     final Map.Entry<String, JobQueueImpl> current = i.next();
                     final JobQueueImpl jbq = current.getValue();
-                    if ( jbq.tryToClose() ) {
+                    if (jbq.tryToClose()) {
                         logger.debug("Removing idle job queue {}", jbq);
                         // remove
                         i.remove();
                         // update mbeans
-                        ((QueuesMBeanImpl)queuesMBean).sendEvent(new QueueStatusEvent(null, jbq));
+                        ((QueuesMBeanImpl) queuesMBean).sendEvent(new QueueStatusEvent(null, jbq));
                     }
                 }
             }
@@ -240,8 +245,7 @@ public class QueueManager
      * @param queueInfo The queue info
      * @param topics The topics
      */
-    private void start(final QueueInfo queueInfo,
-                       final Set<String> topics) {
+    private void start(final QueueInfo queueInfo, final Set<String> topics) {
         final InternalQueueConfiguration config = queueInfo.queueConfiguration;
         final Set<String> filteredTopics = new HashSet<String>(topics);
         filteredTopics.removeAll(haltedTopics);
@@ -250,28 +254,29 @@ public class QueueManager
         boolean isNewQueue = false;
         JobQueueImpl queue = null;
         // we synchronize to avoid creating a queue which is about to be removed during cleanup
-        synchronized ( queuesLock ) {
+        synchronized (queuesLock) {
             queue = this.queues.get(queueInfo.queueName);
             // check for reconfiguration, we really do an identity check here(!)
-            if ( queue != null && queue.getConfiguration() != config ) {
+            if (queue != null && queue.getConfiguration() != config) {
                 this.outdateQueue(queue);
                 // we use a new queue with the configuration
                 queue = null;
             }
-            if ( queue == null ) {
+            if (queue == null) {
                 final OutdatedJobQueueInfo outdatedQueueInfo = outdatedQueues.get(queueInfo.queueName);
-                queue = JobQueueImpl.createQueue(queueInfo.queueName, config, queueServices, filteredTopics, haltedTopics, outdatedQueueInfo);
+                queue = JobQueueImpl.createQueue(
+                        queueInfo.queueName, config, queueServices, filteredTopics, haltedTopics, outdatedQueueInfo);
                 // on startup the queue might be empty and we get null back from createQueue
-                if ( queue != null ) {
+                if (queue != null) {
                     isNewQueue = true;
                     queues.put(queueInfo.queueName, queue);
-                    ((QueuesMBeanImpl)queuesMBean).sendEvent(new QueueStatusEvent(queue, null));
+                    ((QueuesMBeanImpl) queuesMBean).sendEvent(new QueueStatusEvent(queue, null));
                 }
             }
         }
-        if ( queue != null ) {
+        if (queue != null) {
             logger.debug("Starting queue {}", queueInfo.queueName);
-            if ( !isNewQueue ) {
+            if (!isNewQueue) {
                 queue.wakeUpQueue(filteredTopics);
             }
             queue.startJobs();
@@ -297,21 +302,21 @@ public class QueueManager
             outdatedQueues.put(oldName, oldQueue.getOutdatedJobQueueInfo());
         }
         // check if we can close or have to rename
-        if ( queue.tryToClose() ) {
+        if (queue.tryToClose()) {
             // copy statistics
             // update mbeans
-            ((QueuesMBeanImpl)queuesMBean).sendEvent(new QueueStatusEvent(null, queue));
+            ((QueuesMBeanImpl) queuesMBean).sendEvent(new QueueStatusEvent(null, queue));
         } else {
             queue.outdate();
             // readd with new name
             String newName = ResourceHelper.filterName(queue.getName());
             int index = 0;
-            while ( this.queues.containsKey(newName) ) {
+            while (this.queues.containsKey(newName)) {
                 newName = ResourceHelper.filterName(queue.getName()) + '$' + String.valueOf(index++);
             }
             this.queues.put(newName, queue);
             // update mbeans
-            ((QueuesMBeanImpl)queuesMBean).sendEvent(new QueueStatusEvent(queue, queue));
+            ((QueuesMBeanImpl) queuesMBean).sendEvent(new QueueStatusEvent(queue, queue));
         }
     }
 
@@ -320,18 +325,18 @@ public class QueueManager
      */
     private void restart() {
         // let's rename/close all queues and clear them
-        synchronized ( queuesLock ) {
+        synchronized (queuesLock) {
             final List<JobQueueImpl> queues = new ArrayList<>(this.queues.values());
-            for(final JobQueueImpl queue : queues ) {
+            for (final JobQueueImpl queue : queues) {
                 this.outdateQueue(queue);
             }
         }
         // check if we're still active
         final JobManagerConfiguration config = this.configuration;
-        if ( config != null ) {
+        if (config != null) {
             final List<Job> rescheduleList = this.configuration.clearJobRetryList();
-            for(final Job j : rescheduleList) {
-                final JobHandler jh = new JobHandler((JobImpl)j, null, this.configuration);
+            for (final Job j : rescheduleList) {
+                final JobHandler jh = new JobHandler((JobImpl) j, null, this.configuration);
                 jh.reschedule();
             }
         }
@@ -384,11 +389,11 @@ public class QueueManager
     @Override
     public void configurationChanged(final boolean active) {
         // are we still active?
-        if ( this.configuration != null ) {
+        if (this.configuration != null) {
             logger.debug("Topology changed {}", active);
             this.isActive.set(active);
             clearHaltedTopics("configurationChanged : unhalted topics due to configuration change");
-            if ( active ) {
+            if (active) {
                 fullTopicScan();
             } else {
                 this.restart();
@@ -400,8 +405,8 @@ public class QueueManager
         final String haltedTopicsToString;
         // Note: the synchronized below is just to avoid wrong logging about unhalting,
         // the haltedTopics access itself isn't prevented by this (and it is a concurrent set)
-        synchronized( haltedTopics ) {
-            if ( haltedTopics.isEmpty() ) {
+        synchronized (haltedTopics) {
+            if (haltedTopics.isEmpty()) {
                 return;
             }
             haltedTopicsToString = haltedTopics.toString();
@@ -415,7 +420,7 @@ public class QueueManager
         final Set<String> topics = this.scanTopics();
         final Map<QueueInfo, Set<String>> mapping = this.updateTopicMapping(topics);
         // start queues
-        for(final Map.Entry<QueueInfo, Set<String>> entry : mapping.entrySet() ) {
+        for (final Map.Entry<QueueInfo, Set<String>> entry : mapping.entrySet()) {
             this.start(entry.getKey(), entry.getValue());
         }
     }
@@ -431,9 +436,9 @@ public class QueueManager
             final Resource baseResource = resolver.getResource(this.configuration.getLocalJobsPath());
 
             // sanity check - should never be null
-            if ( baseResource != null ) {
+            if (baseResource != null) {
                 final Iterator<Resource> topicIter = baseResource.listChildren();
-                while ( topicIter.hasNext() ) {
+                while (topicIter.hasNext()) {
                     final Resource topicResource = topicIter.next();
                     final String topic = topicResource.getName().replace('.', '/');
                     logger.debug("Found topic {}", topic);
@@ -451,14 +456,15 @@ public class QueueManager
      */
     @Override
     public void handleEvent(final Event event) {
-        if ( ResourceHelper.BUNDLE_EVENT_STARTED.equals(event.getTopic())
-                || ResourceHelper.BUNDLE_EVENT_UPDATED.equals(event.getTopic()) ) {
+        if (ResourceHelper.BUNDLE_EVENT_STARTED.equals(event.getTopic())
+                || ResourceHelper.BUNDLE_EVENT_UPDATED.equals(event.getTopic())) {
             clearHaltedTopics("handleEvent: unhalted topics due to bundle started/updated event");
-       }
-        final String topic = (String)event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
-        if ( this.isActive.get() && topic != null ) {
+        }
+        final String topic = (String) event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
+        if (this.isActive.get() && topic != null) {
             logger.debug("Received event {}", topic);
-            final QueueInfo info = this.configuration.getQueueConfigurationManager().getQueueInfo(topic);
+            final QueueInfo info =
+                    this.configuration.getQueueConfigurationManager().getQueueInfo(topic);
             this.start(info, Collections.singleton(topic));
         }
     }
@@ -468,10 +474,11 @@ public class QueueManager
      */
     private Map<QueueInfo, Set<String>> updateTopicMapping(final Set<String> topics) {
         final Map<QueueInfo, Set<String>> mapping = new HashMap<>();
-        for(final String topic : topics) {
-            final QueueInfo queueInfo = this.configuration.getQueueConfigurationManager().getQueueInfo(topic);
+        for (final String topic : topics) {
+            final QueueInfo queueInfo =
+                    this.configuration.getQueueConfigurationManager().getQueueInfo(topic);
             Set<String> queueTopics = mapping.get(queueInfo);
-            if ( queueTopics == null ) {
+            if (queueTopics == null) {
                 queueTopics = new HashSet<>();
                 mapping.put(queueInfo, queueTopics);
             }
@@ -487,7 +494,7 @@ public class QueueManager
     }
 
     protected void unbindThreadPool(final EventingThreadPool etp) {
-        if ( this.threadPool == etp ) {
+        if (this.threadPool == etp) {
             this.threadPool = null;
         }
     }

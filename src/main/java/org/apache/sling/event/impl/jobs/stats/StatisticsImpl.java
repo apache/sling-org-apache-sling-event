@@ -133,7 +133,7 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
      * Add another statistics information.
      */
     public synchronized void add(final StatisticsImpl other) {
-        synchronized ( other ) {
+        synchronized (other) {
             super.add(other);
             this.queuedJobs.addAndGet(other.queuedJobs.get());
             this.activeJobs.addAndGet(other.activeJobs.get());
@@ -147,11 +147,11 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
         super.copyFrom(other);
         final long localQueuedJobs;
         final long localActiveJobs;
-        synchronized ( other ) {
+        synchronized (other) {
             localQueuedJobs = other.queuedJobs.get();
             localActiveJobs = other.activeJobs.get();
         }
-        synchronized ( this ) {
+        synchronized (this) {
             this.queuedJobs.set(localQueuedJobs);
             this.activeJobs.set(localActiveJobs);
         }
