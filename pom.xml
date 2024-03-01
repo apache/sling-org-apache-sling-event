@@ -47,6 +47,7 @@
         <min.port>37000</min.port>
         <max.port>37999</max.port>
         <project.build.outputTimestamp>2023-10-05T16:16:32Z</project.build.outputTimestamp>
+        <minimalJavaBuildVersion>11</minimalJavaBuildVersion><!-- Paxexam 4 requires Java 11 -->
     </properties>
 
 
@@ -244,7 +245,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>3.11.0</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>

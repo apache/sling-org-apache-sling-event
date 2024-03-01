@@ -23,25 +23,20 @@ import static org.junit.Assert.assertNull;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Map;
 
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.event.impl.jobs.JobImpl;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.scheduling.JobSchedulerImpl;
 import org.apache.sling.event.jobs.Job;
-import org.apache.sling.event.jobs.consumer.JobExecutionContext;
 import org.apache.sling.testing.mock.sling.junit.SlingContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
-
-import com.google.common.collect.Maps;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class HistoryCleanUpRemovedJobsTest {
