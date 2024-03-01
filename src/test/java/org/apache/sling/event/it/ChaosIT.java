@@ -81,13 +81,13 @@ public class ChaosIT extends AbstractJobHandlingIT {
     private static final String[] ROUND_TOPICS = new String[NUM_ROUND_TOPICS];
 
     static {
-        for(int i=0; i<NUM_ORDERED_TOPICS; i++) {
+        for (int i = 0; i < NUM_ORDERED_TOPICS; i++) {
             ORDERED_TOPICS[i] = ORDERED_TOPIC_PREFIX + String.valueOf(i);
         }
-        for(int i=0; i<NUM_PARALLEL_TOPICS; i++) {
+        for (int i = 0; i < NUM_PARALLEL_TOPICS; i++) {
             PARALLEL_TOPICS[i] = PARALLEL_TOPIC_PREFIX + String.valueOf(i);
         }
-        for(int i=0; i<NUM_ROUND_TOPICS; i++) {
+        for (int i = 0; i < NUM_ROUND_TOPICS; i++) {
             ROUND_TOPICS[i] = ROUND_TOPIC_PREFIX + String.valueOf(i);
         }
     }
@@ -95,63 +95,56 @@ public class ChaosIT extends AbstractJobHandlingIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            // create ordered test queue
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "chaos-ordered")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
-                .put(ConfigurationConstants.PROP_TOPICS, ORDERED_TOPICS)
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .asOption(),
-            // create round robin test queue
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "chaos-roundrobin")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
-                .put(ConfigurationConstants.PROP_TOPICS, ROUND_TOPICS)
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .put(ConfigurationConstants.PROP_MAX_PARALLEL, 5)
-                .asOption()
-        );
+                baseConfiguration(),
+                // create ordered test queue
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "chaos-ordered")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, ORDERED_TOPICS)
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .asOption(),
+                // create round robin test queue
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "chaos-roundrobin")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, ROUND_TOPICS)
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .put(ConfigurationConstants.PROP_MAX_PARALLEL, 5)
+                        .asOption());
     }
 
     /**
      * Setup consumers
      */
     private void setupJobConsumers() {
-        for(int i=0; i<NUM_ORDERED_TOPICS; i++) {
-            this.registerJobConsumer(ORDERED_TOPICS[i],
+        for (int i = 0; i < NUM_ORDERED_TOPICS; i++) {
+            this.registerJobConsumer(ORDERED_TOPICS[i], new JobConsumer() {
 
-                new JobConsumer() {
-
-                    @Override
-                    public JobResult process(final Job job) {
-                        return JobResult.OK;
-                    }
-                });
+                @Override
+                public JobResult process(final Job job) {
+                    return JobResult.OK;
+                }
+            });
         }
-        for(int i=0; i<NUM_PARALLEL_TOPICS; i++) {
-            this.registerJobConsumer(PARALLEL_TOPICS[i],
+        for (int i = 0; i < NUM_PARALLEL_TOPICS; i++) {
+            this.registerJobConsumer(PARALLEL_TOPICS[i], new JobConsumer() {
 
-                new JobConsumer() {
-
-                    @Override
-                    public JobResult process(final Job job) {
-                        return JobResult.OK;
-                    }
-                });
+                @Override
+                public JobResult process(final Job job) {
+                    return JobResult.OK;
+                }
+            });
         }
-        for(int i=0; i<NUM_ROUND_TOPICS; i++) {
-            this.registerJobConsumer(ROUND_TOPICS[i],
+        for (int i = 0; i < NUM_ROUND_TOPICS; i++) {
+            this.registerJobConsumer(ROUND_TOPICS[i], new JobConsumer() {
 
-                new JobConsumer() {
-
-                    @Override
-                    public JobResult process(final Job job) {
-                        return JobResult.OK;
-                    }
-                });
+                @Override
+                public JobResult process(final Job job) {
+                    return JobResult.OK;
+                }
+            });
         }
     }
 
@@ -167,7 +160,8 @@ public class ChaosIT extends AbstractJobHandlingIT {
 
         final AtomicLong finishedThreads;
 
-        public CreateJobThread(final JobManager jobManager,
+        public CreateJobThread(
+                final JobManager jobManager,
                 final String[] topics,
                 final Map<String, AtomicLong> created,
                 final AtomicLong finishedThreads) {
@@ -182,42 +176,42 @@ public class ChaosIT extends AbstractJobHandlingIT {
             int index = 0;
             final long startTime = System.currentTimeMillis();
             final long endTime = startTime + DURATION * 1000;
-            while ( System.currentTimeMillis() < endTime ) {
+            while (System.currentTimeMillis() < endTime) {
                 final String topic = topics[index];
-                if ( jobManager.addJob(topic, null) != null ) {
+                if (jobManager.addJob(topic, null) != null) {
                     created.get(topic).incrementAndGet();
 
                     index++;
-                    if ( index == topics.length ) {
+                    if (index == topics.length) {
                         index = 0;
                     }
                 }
                 final int sleepTime = random.nextInt(200);
                 try {
                     Thread.sleep(sleepTime);
-                } catch ( final InterruptedException ie) {
+                } catch (final InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
             }
             finishedThreads.incrementAndGet();
         }
-
     }
 
     /**
      * Setup job creation threads
      */
-    private void setupJobCreationThreads(final List<Thread> threads,
+    private void setupJobCreationThreads(
+            final List<Thread> threads,
             final JobManager jobManager,
             final Map<String, AtomicLong> created,
             final AtomicLong finishedThreads) {
-        for(int i=0;i<NUM_ORDERED_THREADS;i++) {
+        for (int i = 0; i < NUM_ORDERED_THREADS; i++) {
             threads.add(new CreateJobThread(jobManager, ORDERED_TOPICS, created, finishedThreads));
         }
-        for(int i=0;i<NUM_PARALLEL_THREADS;i++) {
+        for (int i = 0; i < NUM_PARALLEL_THREADS; i++) {
             threads.add(new CreateJobThread(jobManager, PARALLEL_TOPICS, created, finishedThreads));
         }
-        for(int i=0;i<NUM_ROUND_THREADS;i++) {
+        for (int i = 0; i < NUM_ROUND_THREADS; i++) {
             threads.add(new CreateJobThread(jobManager, ROUND_TOPICS, created, finishedThreads));
         }
     }
@@ -227,33 +221,39 @@ public class ChaosIT extends AbstractJobHandlingIT {
      *
      * Chaos is right now created by sending topology changing/changed events randomly
      */
-    private void setupChaosThreads(final List<Thread> threads,
-            final AtomicLong finishedThreads) {
+    private void setupChaosThreads(final List<Thread> threads, final AtomicLong finishedThreads) {
         final List<TopologyView> views = new ArrayList<>();
         // register topology listener
-        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(TopologyEventListener.class, new TopologyEventListener() {
+        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(
+                TopologyEventListener.class,
+                new TopologyEventListener() {
 
-            @Override
-            public void handleTopologyEvent(final TopologyEvent event) {
-                if ( event.getType() == Type.TOPOLOGY_INIT ) {
-                    views.add(event.getNewView());
-                }
-            }
-        }, null);
-        while ( views.isEmpty() ) {
+                    @Override
+                    public void handleTopologyEvent(final TopologyEvent event) {
+                        if (event.getType() == Type.TOPOLOGY_INIT) {
+                            views.add(event.getNewView());
+                        }
+                    }
+                },
+                null);
+        while (views.isEmpty()) {
             this.sleep(10);
         }
         reg.unregister();
         final TopologyView view = views.get(0);
 
         try {
-            final Collection<ServiceReference<TopologyEventListener>> refs = this.bundleContext.getServiceReferences(TopologyEventListener.class, null);
+            final Collection<ServiceReference<TopologyEventListener>> refs =
+                    this.bundleContext.getServiceReferences(TopologyEventListener.class, null);
             assertNotNull(refs);
             assertFalse(refs.isEmpty());
             TopologyEventListener found = null;
-            for(final ServiceReference<TopologyEventListener> ref : refs) {
+            for (final ServiceReference<TopologyEventListener> ref : refs) {
                 final TopologyEventListener listener = this.bundleContext.getService(ref);
-                if ( listener != null && listener.getClass().getName().equals("org.apache.sling.event.impl.jobs.config.TopologyHandler") ) {
+                if (listener != null
+                        && listener.getClass()
+                                .getName()
+                                .equals("org.apache.sling.event.impl.jobs.config.TopologyHandler")) {
                     found = listener;
                     break;
                 }
@@ -270,19 +270,19 @@ public class ChaosIT extends AbstractJobHandlingIT {
                 public void run() {
                     final long startTime = System.currentTimeMillis();
                     // this thread runs 30 seconds longer than the job creation thread
-                    final long endTime = startTime + (DURATION +30) * 1000;
-                    while ( System.currentTimeMillis() < endTime ) {
+                    final long endTime = startTime + (DURATION + 30) * 1000;
+                    while (System.currentTimeMillis() < endTime) {
                         final int sleepTime = random.nextInt(25) + 15;
                         try {
                             Thread.sleep(sleepTime * 1000);
-                        } catch ( final InterruptedException ie) {
+                        } catch (final InterruptedException ie) {
                             Thread.currentThread().interrupt();
                         }
                         tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGING, view, null));
                         final int changingTime = random.nextInt(20) + 3;
                         try {
                             Thread.sleep(changingTime * 1000);
-                        } catch ( final InterruptedException ie) {
+                        } catch (final InterruptedException ie) {
                             Thread.currentThread().interrupt();
                         }
                         tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGED, view, view));
@@ -296,7 +296,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
         }
     }
 
-    @Test(timeout=DURATION * 16000L)
+    @Test(timeout = DURATION * 16000L)
     public void testDoChaos() throws Exception {
 
         // setup added, created and finished map
@@ -306,19 +306,19 @@ public class ChaosIT extends AbstractJobHandlingIT {
         final Map<String, AtomicLong> created = new HashMap<>();
         final Map<String, AtomicLong> finished = new HashMap<>();
         final List<String> topics = new ArrayList<>();
-        for(int i=0;i<NUM_ORDERED_TOPICS;i++) {
+        for (int i = 0; i < NUM_ORDERED_TOPICS; i++) {
             added.put(ORDERED_TOPICS[i], new AtomicLong());
             created.put(ORDERED_TOPICS[i], new AtomicLong());
             finished.put(ORDERED_TOPICS[i], new AtomicLong());
             topics.add(ORDERED_TOPICS[i]);
         }
-        for(int i=0;i<NUM_PARALLEL_TOPICS;i++) {
+        for (int i = 0; i < NUM_PARALLEL_TOPICS; i++) {
             added.put(PARALLEL_TOPICS[i], new AtomicLong());
             created.put(PARALLEL_TOPICS[i], new AtomicLong());
             finished.put(PARALLEL_TOPICS[i], new AtomicLong());
             topics.add(PARALLEL_TOPICS[i]);
         }
-        for(int i=0;i<NUM_ROUND_TOPICS;i++) {
+        for (int i = 0; i < NUM_ROUND_TOPICS; i++) {
             added.put(ROUND_TOPICS[i], new AtomicLong());
             created.put(ROUND_TOPICS[i], new AtomicLong());
             finished.put(ROUND_TOPICS[i], new AtomicLong());
@@ -328,19 +328,18 @@ public class ChaosIT extends AbstractJobHandlingIT {
         final List<Thread> threads = new ArrayList<>();
         final AtomicLong finishedThreads = new AtomicLong();
 
-        this.registerEventHandler("org/apache/sling/event/notification/job/*",
-                new EventHandler() {
+        this.registerEventHandler("org/apache/sling/event/notification/job/*", new EventHandler() {
 
-                    @Override
-                    public void handleEvent(final Event event) {
-                        final String topic = (String) event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
-                        if ( NotificationConstants.TOPIC_JOB_FINISHED.equals(event.getTopic())) {
-                            finished.get(topic).incrementAndGet();
-                        } else if ( NotificationConstants.TOPIC_JOB_ADDED.equals(event.getTopic())) {
-                            added.get(topic).incrementAndGet();
-                        }
-                    }
-                });
+            @Override
+            public void handleEvent(final Event event) {
+                final String topic = (String) event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
+                if (NotificationConstants.TOPIC_JOB_FINISHED.equals(event.getTopic())) {
+                    finished.get(topic).incrementAndGet();
+                } else if (NotificationConstants.TOPIC_JOB_ADDED.equals(event.getTopic())) {
+                    added.get(topic).incrementAndGet();
+                }
+            }
+        });
 
         // setup job consumers
         this.setupJobConsumers();
@@ -352,7 +351,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
 
         System.out.println("Starting threads...");
         // start threads
-        for(final Thread t : threads) {
+        for (final Thread t : threads) {
             t.setDaemon(true);
             t.start();
         }
@@ -363,29 +362,29 @@ public class ChaosIT extends AbstractJobHandlingIT {
 
         System.out.println("Polling for threads to finish...");
         // wait until threads are finished
-        while ( finishedThreads.get() < threads.size() ) {
+        while (finishedThreads.get() < threads.size()) {
             this.sleep(100);
         }
 
         System.out.println("Waiting for job handling to finish...");
         final Set<String> allTopics = new HashSet<>(topics);
-        while ( !allTopics.isEmpty() ) {
+        while (!allTopics.isEmpty()) {
             final Iterator<String> iter = allTopics.iterator();
-            while ( iter.hasNext() ) {
+            while (iter.hasNext()) {
                 final String topic = iter.next();
-                if ( finished.get(topic).get() == created.get(topic).get() ) {
+                if (finished.get(topic).get() == created.get(topic).get()) {
                     iter.remove();
                 }
             }
             this.sleep(100);
         }
-/* We could try to enable this with Oak again - but right now JR observation handler is too
- * slow.
-            System.out.println("Checking notifications...");
-            for(final String topic : topics) {
-                assertEquals("Checking topic " + topic, created.get(topic).get(), added.get(topic).get());
-            }
- */
+        /* We could try to enable this with Oak again - but right now JR observation handler is too
+        * slow.
+                   System.out.println("Checking notifications...");
+                   for(final String topic : topics) {
+                       assertEquals("Checking topic " + topic, created.get(topic).get(), added.get(topic).get());
+                   }
+        */
 
     }
 }

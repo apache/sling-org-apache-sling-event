@@ -18,13 +18,11 @@
  */
 package org.apache.sling.event.impl.jobs.tasks;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 
+import com.google.common.collect.Maps;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.event.impl.jobs.JobImpl;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
@@ -40,7 +38,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.google.common.collect.Maps;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 @RunWith(MockitoJUnitRunner.class)
 public class HistoryCleanUpTaskTest {
@@ -56,7 +55,9 @@ public class HistoryCleanUpTaskTest {
 
     @Mock
     private JobManagerConfiguration configuration;
+
     private Job job;
+
     @Mock(answer = Answers.RETURNS_MOCKS)
     private JobExecutionContext jobContext;
 
@@ -76,7 +77,7 @@ public class HistoryCleanUpTaskTest {
     }
 
     private void setUpJob() {
-        Map<String, Object> parameters = Maps.<String, Object> newHashMap();
+        Map<String, Object> parameters = Maps.<String, Object>newHashMap();
         parameters.put("age", MAX_AGE_IN_DAYS * 24 * 60);
         job = new JobImpl("not-relevant", "not-relevant_123", parameters);
         Mockito.when(jobContext.isStopped()).thenReturn(false);
@@ -102,5 +103,4 @@ public class HistoryCleanUpTaskTest {
         String path = JCR_PATH + '/' + JCR_TOPIC + '/' + DATE_FORMATTER.format(cal.getTime()) + '/' + JCR_JOB_NAME;
         return ctx.create().resource(path);
     }
-
 }

@@ -61,8 +61,10 @@ public class StatisticsManagerTest {
     @Test
     public void testGlobalGaugesAreRemovedOnDeactivate() {
         statisticsManager.jobQueued(TEST_QUEUE_NAME, TEST_TOPIC);
-        assertEquals("Less than 16 metrics present (8 global + 8 topic).",
-                16, metricRegistry.getMetrics().size());
+        assertEquals(
+                "Less than 16 metrics present (8 global + 8 topic).",
+                16,
+                metricRegistry.getMetrics().size());
         statisticsManager.deactivate();
         assertEquals(0, metricRegistry.getMetrics().size());
     }
@@ -154,25 +156,27 @@ public class StatisticsManagerTest {
         statisticsManager.jobQueued(queueName2, TEST_TOPIC);
         statisticsManager.jobQueued(queueName3, TEST_TOPIC);
 
-        Gauge topicMetric = (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
-                "." + QUEUE_PREFIX + ".topic_with_special_chars" + QUEUED_METRIC_SUFFIX);
-        Gauge topicMetric2 = (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
-                "." + QUEUE_PREFIX + ".topic_with_special_chars_1" + QUEUED_METRIC_SUFFIX);
-        Gauge topicMetric3 = (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
-                "." + QUEUE_PREFIX + ".topic_with_special_chars_2" + QUEUED_METRIC_SUFFIX);
+        Gauge topicMetric = (Gauge) metricRegistry
+                .getMetrics()
+                .get(GAUGE_NAME_PREFIX + "." + QUEUE_PREFIX + ".topic_with_special_chars" + QUEUED_METRIC_SUFFIX);
+        Gauge topicMetric2 = (Gauge) metricRegistry
+                .getMetrics()
+                .get(GAUGE_NAME_PREFIX + "." + QUEUE_PREFIX + ".topic_with_special_chars_1" + QUEUED_METRIC_SUFFIX);
+        Gauge topicMetric3 = (Gauge) metricRegistry
+                .getMetrics()
+                .get(GAUGE_NAME_PREFIX + "." + QUEUE_PREFIX + ".topic_with_special_chars_2" + QUEUED_METRIC_SUFFIX);
         assertEquals(1L, topicMetric.getValue());
         assertEquals(1L, topicMetric2.getValue());
         assertEquals(1L, topicMetric3.getValue());
     }
 
     private Gauge getTopicMetric(String metricSuffix) {
-        return (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX +
-                "." + QUEUE_PREFIX + "." + TEST_QUEUE_NAME + metricSuffix);
+        return (Gauge) metricRegistry
+                .getMetrics()
+                .get(GAUGE_NAME_PREFIX + "." + QUEUE_PREFIX + "." + TEST_QUEUE_NAME + metricSuffix);
     }
 
     private Gauge getGlobalMetric(String metricSuffix) {
         return (Gauge) metricRegistry.getMetrics().get(GAUGE_NAME_PREFIX + metricSuffix);
     }
-
-
 }

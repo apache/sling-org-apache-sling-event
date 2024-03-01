@@ -83,10 +83,10 @@ public class InitDelayingTopologyEventListener implements TopologyEventListener 
      */
     public InitDelayingTopologyEventListener(final long startupDelay, final TopologyEventListener delegate) {
 
-        if ( delegate == null ) {
+        if (delegate == null) {
             throw new IllegalArgumentException("delegate must not be null");
         }
-        if ( startupDelay <= 0) {
+        if (startupDelay <= 0) {
             throw new IllegalArgumentException("startupDelay must be greater than 0, not " + startupDelay);
         }
         this.delegate = delegate;
@@ -128,17 +128,19 @@ public class InitDelayingTopologyEventListener implements TopologyEventListener 
 
     @Override
     public void handleTopologyEvent(TopologyEvent event) {
-        synchronized ( syncObj ) {
-            if ( this.delaying ) {
+        synchronized (syncObj) {
+            if (this.delaying) {
                 // when we're delaying, keep hold of the last event
                 // as action afterStartupDelay depends on this last
                 // event
-                this.logger.debug("handleTopologyEvent: delaying processing of received topology event (startup delay active) {}", event);
+                this.logger.debug(
+                        "handleTopologyEvent: delaying processing of received topology event (startup delay active) {}",
+                        event);
                 this.pendingDelayedEvent = event;
 
                 // and we're delaying - so stop processing now and return
                 return;
-            } else if ( this.pendingDelayedEvent != null ) {
+            } else if (this.pendingDelayedEvent != null) {
                 // this means that while we're no longer delaying we still
                 // have a pending delayed event to process.
                 // more concretely, it means that this event is a CHANGING
@@ -148,16 +150,19 @@ public class InitDelayingTopologyEventListener implements TopologyEventListener 
                 // to ensure our code gets an INIT first thing
 
                 // paranoia check:
-                if ( event.getType() == Type.TOPOLOGY_CHANGING ) {
+                if (event.getType() == Type.TOPOLOGY_CHANGING) {
                     // this should never happen - but if it does, rinse and repeat
                     this.pendingDelayedEvent = event;
-                    this.logger.info("handleTopologyEvent: ignoring received topology event of type CHANGING {}", event);
+                    this.logger.info(
+                            "handleTopologyEvent: ignoring received topology event of type CHANGING {}", event);
                     return;
                 } else {
                     // otherwise we now **convert** the event to an init event
                     this.pendingDelayedEvent = null;
-                    this.logger.debug("handleTopologyEvent: first stable topology event received after startup delaying. "
-                            + "Simulating an INIT event with this new view: {}", event);
+                    this.logger.debug(
+                            "handleTopologyEvent: first stable topology event received after startup delaying. "
+                                    + "Simulating an INIT event with this new view: {}",
+                            event);
                     event = new TopologyEvent(Type.TOPOLOGY_INIT, null, event.getNewView());
                 }
             } else {
@@ -190,16 +195,16 @@ public class InitDelayingTopologyEventListener implements TopologyEventListener 
      * Hence only called once!
      */
     private void afterStartupDelay() {
-        synchronized ( this.syncObj ) {
+        synchronized (this.syncObj) {
             // stop any future delaying
             this.delaying = false;
 
-            if ( this.pendingDelayedEvent == null ) {
+            if (this.pendingDelayedEvent == null) {
                 // if no event received while we delayed,
                 // then we don't have to do anything later
                 this.logger.debug("afterStartupDelay: startup delay passed without any events delayed. "
                         + "So, ready for first upcoming INIT event");
-            } else if ( this.pendingDelayedEvent.getType() == Type.TOPOLOGY_CHANGING ) {
+            } else if (this.pendingDelayedEvent.getType() == Type.TOPOLOGY_CHANGING) {
                 // if the last delayed event was CHANGING
                 // then we must convert the next upcoming CHANGED, PROPERTIES
                 // into an INIT
@@ -218,8 +223,11 @@ public class InitDelayingTopologyEventListener implements TopologyEventListener 
                 final TopologyEvent artificialInitEvent =
                         new TopologyEvent(Type.TOPOLOGY_INIT, null, this.pendingDelayedEvent.getNewView());
 
-                this.logger.debug("afterStartupDelay: startup delay passed, last pending delayed event was stable ({}). "
-                        + "Simulating an INIT event with that view: {}", this.pendingDelayedEvent, artificialInitEvent);
+                this.logger.debug(
+                        "afterStartupDelay: startup delay passed, last pending delayed event was stable ({}). "
+                                + "Simulating an INIT event with that view: {}",
+                        this.pendingDelayedEvent,
+                        artificialInitEvent);
                 this.pendingDelayedEvent = null;
 
                 // call the delegate.

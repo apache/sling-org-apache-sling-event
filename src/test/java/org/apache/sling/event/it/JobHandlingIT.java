@@ -18,13 +18,6 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.ops4j.pax.exam.CoreOptions.options;
-import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -60,6 +53,13 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.ops4j.pax.exam.CoreOptions.options;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
+
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
 public class JobHandlingIT extends AbstractJobHandlingIT {
@@ -71,16 +71,15 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            // create test queue
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "test")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
-                .put(ConfigurationConstants.PROP_TOPICS, new String[]{TOPIC, TOPIC + "2"})
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .asOption()
-        );
+                baseConfiguration(),
+                // create test queue
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "test")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, new String[] {TOPIC, TOPIC + "2"})
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .asOption());
     }
 
     @Before
@@ -96,15 +95,14 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
     public void testSimpleJobExecutionUsingJobConsumer() throws Exception {
         final Barrier cb = new Barrier(2);
 
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
 
             @Override
-                    public JobResult process(final Job job) {
-                        cb.block();
-                        return JobResult.OK;
-                    }
-                 });
+            public JobResult process(final Job job) {
+                cb.block();
+                return JobResult.OK;
+            }
+        });
 
         jobManager.addJob(TOPIC, null);
         assertTrue("No event received in the given time.", cb.block(5));
@@ -120,15 +118,14 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
     public void testSimpleJobExecutionUsingJobExecutor() throws Exception {
         final Barrier cb = new Barrier(2);
 
-        this.registerJobExecutor(TOPIC,
-                new JobExecutor() {
+        this.registerJobExecutor(TOPIC, new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        cb.block();
-                        return context.result().succeeded();
-                    }
-                });
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                cb.block();
+                return context.result().succeeded();
+            }
+        });
 
         jobManager.addJob(TOPIC, null);
         assertTrue("No event received in the given time.", cb.block(5));
@@ -138,30 +135,27 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testManyJobs() throws Exception {
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
 
-                    @Override
-                    public JobResult process(final Job job) {
-                        return JobResult.OK;
-                    }
-
-                 });
+            @Override
+            public JobResult process(final Job job) {
+                return JobResult.OK;
+            }
+        });
         final AtomicInteger count = new AtomicInteger(0);
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED,
-                new EventHandler() {
-                    @Override
-                    public void handleEvent(final Event event) {
-                        count.incrementAndGet();
-                    }
-                 });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED, new EventHandler() {
+            @Override
+            public void handleEvent(final Event event) {
+                count.incrementAndGet();
+            }
+        });
 
         // we start "some" jobs
         final int COUNT = 300;
-        for(int i = 0; i < COUNT; i++ ) {
+        for (int i = 0; i < COUNT; i++) {
             jobManager.addJob(TOPIC, null);
         }
-        while ( count.get() < COUNT ) {
+        while (count.get() < COUNT) {
             this.sleep(50);
         }
         assertEquals("Finished count", COUNT, count.get());
@@ -176,18 +170,17 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
     public void testCancelJob() throws Exception {
         final Barrier cb = new Barrier(2);
         final Barrier cb2 = new Barrier(2);
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
 
-                    @Override
-                    public JobResult process(Job job) {
-                        cb.block();
-                        cb2.block();
-                        return JobResult.FAILED;
-                    }
-                });
+            @Override
+            public JobResult process(Job job) {
+                cb.block();
+                cb2.block();
+                return JobResult.FAILED;
+            }
+        });
 
-        final Map<String, Object> jobProperties = Collections.singletonMap("id", (Object)"cancelJobId");
+        final Map<String, Object> jobProperties = Collections.singletonMap("id", (Object) "cancelJobId");
         @SuppressWarnings("unchecked")
         final Map<String, Object>[] jobPropertiesAsArray = new Map[1];
         jobPropertiesAsArray[0] = jobProperties;
@@ -196,7 +189,11 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
         jobManager.addJob(TOPIC, jobProperties);
         cb.block();
 
-        assertEquals(1, jobManager.findJobs(JobManager.QueryType.ALL, TOPIC, -1, jobPropertiesAsArray).size());
+        assertEquals(
+                1,
+                jobManager
+                        .findJobs(JobManager.QueryType.ALL, TOPIC, -1, jobPropertiesAsArray)
+                        .size());
         // job is currently waiting, therefore cancel fails
         final Job e1 = jobManager.getJob(TOPIC, jobProperties);
         assertNotNull(e1);
@@ -208,17 +205,20 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
         final Job e2 = jobManager.getJob(TOPIC, jobProperties);
         assertNotNull(e2);
         assertTrue(jobManager.removeJobById(e2.getId()));
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.ALL, TOPIC, -1, jobPropertiesAsArray).size());
-        final Collection<Job> col = jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1,
-                jobPropertiesAsArray);
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.ALL, TOPIC, -1, jobPropertiesAsArray)
+                        .size());
+        final Collection<Job> col = jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, jobPropertiesAsArray);
         try {
             assertEquals(1, col.size());
         } finally {
-            for(final Job j : col) {
+            for (final Job j : col) {
                 jobManager.removeJobById(j.getId());
             }
         }
-   }
+    }
 
     /**
      * Test get a job
@@ -227,16 +227,15 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
     public void testGetJob() throws Exception {
         final Barrier cb = new Barrier(2);
         final Barrier cb2 = new Barrier(2);
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
 
-                    @Override
-                    public JobResult process(Job job) {
-                        cb.block();
-                        cb2.block();
-                        return JobResult.OK;
-                    }
-                });
+            @Override
+            public JobResult process(Job job) {
+                cb.block();
+                cb2.block();
+                return JobResult.OK;
+            }
+        });
         final Job j = jobManager.addJob(TOPIC, null);
         cb.block();
 
@@ -256,24 +255,23 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
         final List<Integer> retryCountList = new ArrayList<Integer>();
         final Barrier cb = new Barrier(2);
 
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
-                    int retryCount;
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
+            int retryCount;
 
-                    @Override
-                    public JobResult process(Job job) {
-                        int retry = 0;
-                        if ( job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT) != null ) {
-                            retry = (Integer)job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT);
-                        }
-                        if ( retry == retryCount ) {
-                            retryCountList.add(retry);
-                        }
-                        retryCount++;
-                        cb.block();
-                        return JobResult.FAILED;
-                    }
-                });
+            @Override
+            public JobResult process(Job job) {
+                int retry = 0;
+                if (job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT) != null) {
+                    retry = (Integer) job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT);
+                }
+                if (retry == retryCount) {
+                    retryCountList.add(retry);
+                }
+                retryCount++;
+                cb.block();
+                return JobResult.FAILED;
+            }
+        });
 
         final Job job = jobManager.addJob(TOPIC, null);
 
@@ -303,96 +301,91 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
         final List<String> failed = Collections.synchronizedList(new ArrayList<String>());
         final List<String> finished = Collections.synchronizedList(new ArrayList<String>());
         final List<String> started = Collections.synchronizedList(new ArrayList<String>());
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
 
-                    @Override
-                    public JobResult process(Job job) {
-                        // events 1 and 4 finish the first time
-                        final String id = (String)job.getProperty("id");
-                        if ( "1".equals(id) || "4".equals(id) ) {
-                            return JobResult.OK;
+            @Override
+            public JobResult process(Job job) {
+                // events 1 and 4 finish the first time
+                final String id = (String) job.getProperty("id");
+                if ("1".equals(id) || "4".equals(id)) {
+                    return JobResult.OK;
 
-                        // 5 fails always
-                        } else if ( "5".equals(id) ) {
+                    // 5 fails always
+                } else if ("5".equals(id)) {
+                    return JobResult.FAILED;
+                } else {
+                    int retry = 0;
+                    if (job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT) != null) {
+                        retry = (Integer) job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT);
+                    }
+                    // 2 fails the first time
+                    if ("2".equals(id)) {
+                        if (retry == 0) {
                             return JobResult.FAILED;
                         } else {
-                            int retry = 0;
-                            if ( job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT) != null ) {
-                                retry = (Integer)job.getProperty(Job.PROPERTY_JOB_RETRY_COUNT);
-                            }
-                            // 2 fails the first time
-                            if ( "2".equals(id) ) {
-                                if ( retry == 0 ) {
-                                    return JobResult.FAILED;
-                                } else {
-                                    return JobResult.OK;
-                                }
-                            }
-                            // 3 fails the first and second time
-                            if ( "3".equals(id) ) {
-                                if ( retry == 0 || retry == 1 ) {
-                                    return JobResult.FAILED;
-                                } else {
-                                    return JobResult.OK;
-                                }
-                            }
+                            return JobResult.OK;
                         }
-                        return JobResult.FAILED;
                     }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_CANCELLED,
-                new EventHandler() {
-
-                    @Override
-                    public void handleEvent(Event event) {
-                        final String id = (String)event.getProperty("id");
-                        cancelled.add(id);
+                    // 3 fails the first and second time
+                    if ("3".equals(id)) {
+                        if (retry == 0 || retry == 1) {
+                            return JobResult.FAILED;
+                        } else {
+                            return JobResult.OK;
+                        }
                     }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FAILED,
-                new EventHandler() {
+                }
+                return JobResult.FAILED;
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_CANCELLED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(Event event) {
-                        final String id = (String)event.getProperty("id");
-                        failed.add(id);
-                    }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED,
-                new EventHandler() {
+            @Override
+            public void handleEvent(Event event) {
+                final String id = (String) event.getProperty("id");
+                cancelled.add(id);
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FAILED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(Event event) {
-                        final String id = (String)event.getProperty("id");
-                        finished.add(id);
-                    }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_STARTED,
-                new EventHandler() {
+            @Override
+            public void handleEvent(Event event) {
+                final String id = (String) event.getProperty("id");
+                failed.add(id);
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(Event event) {
-                        final String id = (String)event.getProperty("id");
-                        started.add(id);
-                    }
-                });
+            @Override
+            public void handleEvent(Event event) {
+                final String id = (String) event.getProperty("id");
+                finished.add(id);
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_STARTED, new EventHandler() {
 
-        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"1"));
-        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"2"));
-        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"3"));
-        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"4"));
-        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object)"5"));
+            @Override
+            public void handleEvent(Event event) {
+                final String id = (String) event.getProperty("id");
+                started.add(id);
+            }
+        });
+
+        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object) "1"));
+        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object) "2"));
+        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object) "3"));
+        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object) "4"));
+        jobManager.addJob(TOPIC, Collections.singletonMap("id", (Object) "5"));
 
         int count = 0;
         final long startTime = System.currentTimeMillis();
         do {
             count = finished.size() + cancelled.size();
             // after 25 seconds we cancel the test
-            if ( System.currentTimeMillis() - startTime > 25000 ) {
+            if (System.currentTimeMillis() - startTime > 25000) {
                 throw new Exception("Timeout during notification test.");
             }
-        } while ( count < 5 || started.size() < 10 );
+        } while (count < 5 || started.size() < 10);
         assertEquals("Finished count", 4, finished.size());
         assertEquals("Cancelled count", 1, cancelled.size());
         assertEquals("Started count", 10, started.size());
@@ -407,8 +400,7 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
         final AtomicInteger count = new AtomicInteger(0);
 
         log.info("testNoJobProcessor : registering job consumer");
-        this.registerJobConsumer(TOPIC,
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC, new JobConsumer() {
 
             @Override
             public JobResult process(final Job job) {
@@ -416,19 +408,19 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
                 log.info("testNoJobProcessor.process : got " + got + " jobs");
                 return JobResult.OK;
             }
-         });
+        });
 
         log.info("testNoJobProcessor : starting 20 jobs, 10 on " + TOPIC + " and 10 on " + TOPIC + "2");
         // we start 20 jobs, every second job has no processor
         final int COUNT = 20;
-        for(int i = 0; i < COUNT; i++ ) {
+        for (int i = 0; i < COUNT; i++) {
             final String jobTopic = (i % 2 == 0 ? TOPIC : TOPIC + "2");
 
             jobManager.addJob(jobTopic, null);
         }
 
         log.info("testNoJobProcessor : waiting for jobs to be received ...");
-        while ( jobManager.getStatistics().getNumberOfFinishedJobs() < COUNT / 2) {
+        while (jobManager.getStatistics().getNumberOfFinishedJobs() < COUNT / 2) {
             this.sleep(50);
         }
 
@@ -458,5 +450,4 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
             System.setOut(originalOut);
         }
     }
-
 }

@@ -25,10 +25,9 @@ import org.apache.sling.event.jobs.consumer.JobExecutor;
  * The state of the job after it has been processed by a {@link JobExecutor}.
  */
 public enum InternalJobState {
-
-    SUCCEEDED(NotificationConstants.TOPIC_JOB_FINISHED),    // processing finished successfully
-    FAILED(NotificationConstants.TOPIC_JOB_FAILED),         // processing failed, can be retried
-    CANCELLED(NotificationConstants.TOPIC_JOB_CANCELLED);   // processing failed permanently
+    SUCCEEDED(NotificationConstants.TOPIC_JOB_FINISHED), // processing finished successfully
+    FAILED(NotificationConstants.TOPIC_JOB_FAILED), // processing failed, can be retried
+    CANCELLED(NotificationConstants.TOPIC_JOB_CANCELLED); // processing failed permanently
 
     private final String topic;
 

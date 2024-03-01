@@ -39,15 +39,14 @@ public class BatchResourceRemover {
         this.max = batchSize;
     }
 
-    public void delete(final Resource rsrc )
-    throws PersistenceException {
+    public void delete(final Resource rsrc) throws PersistenceException {
         final ResourceResolver resolver = rsrc.getResourceResolver();
-        for(final Resource child : rsrc.getChildren()) {
+        for (final Resource child : rsrc.getChildren()) {
             delete(child);
         }
         resolver.delete(rsrc);
         count++;
-        if ( count >= max ) {
+        if (count >= max) {
             resolver.commit();
             count = 0;
         }

@@ -57,7 +57,7 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
     private JobManagerConfiguration configuration;
 
     /** The event admin. */
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private EventAdmin eventAdmin;
 
     /** Service registration for the event handler. */
@@ -85,7 +85,7 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
      */
     @Deactivate
     protected void deactivate() {
-        if ( this.listenerRegistration != null ) {
+        if (this.listenerRegistration != null) {
             this.listenerRegistration.unregister();
             this.listenerRegistration = null;
         }
@@ -93,26 +93,27 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
     }
 
     @Override
-	public void onChange(final List<ResourceChange> resourceChanges) {
-    	for(final ResourceChange resourceChange : resourceChanges) {
+    public void onChange(final List<ResourceChange> resourceChanges) {
+        for (final ResourceChange resourceChange : resourceChanges) {
             final String path = resourceChange.getPath();
 
             logger.debug("Received event {} : {}", resourceChange.getType().name(), path);
 
-    		final int topicStart = this.configuration.getLocalJobsPath().length() + 1;
-    		final int topicEnd = path.indexOf('/', topicStart);
-    		if ( topicEnd != -1 ) {
-    			final String topic = path.substring(topicStart, topicEnd).replace('.', '/');
+            final int topicStart = this.configuration.getLocalJobsPath().length() + 1;
+            final int topicEnd = path.indexOf('/', topicStart);
+            if (topicEnd != -1) {
+                final String topic = path.substring(topicStart, topicEnd).replace('.', '/');
                 final String jobId = path.substring(topicEnd + 1);
 
-                if ( path.indexOf("_", topicEnd + 1) != -1 ) {
-                	// only job id and topic are guaranteed
-                	final Dictionary<String, Object> properties = new Hashtable<>();
-                	properties.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_ID, jobId);
+                if (path.indexOf("_", topicEnd + 1) != -1) {
+                    // only job id and topic are guaranteed
+                    final Dictionary<String, Object> properties = new Hashtable<>();
+                    properties.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_ID, jobId);
                     properties.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC, topic);
 
-                     // we also set internally the queue name
-                    final String queueName = this.configuration.getQueueConfigurationManager().getQueueInfo(topic).queueName;
+                    // we also set internally the queue name
+                    final String queueName =
+                            this.configuration.getQueueConfigurationManager().getQueueInfo(topic).queueName;
                     properties.put(Job.PROPERTY_JOB_QUEUE_NAME, queueName);
 
                     final Event jobEvent = new Event(NotificationConstants.TOPIC_JOB_ADDED, properties);
@@ -120,8 +121,7 @@ public class NewJobSender implements ResourceChangeListener, ExternalResourceCha
                     logger.debug("Sending event {} : {}", topic, jobId);
                     this.eventAdmin.sendEvent(jobEvent);
                 }
-    		}
-    	}
-
-	}
+            }
+        }
+    }
 }

@@ -26,15 +26,15 @@ import java.util.Map;
 
 import org.apache.sling.event.impl.support.ScheduleInfoImpl;
 import org.apache.sling.event.jobs.JobBuilder.ScheduleBuilder;
+import org.apache.sling.event.jobs.ScheduledJobInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.sling.event.jobs.ScheduledJobInfo;
 
 /**
  * The builder implementation for scheduled jobs.
  */
 public final class JobScheduleBuilderImpl implements ScheduleBuilder {
-    
+
     private final Logger logger = LoggerFactory.getLogger(JobScheduleBuilderImpl.class);
 
     private final String topic;
@@ -113,12 +113,7 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
         if (scheduleName == null) {
             finalScheduleName = deriveScheduleName();
         }
-        return this.jobScheduler.addScheduledJob(topic,
-                properties,
-                finalScheduleName,
-                suspend,
-                schedules,
-                errors);
+        return this.jobScheduler.addScheduledJob(topic, properties, finalScheduleName, suspend, schedules, errors);
     }
 
     @Override
@@ -134,15 +129,13 @@ public final class JobScheduleBuilderImpl implements ScheduleBuilder {
      */
     private String deriveScheduleName() {
         StringBuilder sb = new StringBuilder();
-        sb.append("topic=").append(topic)
-            .append(",suspend=").append(suspend)
-            .append(",");
+        sb.append("topic=").append(topic).append(",suspend=").append(suspend).append(",");
 
         if (properties != null) {
             // sort the properties and flatten them into a string
             List<String> keys = new ArrayList<>(properties.keySet());
             Collections.sort(keys);
-            for (String key: keys) {
+            for (String key : keys) {
                 sb.append(key).append("=").append(properties.get(key)).append(",");
             }
         }

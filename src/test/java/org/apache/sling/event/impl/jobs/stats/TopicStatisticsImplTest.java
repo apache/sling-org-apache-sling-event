@@ -18,15 +18,16 @@
  */
 package org.apache.sling.event.impl.jobs.stats;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.sling.event.jobs.TopicStatistics;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 public class TopicStatisticsImplTest {
 
-    @Test public void testInit() {
+    @Test
+    public void testInit() {
         final TopicStatistics s = new TopicStatisticsImpl("topic");
         assertEquals("topic", s.getTopic());
         assertEquals(0, s.getNumberOfFinishedJobs());
@@ -39,7 +40,8 @@ public class TopicStatisticsImplTest {
         assertEquals(0, s.getAverageProcessingTime());
     }
 
-    @Test public void testJobFinished() {
+    @Test
+    public void testJobFinished() {
         final TopicStatisticsImpl s = new TopicStatisticsImpl("topic");
 
         final long now = System.currentTimeMillis();
@@ -61,7 +63,8 @@ public class TopicStatisticsImplTest {
         assertTrue(s.getLastActivatedJobTime() <= System.currentTimeMillis());
     }
 
-    @Test public void testJobFailed() {
+    @Test
+    public void testJobFailed() {
         final TopicStatisticsImpl s = new TopicStatisticsImpl("topic");
 
         final long now = System.currentTimeMillis();
@@ -83,7 +86,8 @@ public class TopicStatisticsImplTest {
         assertTrue(s.getLastActivatedJobTime() <= System.currentTimeMillis());
     }
 
-    @Test public void testJobCancelled() {
+    @Test
+    public void testJobCancelled() {
         final TopicStatisticsImpl s = new TopicStatisticsImpl("topic");
 
         final long now = System.currentTimeMillis();

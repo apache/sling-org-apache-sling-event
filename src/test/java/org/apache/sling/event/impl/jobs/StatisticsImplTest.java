@@ -18,10 +18,10 @@
  */
 package org.apache.sling.event.impl.jobs;
 
+import org.apache.sling.event.impl.jobs.stats.StatisticsImpl;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import org.apache.sling.event.impl.jobs.stats.StatisticsImpl;
 
 public class StatisticsImplTest {
 
@@ -29,11 +29,13 @@ public class StatisticsImplTest {
 
     static long START_TIME = System.currentTimeMillis();
 
-    @org.junit.Before public void setup() {
+    @org.junit.Before
+    public void setup() {
         this.stat = new StatisticsImpl();
     }
 
-    @org.junit.Test public void testInitial() {
+    @org.junit.Test
+    public void testInitial() {
         assertTrue(this.stat.getStartTime() >= START_TIME);
         assertEquals(0, this.stat.getAverageProcessingTime());
         assertEquals(0, this.stat.getAverageWaitingTime());
@@ -48,7 +50,8 @@ public class StatisticsImplTest {
         assertEquals(-1, this.stat.getLastFinishedJobTime());
     }
 
-    @org.junit.Test public void testIncDecQueued() {
+    @org.junit.Test
+    public void testIncDecQueued() {
         this.stat.incQueued();
         assertTrue(this.stat.getStartTime() >= START_TIME);
         assertEquals(0, this.stat.getAverageProcessingTime());
@@ -92,7 +95,8 @@ public class StatisticsImplTest {
         assertEquals(-1, this.stat.getLastFinishedJobTime());
     }
 
-    @org.junit.Test public void testFinished() {
+    @org.junit.Test
+    public void testFinished() {
         long now = System.currentTimeMillis();
         this.stat.incQueued();
         this.stat.addActive(100);
@@ -146,7 +150,8 @@ public class StatisticsImplTest {
         assertTrue(this.stat.getLastFinishedJobTime() >= now);
     }
 
-    @org.junit.Test public void testFailAndCancel() {
+    @org.junit.Test
+    public void testFailAndCancel() {
         // we start with the results from the previous test!
         this.testFinished();
 
@@ -185,7 +190,8 @@ public class StatisticsImplTest {
         assertTrue(this.stat.getLastFinishedJobTime() <= now);
     }
 
-    @org.junit.Test public void  testMisc() {
+    @org.junit.Test
+    public void testMisc() {
         final StatisticsImpl stat2 = new StatisticsImpl(200);
         assertEquals(200, stat2.getStartTime());
 
