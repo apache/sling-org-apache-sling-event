@@ -88,10 +88,10 @@ public class JobExecutionContextImplTest {
         context.registerService(JobManagerConfiguration.class, configuration);
         context.registerService(TopologyCapabilities.class, capabilities);
         context.registerService(QueueConfigurationManager.class, queueConfigMgr);
+        context.registerService(ThreadPoolManager.class, threadPoolManager);
         context.registerService(MetricRegistry.class, metric);
         context.registerService(QueueManager.class, qManager);
         context.registerService(JobConsumerManager.class, jobConsumerManager);
-        context.registerService(ThreadPoolManager.class, threadPoolManager);
         context.registerService(StatisticsManager.class, statisticsManager);
         context.registerService(QueuesMBean.class, queuesMBean);
         context.registerService(Scheduler.class, scheduler);
