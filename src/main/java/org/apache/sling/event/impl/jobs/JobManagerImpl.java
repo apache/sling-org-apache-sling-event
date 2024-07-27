@@ -266,8 +266,7 @@ public class JobManagerImpl
                 final boolean isHistoryJob = this.configuration.isStoragePath(job.getResourcePath());
                 // if history job, simply remove - otherwise move to history!
                 if ( isHistoryJob ) {
-                    final ResourceResolver resolver = this.configuration.createResourceResolver();
-                    try {
+                    try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
                         final Resource jobResource = resolver.getResource(job.getResourcePath());
                         if ( jobResource != null ) {
                             resolver.delete(jobResource);
@@ -280,8 +279,6 @@ public class JobManagerImpl
                     } catch ( final PersistenceException pe) {
                         logger.warn("Unable to remove job at " + job.getResourcePath(), pe);
                         result = false;
-                    } finally {
-                        resolver.close();
                     }
                 } else {
                     final JobHandler jh = new JobHandler(job, null, this.configuration);
@@ -309,9 +306,8 @@ public class JobManagerImpl
     @Override
     public Job getJobById(final String id) {
         logger.debug("Getting job by id: {}", id);
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
         final StringBuilder buf = new StringBuilder(64);
-        try {
+        try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
 
             buf.append("/jcr:root");
             buf.append(this.configuration.getJobsBasePathWithSlash());
@@ -342,8 +338,6 @@ public class JobManagerImpl
             }
         } catch (final QuerySyntaxException qse) {
             logger.warn("Query syntax wrong " + buf.toString(), qse);
-        } finally {
-            resolver.close();
         }
         logger.debug("Job not found with id: {}", id);
         return null;
@@ -400,9 +394,8 @@ public class JobManagerImpl
                                        || type == QueryType.GIVEN_UP
                                        || type == QueryType.STOPPED;
         final List<Job> result = new ArrayList<>();
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
         final StringBuilder buf = new StringBuilder(64);
-        try {
+        try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
             buf.append(buildBaseQuery(this.configuration.getJobsBasePathWithSlash(), topic, type, isHistoryQuery));
 
             if ( templates != null && templates.length > 0 ) {
@@ -502,8 +495,6 @@ public class JobManagerImpl
              }
         } catch (final QuerySyntaxException qse) {
             logger.warn("Query syntax wrong " + buf.toString(), qse);
-        } finally {
-            resolver.close();
         }
         return result;
     }
@@ -587,8 +578,8 @@ public class JobManagerImpl
             logger.debug("Persisting job {} into queue {}, target={}",
                     Utility.toString(jobTopic, jobProperties), info.queueName, info.targetId);
         }
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        
+        try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
             final JobImpl job = this.writeJob(resolver,
                     jobTopic,
                     jobProperties,
@@ -604,8 +595,6 @@ public class JobManagerImpl
         } catch (final PersistenceException re ) {
             // something went wrong, so let's log it
             this.logger.error("Exception during persisting new job '" + Utility.toString(jobTopic, jobProperties) + "'", re);
-        } finally {
-            resolver.close();
         }
         if ( errors != null ) {
             errors.add("Unable to persist new job.");

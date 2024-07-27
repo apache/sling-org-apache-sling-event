@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -181,7 +182,8 @@ public class JobHandlerTest {
         // we don't care what type of resolver we use for these tests
         resolver = spy (rrf.getAdministrativeResourceResolver(null));
 
-        when (configuration.createResourceResolver()).thenReturn(resolver);
+//        when (configuration.createResourceResolver()).thenReturn(resolver);
+        doReturn(resolver).when(configuration).createResourceResolver();
 
         // these are mocked because it's easier than invoking the activate method
         when (configuration.getJobsBasePathWithSlash()).thenReturn("/var/events/");

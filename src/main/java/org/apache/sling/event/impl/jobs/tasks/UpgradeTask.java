@@ -82,21 +82,17 @@ public class UpgradeTask {
      */
     private void upgradeBridgedJobs() {
         final String path = configuration.getLocalJobsPath() + "/slingevent:eventadmin";
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        if ( resolver != null ) {
-            try {
-                final Resource rootResource = resolver.getResource(path);
-                if ( rootResource != null ) {
-                    upgradeBridgedJobs(rootResource);
+
+        try ( final ResourceResolver resolver = configuration.createResourceResolver();) {
+            final Resource rootResource = resolver.getResource(path);
+            if ( rootResource != null ) {
+                upgradeBridgedJobs(rootResource);
+            }
+            if ( caps.isLeader() ) {
+                final Resource unassignedRoot = resolver.getResource(configuration.getUnassignedJobsPath() + "/slingevent:eventadmin");
+                if ( unassignedRoot != null ) {
+                    upgradeBridgedJobs(unassignedRoot);
                 }
-                if ( caps.isLeader() ) {
-                    final Resource unassignedRoot = resolver.getResource(configuration.getUnassignedJobsPath() + "/slingevent:eventadmin");
-                    if ( unassignedRoot != null ) {
-                        upgradeBridgedJobs(unassignedRoot);
-                    }
-                }
-            } finally {
-                resolver.close();
             }
         }
     }
@@ -155,16 +151,11 @@ public class UpgradeTask {
      * Handle jobs from previous versions (<= 3.1.4) by moving them to the unassigned area
      */
     private void processJobsFromPreviousVersions() {
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        if ( resolver != null ) {
-            try {
-                this.processJobsFromPreviousVersions(resolver.getResource(configuration.getPreviousVersionAnonPath()));
-                this.processJobsFromPreviousVersions(resolver.getResource(configuration.getPreviousVersionIdentifiedPath()));
-            } catch ( final PersistenceException pe ) {
-                this.logger.warn("Problems moving jobs from previous version.", pe);
-            } finally {
-                resolver.close();
-            }
+        try (final ResourceResolver resolver = configuration.createResourceResolver();) {
+            this.processJobsFromPreviousVersions(resolver.getResource(configuration.getPreviousVersionAnonPath()));
+            this.processJobsFromPreviousVersions(resolver.getResource(configuration.getPreviousVersionIdentifiedPath()));
+        } catch ( final PersistenceException pe ) {
+            this.logger.warn("Problems moving jobs from previous version.", pe);
         }
     }
 

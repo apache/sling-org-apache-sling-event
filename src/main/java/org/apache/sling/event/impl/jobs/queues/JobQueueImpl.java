@@ -641,8 +641,7 @@ public class JobQueueImpl
 
         if ( !topics.isEmpty() ) {
 
-            final ResourceResolver resolver = this.services.configuration.createResourceResolver();
-            try {
+            try (final ResourceResolver resolver = this.services.configuration.createResourceResolver();) {
                 final Resource baseResource = resolver.getResource(this.services.configuration.getLocalJobsPath());
 
                 // sanity check - should never be null
@@ -674,12 +673,10 @@ public class JobQueueImpl
                     }
                     try {
                         resolver.commit();
-                    } catch ( final PersistenceException ignore) {
+                    } catch (final PersistenceException ignore) {
                         logger.error("Unable to remove jobs", ignore);
                     }
                 }
-            } finally {
-                resolver.close();
             }
         }
     }
