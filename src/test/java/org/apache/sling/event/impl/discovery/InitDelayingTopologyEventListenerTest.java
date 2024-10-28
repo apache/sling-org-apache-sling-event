@@ -63,6 +63,7 @@ public class InitDelayingTopologyEventListenerTest {
                     if (remaining > 0) {
                         events.wait(remaining);
                     } else {
+                        dumpEvents();
                         fail("did not receive " + cnt + " events within " + timeout + " ms, " + "but " + events.size());
                     }
                 }
@@ -82,7 +83,15 @@ public class InitDelayingTopologyEventListenerTest {
                         return;
                     }
                 }
+                dumpEvents();
                 fail("did not receive " + cnt + " events within " + timeout + " ms, " + "but " + events.size());
+            }
+        }
+
+        void dumpEvents() {
+            int i = 0;
+            for (TopologyEvent event : events) {
+                System.err.printf("event %2d: %s%n", ++i, event.getType());
             }
         }
     }
