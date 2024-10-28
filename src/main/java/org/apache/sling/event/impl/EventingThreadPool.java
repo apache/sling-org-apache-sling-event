@@ -66,7 +66,7 @@ public class EventingThreadPool implements ThreadPool {
     /**
      * Logger.
      */
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(EventingThreadPool.class);
 
     @Reference(policyOption=ReferencePolicyOption.GREEDY)
     private ThreadPoolManager threadPoolManager;
