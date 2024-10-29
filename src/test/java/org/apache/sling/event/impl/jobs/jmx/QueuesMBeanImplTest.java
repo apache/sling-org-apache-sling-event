@@ -1,19 +1,20 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The SF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.apache.sling.event.impl.jobs.jmx;
 
@@ -37,15 +38,20 @@ import org.osgi.framework.ServiceRegistration;
 public class QueuesMBeanImplTest {
 
     private QueuesMBeanImpl mbean;
+
     @Mock
     private BundleContext bundleContext;
+
     @Captor
     private ArgumentCaptor<String> serviceClass;
+
     @Captor
     private ArgumentCaptor<Object> serviceObject;
+
     @SuppressWarnings("rawtypes")
     @Captor
     private ArgumentCaptor<Dictionary> serviceProperties;
+
     @Mock
     private ServiceRegistration serviceRegistration;
 
@@ -59,7 +65,6 @@ public class QueuesMBeanImplTest {
         mbean.activate(bundleContext);
     }
 
-
     @Test
     public void testAddQueue() {
         addQueue();
@@ -69,16 +74,26 @@ public class QueuesMBeanImplTest {
         Queue queue = Mockito.mock(Queue.class, Mockito.withSettings().extraInterfaces(Statistics.class));
         mockStatistics((Statistics) queue);
         Mockito.when(queue.getName()).thenReturn("queue-name");
-        Mockito.when(bundleContext.registerService(Mockito.anyString(), Mockito.any(StatisticsMBean.class), Mockito.any(Dictionary.class))).thenReturn(serviceRegistration);
-        mbean.sendEvent(new QueueStatusEvent(queue,null));
-        Mockito.verify(bundleContext, Mockito.only()).registerService(serviceClass.capture(), serviceObject.capture(), serviceProperties.capture());
-        Assert.assertEquals("Expected bean to be registerd as a StatisticsMBean ", StatisticsMBean.class.getName(), serviceClass.getValue());
-        Assert.assertTrue("Expected service to be an instance of SatisticsMBean", serviceObject.getValue() instanceof StatisticsMBean);
-        Assert.assertNotNull("Expected properties to have a jmx.objectname", serviceProperties.getValue().get("jmx.objectname"));
+        Mockito.when(bundleContext.registerService(
+                        Mockito.anyString(), Mockito.any(StatisticsMBean.class), Mockito.any(Dictionary.class)))
+                .thenReturn(serviceRegistration);
+        mbean.sendEvent(new QueueStatusEvent(queue, null));
+        Mockito.verify(bundleContext, Mockito.only())
+                .registerService(serviceClass.capture(), serviceObject.capture(), serviceProperties.capture());
+        Assert.assertEquals(
+                "Expected bean to be registerd as a StatisticsMBean ",
+                StatisticsMBean.class.getName(),
+                serviceClass.getValue());
+        Assert.assertTrue(
+                "Expected service to be an instance of SatisticsMBean",
+                serviceObject.getValue() instanceof StatisticsMBean);
+        Assert.assertNotNull(
+                "Expected properties to have a jmx.objectname",
+                serviceProperties.getValue().get("jmx.objectname"));
         testStatistics((StatisticsMBean) serviceObject.getValue());
         return queue;
     }
-    
+
     @Test
     public void testAddQueueWithStatistics() {
         Queue queue = Mockito.mock(Queue.class);
@@ -86,15 +101,24 @@ public class QueuesMBeanImplTest {
         mockStatistics(stats);
         Mockito.when(queue.getStatistics()).thenReturn(stats);
         Mockito.when(queue.getName()).thenReturn("queue-name");
-        Mockito.when(bundleContext.registerService(Mockito.anyString(), Mockito.any(StatisticsMBean.class), Mockito.any(Dictionary.class))).thenReturn(serviceRegistration);
-        mbean.sendEvent(new QueueStatusEvent(queue,null));
-        Mockito.verify(bundleContext, Mockito.only()).registerService(serviceClass.capture(), serviceObject.capture(), serviceProperties.capture());
-        Assert.assertEquals("Expected bean to be registerd as a StatisticsMBean ", StatisticsMBean.class.getName(), serviceClass.getValue());
-        Assert.assertTrue("Expected service to be an instance of SatisticsMBean", serviceObject.getValue() instanceof StatisticsMBean);
-        Assert.assertNotNull("Expected properties to have a jmx.objectname", serviceProperties.getValue().get("jmx.objectname"));
+        Mockito.when(bundleContext.registerService(
+                        Mockito.anyString(), Mockito.any(StatisticsMBean.class), Mockito.any(Dictionary.class)))
+                .thenReturn(serviceRegistration);
+        mbean.sendEvent(new QueueStatusEvent(queue, null));
+        Mockito.verify(bundleContext, Mockito.only())
+                .registerService(serviceClass.capture(), serviceObject.capture(), serviceProperties.capture());
+        Assert.assertEquals(
+                "Expected bean to be registerd as a StatisticsMBean ",
+                StatisticsMBean.class.getName(),
+                serviceClass.getValue());
+        Assert.assertTrue(
+                "Expected service to be an instance of SatisticsMBean",
+                serviceObject.getValue() instanceof StatisticsMBean);
+        Assert.assertNotNull(
+                "Expected properties to have a jmx.objectname",
+                serviceProperties.getValue().get("jmx.objectname"));
         testStatistics((StatisticsMBean) serviceObject.getValue());
     }
-
 
     @Test
     public void updateQueue() {
@@ -102,16 +126,16 @@ public class QueuesMBeanImplTest {
         Queue queue = Mockito.mock(Queue.class, Mockito.withSettings().extraInterfaces(Statistics.class));
         Mockito.when(queue.getName()).thenReturn("queue-name-changed");
         Mockito.reset(bundleContext);
-        mbean.sendEvent(new QueueStatusEvent(queue,firstQueue));
-        Mockito.verify(bundleContext, Mockito.never()).registerService(serviceClass.capture(), serviceObject.capture(), serviceProperties.capture());
+        mbean.sendEvent(new QueueStatusEvent(queue, firstQueue));
+        Mockito.verify(bundleContext, Mockito.never())
+                .registerService(serviceClass.capture(), serviceObject.capture(), serviceProperties.capture());
     }
 
     @Test
     public void removeQueue() {
         Queue firstQueue = addQueue();
-        mbean.sendEvent(new QueueStatusEvent(null,firstQueue));
+        mbean.sendEvent(new QueueStatusEvent(null, firstQueue));
         Mockito.verify(serviceRegistration, Mockito.only()).unregister();
-
     }
 
     private void mockStatistics(Statistics queue) {
@@ -145,6 +169,4 @@ public class QueuesMBeanImplTest {
         Assert.assertEquals(11, statisticsMbean.getAverageWaitingTime());
         Assert.assertEquals(12, statisticsMbean.getAverageProcessingTime());
     }
-
-
 }

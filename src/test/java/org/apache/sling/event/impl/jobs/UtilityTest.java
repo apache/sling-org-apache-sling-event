@@ -19,15 +19,13 @@
 package org.apache.sling.event.impl.jobs;
 
 import junit.framework.TestCase;
-
 import org.apache.sling.event.impl.support.ResourceHelper;
 
 public class UtilityTest extends TestCase {
 
     public void test_filter_allowed() {
         final String allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789_,.-+#!?$%&()=";
-        assertEquals("Allowed Characters must not be filtered", allowed,
-                ResourceHelper.filterName(allowed));
+        assertEquals("Allowed Characters must not be filtered", allowed, ResourceHelper.filterName(allowed));
     }
 
     public void test_filter_illegal_jcr() {
@@ -67,14 +65,13 @@ public class UtilityTest extends TestCase {
     public void test_filter_consecutive_replace() {
         assertEquals("a_b_", ResourceHelper.filterName("a/[b]"));
     }
-    
+
     public void test_checkJobTopic() {
-    	assertNull (Utility.checkJobTopic("simpleTopic"));
-    	final String result = Utility.checkJobTopic("simpleTopic.withDots");
-    	assertNotNull(result);
-    	assertTrue ("Discarding job - job has an illegal job topic 'simpleTopic.withDots'".equals(result));
-    	assertNotNull (Utility.checkJobTopic(new StringBuilder("simpleTopic")));
-    	assertNotNull (Utility.checkJobTopic(null));
+        assertNull(Utility.checkJobTopic("simpleTopic"));
+        final String result = Utility.checkJobTopic("simpleTopic.withDots");
+        assertNotNull(result);
+        assertTrue("Discarding job - job has an illegal job topic 'simpleTopic.withDots'".equals(result));
+        assertNotNull(Utility.checkJobTopic(new StringBuilder("simpleTopic")));
+        assertNotNull(Utility.checkJobTopic(null));
     }
-    
 }

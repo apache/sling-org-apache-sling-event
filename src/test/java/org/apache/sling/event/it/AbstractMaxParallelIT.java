@@ -18,9 +18,6 @@
  */
 package org.apache.sling.event.it;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,15 +46,18 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+
 public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
     private static final int BACKGROUND_LOAD_DELAY_SECONDS = 1;
 
     private static final int EXTRA_CHAOS_DURATION_SECONDS = 20;
 
-    private static final int UNKNOWN_TOPOLOGY_FACTOR_MILLIS = 15;//100;
+    private static final int UNKNOWN_TOPOLOGY_FACTOR_MILLIS = 15; // 100;
 
-    private static final int STABLE_TOPOLOGY_FACTOR_MILLIS = 40;//300;
+    private static final int STABLE_TOPOLOGY_FACTOR_MILLIS = 40; // 300;
 
     static final String TOPIC_PREFIX = "sling/maxparallel/";
 
@@ -73,7 +73,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
     }
 
     private void registerMax(int cnt) {
-        synchronized(syncObj) {
+        synchronized (syncObj) {
             max = Math.max(max, cnt);
         }
     }
@@ -82,28 +82,26 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
      * Setup consumers
      */
     private void setupJobConsumers(long jobRunMillis) {
-        this.registerJobConsumer(TOPIC_NAME,
+        this.registerJobConsumer(TOPIC_NAME, new JobConsumer() {
 
-            new JobConsumer() {
+            private AtomicInteger cnt = new AtomicInteger(0);
 
-                private AtomicInteger cnt = new AtomicInteger(0);
-
-                @Override
-                public JobResult process(final Job job) {
-                    int c = cnt.incrementAndGet();
-                    registerMax(c);
-                    log.info("process : start delaying. count=" + c + ", id="+ job.getId());
-                    try {
-                        Thread.sleep(jobRunMillis);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    log.info("process : done delaying. count=" + c + ", id="+ job.getId());
-                    cnt.decrementAndGet();
-                    return JobResult.OK;
+            @Override
+            public JobResult process(final Job job) {
+                int c = cnt.incrementAndGet();
+                registerMax(c);
+                log.info("process : start delaying. count=" + c + ", id=" + job.getId());
+                try {
+                    Thread.sleep(jobRunMillis);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
-            });
+                log.info("process : done delaying. count=" + c + ", id=" + job.getId());
+                cnt.decrementAndGet();
+                return JobResult.OK;
+            }
+        });
     }
 
     private static final class CreateJobThread extends Thread {
@@ -118,7 +116,8 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
         private final int numJobs;
 
-        public CreateJobThread(final JobManager jobManager,
+        public CreateJobThread(
+                final JobManager jobManager,
                 Map<String, AtomicLong> created,
                 final AtomicLong finishedThreads,
                 int numJobs) {
@@ -131,7 +130,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         @Override
         public void run() {
             AtomicInteger cnt = new AtomicInteger(0);
-            for(int i=0; i<numJobs; i++) {
+            for (int i = 0; i < numJobs; i++) {
                 final int c = cnt.incrementAndGet();
                 log.info("run: creating job " + c + " on topic " + TOPIC_NAME);
                 if (jobManager.addJob(TOPIC_NAME, null) != null) {
@@ -140,7 +139,6 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
             }
             finishedThreads.incrementAndGet();
         }
-
     }
 
     /**
@@ -148,33 +146,39 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
      *
      * Chaos is right now created by sending topology changing/changed events randomly
      */
-    private void setupChaosThreads(final List<Thread> threads,
-            final AtomicLong finishedThreads, long duration) {
+    private void setupChaosThreads(final List<Thread> threads, final AtomicLong finishedThreads, long duration) {
         final List<TopologyView> views = new ArrayList<>();
         // register topology listener
-        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(TopologyEventListener.class, new TopologyEventListener() {
+        final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(
+                TopologyEventListener.class,
+                new TopologyEventListener() {
 
-            @Override
-            public void handleTopologyEvent(final TopologyEvent event) {
-                if ( event.getType() == Type.TOPOLOGY_INIT ) {
-                    views.add(event.getNewView());
-                }
-            }
-        }, null);
-        while ( views.isEmpty() ) {
+                    @Override
+                    public void handleTopologyEvent(final TopologyEvent event) {
+                        if (event.getType() == Type.TOPOLOGY_INIT) {
+                            views.add(event.getNewView());
+                        }
+                    }
+                },
+                null);
+        while (views.isEmpty()) {
             this.sleep(10);
         }
         reg.unregister();
         final TopologyView view = views.get(0);
 
         try {
-            final Collection<ServiceReference<TopologyEventListener>> refs = this.bundleContext.getServiceReferences(TopologyEventListener.class, null);
+            final Collection<ServiceReference<TopologyEventListener>> refs =
+                    this.bundleContext.getServiceReferences(TopologyEventListener.class, null);
             assertNotNull(refs);
             assertFalse(refs.isEmpty());
             TopologyEventListener found = null;
-            for(final ServiceReference<TopologyEventListener> ref : refs) {
+            for (final ServiceReference<TopologyEventListener> ref : refs) {
                 final TopologyEventListener listener = this.bundleContext.getService(ref);
-                if ( listener != null && listener.getClass().getName().equals("org.apache.sling.event.impl.jobs.config.TopologyHandler") ) {
+                if (listener != null
+                        && listener.getClass()
+                                .getName()
+                                .equals("org.apache.sling.event.impl.jobs.config.TopologyHandler")) {
                     found = listener;
                     break;
                 }
@@ -193,12 +197,12 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
                 public void run() {
                     final long startTime = System.currentTimeMillis();
                     // this thread runs 30 seconds longer than the job creation thread
-                    final long endTime = startTime + (duration +EXTRA_CHAOS_DURATION_SECONDS) * 1000;
-                    while ( System.currentTimeMillis() < endTime ) {
+                    final long endTime = startTime + (duration + EXTRA_CHAOS_DURATION_SECONDS) * 1000;
+                    while (System.currentTimeMillis() < endTime) {
                         final int sleepTime = random.nextInt(25) + 15;
                         try {
                             Thread.sleep(sleepTime * STABLE_TOPOLOGY_FACTOR_MILLIS);
-                        } catch ( final InterruptedException ie) {
+                        } catch (final InterruptedException ie) {
                             Thread.currentThread().interrupt();
                         }
                         log.info("setupChaosThreads : simulating TOPOLOGY_CHANGING");
@@ -206,7 +210,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
                         final int changingTime = random.nextInt(20) + 3;
                         try {
                             Thread.sleep(changingTime * UNKNOWN_TOPOLOGY_FACTOR_MILLIS);
-                        } catch ( final InterruptedException ie) {
+                        } catch (final InterruptedException ie) {
                             Thread.currentThread().interrupt();
                         }
                         log.info("setupChaosThreads : simulating TOPOLOGY_CHANGED");
@@ -235,19 +239,18 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         final List<Thread> threads = new ArrayList<>();
         final AtomicLong finishedThreads = new AtomicLong();
 
-        this.registerEventHandler("org/apache/sling/event/notification/job/*",
-                new EventHandler() {
+        this.registerEventHandler("org/apache/sling/event/notification/job/*", new EventHandler() {
 
-                    @Override
-                    public void handleEvent(final Event event) {
-                        final String topic = (String) event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
-                        if ( NotificationConstants.TOPIC_JOB_FINISHED.equals(event.getTopic())) {
-                            finished.get(topic).incrementAndGet();
-                        } else if ( NotificationConstants.TOPIC_JOB_ADDED.equals(event.getTopic())) {
-                            added.get(topic).incrementAndGet();
-                        }
-                    }
-                });
+            @Override
+            public void handleEvent(final Event event) {
+                final String topic = (String) event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
+                if (NotificationConstants.TOPIC_JOB_FINISHED.equals(event.getTopic())) {
+                    finished.get(topic).incrementAndGet();
+                } else if (NotificationConstants.TOPIC_JOB_ADDED.equals(event.getTopic())) {
+                    added.get(topic).incrementAndGet();
+                }
+            }
+        });
 
         // setup job consumers
         this.setupJobConsumers(jobRunMillis);
@@ -257,7 +260,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
         // wait until 1 job is being processed
         log.info("doTestMaxParallel : waiting until 1 job is being processed");
-        while ( max <= 0 ) {
+        while (max <= 0) {
             this.sleep(100);
         }
         log.info("doTestMaxParallel : 1 job was processed, ready to go. max=" + max);
@@ -266,7 +269,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
         log.info("doTestMaxParallel : starting threads (" + threads.size() + ")");
         // start threads
-        for(final Thread t : threads) {
+        for (final Thread t : threads) {
             t.setDaemon(true);
             t.start();
         }
@@ -277,19 +280,20 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
         log.info("doTestMaxParallel: polling for threads to finish...");
         // wait until threads are finished
-        while ( finishedThreads.get() < threads.size() ) {
+        while (finishedThreads.get() < threads.size()) {
             this.sleep(100);
         }
 
         final Set<String> allTopics = new HashSet<>(topics);
         log.info("doTestMaxParallel: waiting for job handling to finish... " + allTopics.size());
-        while ( !allTopics.isEmpty() ) {
+        while (!allTopics.isEmpty()) {
             final Iterator<String> iter = allTopics.iterator();
-            while ( iter.hasNext() ) {
+            while (iter.hasNext()) {
                 final String topic = iter.next();
-                log.info("doTestMaxParallel: checking topic= " + topic +
-                        ", finished=" + finished.get(topic).get() + ", created=" + created.get(topic).get());
-                if ( finished.get(topic).get() == created.get(topic).get() ) {
+                log.info("doTestMaxParallel: checking topic= " + topic + ", finished="
+                        + finished.get(topic).get() + ", created="
+                        + created.get(topic).get());
+                if (finished.get(topic).get() == created.get(topic).get()) {
                     iter.remove();
                 }
             }

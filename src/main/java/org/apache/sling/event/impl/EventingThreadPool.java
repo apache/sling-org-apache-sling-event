@@ -34,31 +34,31 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
-
 /**
  * The configurable eventing thread pool.
  */
-@Component(service = EventingThreadPool.class,
-           property = {
-              Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-})
+@Component(
+        service = EventingThreadPool.class,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 @Designate(ocd = EventingThreadPool.Config.class)
 public class EventingThreadPool implements ThreadPool {
 
-    @ObjectClassDefinition(name = "Apache Sling Job Thread Pool",
-        description="This is the thread pool used by the Apache Sling job handling. The "
-                  + "threads from this pool are merely used for executing jobs. By limiting this pool, it is "
-                  + "possible to limit the maximum number of parallel processed jobs - regardless of the queue "
-                  + "configuration.")
+    @ObjectClassDefinition(
+            name = "Apache Sling Job Thread Pool",
+            description = "This is the thread pool used by the Apache Sling job handling. The "
+                    + "threads from this pool are merely used for executing jobs. By limiting this pool, it is "
+                    + "possible to limit the maximum number of parallel processed jobs - regardless of the queue "
+                    + "configuration.")
     public @interface Config {
 
-        @AttributeDefinition(name = "Pool Size",
-              description="The size of the thread pool. This pool is used to execute jobs and therefore "
+        @AttributeDefinition(
+                name = "Pool Size",
+                description = "The size of the thread pool. This pool is used to execute jobs and therefore "
                         + "limits the maximum number of jobs executed in parallel.")
         int minPoolSize() default 35;
     }
 
-    @Reference(policyOption=ReferencePolicyOption.GREEDY)
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private ThreadPoolManager threadPoolManager;
 
     /** The real thread pool used. */

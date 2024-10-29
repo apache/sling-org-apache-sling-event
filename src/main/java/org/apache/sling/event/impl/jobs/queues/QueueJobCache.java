@@ -86,7 +86,8 @@ public class QueueJobCache {
      * @param queueType The queue type
      * @param topics The topics handled by this queue.
      */
-    public QueueJobCache(final JobManagerConfiguration configuration,
+    public QueueJobCache(
+            final JobManagerConfiguration configuration,
             final String queueName,
             final StatisticsManager statisticsManager,
             final QueueConfiguration.Type queueType,
@@ -111,11 +112,11 @@ public class QueueJobCache {
      */
     public boolean isEmpty() {
         boolean result = true;
-        synchronized ( this.cache ) {
+        synchronized (this.cache) {
             result = this.cache.isEmpty();
         }
-        if ( result ) {
-            synchronized ( this.topicsWithNewJobs ) {
+        if (result) {
+            synchronized (this.topicsWithNewJobs) {
                 result = this.topicsWithNewJobs.isEmpty();
             }
         }
@@ -123,7 +124,7 @@ public class QueueJobCache {
     }
 
     Set<String> getNewlyHaltedTopics() {
-        synchronized ( this.topicsWithNewJobs ) {
+        synchronized (this.topicsWithNewJobs) {
             return new HashSet<>(this.newlyHaltedTopics);
         }
     }
@@ -139,7 +140,7 @@ public class QueueJobCache {
     private void fillCache(final String queueName, final StatisticsManager statisticsManager) {
         final Set<String> checkingTopics = new HashSet<String>();
         checkingTopics.addAll(this.topics);
-        if ( !checkingTopics.isEmpty() ) {
+        if (!checkingTopics.isEmpty()) {
             this.loadJobs(queueName, checkingTopics, statisticsManager);
         }
     }
@@ -155,57 +156,59 @@ public class QueueJobCache {
      * @param doFull Whether to do a full scan
      * @return The job handler or {@code null}.
      */
-    public JobHandler getNextJob(final JobConsumerManager jobConsumerManager,
+    public JobHandler getNextJob(
+            final JobConsumerManager jobConsumerManager,
             final StatisticsManager statisticsManager,
             final Queue queue,
             final boolean doFull) {
         JobHandler handler = null;
 
-        if ( !this.queueIsBlocked.get() ) {
-            synchronized ( this.cache ) {
+        if (!this.queueIsBlocked.get()) {
+            synchronized (this.cache) {
                 boolean retry;
                 do {
                     retry = false;
-                    if ( this.cache.isEmpty() ) {
+                    if (this.cache.isEmpty()) {
                         final Set<String> checkingTopics = new HashSet<String>();
-                        synchronized ( this.topicsWithNewJobs ) {
+                        synchronized (this.topicsWithNewJobs) {
                             checkingTopics.addAll(this.topicsWithNewJobs);
                             this.topicsWithNewJobs.clear();
                         }
-                        if ( doFull ) {
+                        if (doFull) {
                             checkingTopics.addAll(this.topics);
                         }
                         checkingTopics.removeAll(newlyHaltedTopics);
-                        if ( !checkingTopics.isEmpty() ) {
+                        if (!checkingTopics.isEmpty()) {
                             this.loadJobs(queue.getName(), checkingTopics, statisticsManager);
                         }
                     }
 
-                    if ( !this.cache.isEmpty() ) {
+                    if (!this.cache.isEmpty()) {
                         final JobImpl job = this.cache.remove(0);
                         final JobExecutor consumer = jobConsumerManager.getExecutor(job.getTopic());
 
                         handler = new JobHandler(job, consumer, this.configuration);
-                        if ( consumer != null ) {
-                            if ( !handler.startProcessing(queue) ) {
-                                statisticsManager.jobDequeued(queue.getName(), handler.getJob().getTopic());
-                                if ( logger.isDebugEnabled() ) {
+                        if (consumer != null) {
+                            if (!handler.startProcessing(queue)) {
+                                statisticsManager.jobDequeued(
+                                        queue.getName(), handler.getJob().getTopic());
+                                if (logger.isDebugEnabled()) {
                                     logger.debug("Discarding removed job {}", Utility.toString(job));
                                 }
                                 handler = null;
                                 retry = true;
                             }
                         } else {
-                            statisticsManager.jobDequeued(queue.getName(), handler.getJob().getTopic());
+                            statisticsManager.jobDequeued(
+                                    queue.getName(), handler.getJob().getTopic());
                             // no consumer on this instance, assign to another instance
                             handler.reassign();
 
                             handler = null;
                             retry = true;
                         }
-
                     }
-                } while ( handler == null && retry);
+                } while (handler == null && retry);
             }
         }
         return handler;
@@ -215,8 +218,8 @@ public class QueueJobCache {
      * Load the next N x numberOf(topics) jobs
      * @param checkingTopics The set of topics to check.
      */
-    private void loadJobs( final String queueName, final Set<String> checkingTopics,
-            final StatisticsManager statisticsManager) {
+    private void loadJobs(
+            final String queueName, final Set<String> checkingTopics, final StatisticsManager statisticsManager) {
         logger.debug("Starting jobs loading from {}...", checkingTopics);
 
         final Map<String, List<JobImpl>> topicCache = new HashMap<String, List<JobImpl>>();
@@ -225,11 +228,11 @@ public class QueueJobCache {
         try {
             final Resource baseResource = resolver.getResource(this.configuration.getLocalJobsPath());
             // sanity check - should never be null
-            if ( baseResource != null ) {
-                for(final String topic : checkingTopics) {
+            if (baseResource != null) {
+                for (final String topic : checkingTopics) {
 
                     final Resource topicResource = baseResource.getChild(topic.replace('/', '.'));
-                    if ( topicResource != null ) {
+                    if (topicResource != null) {
                         topicCache.put(topic, loadJobs(queueName, topic, topicResource, statisticsManager));
                     }
                 }
@@ -247,9 +250,8 @@ public class QueueJobCache {
      * @param topicCache The topic based cache
      */
     private void orderTopics(final Map<String, List<JobImpl>> topicCache) {
-        if ( this.queueType == Type.ORDERED
-             || this.queueType == Type.UNORDERED) {
-            for(final List<JobImpl> list : topicCache.values()) {
+        if (this.queueType == Type.ORDERED || this.queueType == Type.UNORDERED) {
+            for (final List<JobImpl> list : topicCache.values()) {
                 this.cache.addAll(list);
             }
             Collections.sort(this.cache);
@@ -258,15 +260,15 @@ public class QueueJobCache {
             boolean done = true;
             do {
                 done = true;
-                for(final Map.Entry<String, List<JobImpl>> entry : topicCache.entrySet()) {
-                    if ( !entry.getValue().isEmpty() ) {
+                for (final Map.Entry<String, List<JobImpl>> entry : topicCache.entrySet()) {
+                    if (!entry.getValue().isEmpty()) {
                         this.cache.add(entry.getValue().remove(0));
-                        if ( !entry.getValue().isEmpty() ) {
+                        if (!entry.getValue().isEmpty()) {
                             done = false;
                         }
                     }
                 }
-            } while ( !done ) ;
+            } while (!done);
         }
     }
 
@@ -276,7 +278,9 @@ public class QueueJobCache {
      * @param topicResource The parent resource of the jobs
      * @return The cache which will be filled with the jobs.
      */
-    private List<JobImpl> loadJobs(final String queueName, final String topic,
+    private List<JobImpl> loadJobs(
+            final String queueName,
+            final String topic,
             final Resource topicResource,
             final StatisticsManager statisticsManager) {
         logger.debug("Loading jobs from topic {}", topic);
@@ -289,43 +293,43 @@ public class QueueJobCache {
 
             @Override
             public boolean handle(final JobImpl job) {
-                if ( job.getProcessingStarted() == null && !job.hasReadErrors() ) {
+                if (job.getProcessingStarted() == null && !job.hasReadErrors()) {
                     list.add(job);
                     statisticsManager.jobQueued(queueName, topic);
-                    if ( list.size() == maxPreloadLimit ) {
+                    if (list.size() == maxPreloadLimit) {
                         scanTopic.set(true);
                     }
-                } else if ( job.getProcessingStarted() != null ) {
+                } else if (job.getProcessingStarted() != null) {
                     logger.debug("Ignoring job {} - processing already started.", job);
                 } else {
                     // error reading job
-                    switch( job.getReadErrorType() ) {
-                    case CLASSNOTFOUNDEXCEPTION : {
-                        haltTopic.set(true);
-                        break;
-                    }
-                    case RUNTIMEEXCEPTION : {
-                        scanTopic.set(true);
-                        logger.debug("Failing job {} due to unrecoverable read errors.", job);
-                        final JobHandler handler = new JobHandler(job, null, configuration);
-                        handler.finished(JobState.ERROR, true, null);
-                        break;
-                    }
-                    default: {
-                        scanTopic.set(true);
-                        logger.debug("Ignoring job {} due to recoverable read errors.", job);
-                    }
+                    switch (job.getReadErrorType()) {
+                        case CLASSNOTFOUNDEXCEPTION: {
+                            haltTopic.set(true);
+                            break;
+                        }
+                        case RUNTIMEEXCEPTION: {
+                            scanTopic.set(true);
+                            logger.debug("Failing job {} due to unrecoverable read errors.", job);
+                            final JobHandler handler = new JobHandler(job, null, configuration);
+                            handler.finished(JobState.ERROR, true, null);
+                            break;
+                        }
+                        default: {
+                            scanTopic.set(true);
+                            logger.debug("Ignoring job {} due to recoverable read errors.", job);
+                        }
                     }
                 }
                 return list.size() < maxPreloadLimit;
             }
         });
-        if ( haltTopic.get() ) {
-            synchronized ( this.topicsWithNewJobs ) {
+        if (haltTopic.get()) {
+            synchronized (this.topicsWithNewJobs) {
                 this.newlyHaltedTopics.add(topic);
             }
-        } else if ( scanTopic.get() ) {
-            synchronized ( this.topicsWithNewJobs ) {
+        } else if (scanTopic.get()) {
+            synchronized (this.topicsWithNewJobs) {
                 this.topicsWithNewJobs.add(topic);
             }
         }
@@ -340,10 +344,11 @@ public class QueueJobCache {
      */
     public void handleNewTopics(final Set<String> topics) {
         logger.debug("Update cache to handle new event for topics {}", topics);
-        synchronized ( this.topicsWithNewJobs ) {
+        synchronized (this.topicsWithNewJobs) {
             final Set<String> nonHaltedTopics = new HashSet<>(topics);
             if (!Collections.disjoint(topics, newlyHaltedTopics)) {
-                logger.warn("handleNewTopics : sets not disjoint as expected. topics: " + topics + ", newlyHaltedTopics: " + newlyHaltedTopics);
+                logger.warn("handleNewTopics : sets not disjoint as expected. topics: " + topics
+                        + ", newlyHaltedTopics: " + newlyHaltedTopics);
                 nonHaltedTopics.removeAll(newlyHaltedTopics);
             }
             this.topicsWithNewJobs.addAll(nonHaltedTopics);
@@ -358,10 +363,11 @@ public class QueueJobCache {
      * @param handler The job handler
      * @param statisticsManager The statistics manager
      */
-    public void reschedule(final String queueName, final JobHandler handler, final StatisticsManager statisticsManager) {
-        synchronized ( this.cache ) {
-            if ( handler.reschedule() ) {
-                if ( this.queueType == Type.ORDERED ) {
+    public void reschedule(
+            final String queueName, final JobHandler handler, final StatisticsManager statisticsManager) {
+        synchronized (this.cache) {
+            if (handler.reschedule()) {
+                if (this.queueType == Type.ORDERED) {
                     this.cache.add(0, handler.getJob());
                 } else {
                     this.cache.add(handler.getJob());

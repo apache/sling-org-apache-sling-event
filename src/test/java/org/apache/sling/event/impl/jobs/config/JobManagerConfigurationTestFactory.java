@@ -26,38 +26,38 @@ import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration.Config;
 
 public class JobManagerConfigurationTestFactory {
 
-    public static JobManagerConfiguration create(String jobsRoot, 
-            ResourceResolverFactory resourceResolverFactory, 
-            QueueConfigurationManager queueConfigurationManager) throws NoSuchFieldException {
+    public static JobManagerConfiguration create(
+            String jobsRoot,
+            ResourceResolverFactory resourceResolverFactory,
+            QueueConfigurationManager queueConfigurationManager)
+            throws NoSuchFieldException {
         final JobManagerConfiguration real = JobManagerConfiguration.newForTest(
-                resourceResolverFactory, queueConfigurationManager,
-                new HashMap<String, Object>(), new Config() {
+                resourceResolverFactory, queueConfigurationManager, new HashMap<String, Object>(), new Config() {
 
-            @Override
-            public Class<? extends Annotation> annotationType() {
-                return null;
-            }
+                    @Override
+                    public Class<? extends Annotation> annotationType() {
+                        return null;
+                    }
 
-            @Override
-            public boolean job_consumermanager_disableDistribution() {
-                return false;
-            }
+                    @Override
+                    public boolean job_consumermanager_disableDistribution() {
+                        return false;
+                    }
 
-            @Override
-            public long startup_delay() {
-                return 0;
-            }
+                    @Override
+                    public long startup_delay() {
+                        return 0;
+                    }
 
-            @Override
-            public int cleanup_period() {
-                return 0;
-            }
+                    @Override
+                    public int cleanup_period() {
+                        return 0;
+                    }
 
-            public int progresslog_maxCount() {
-                return Integer.MAX_VALUE;
-            }
-        });
+                    public int progresslog_maxCount() {
+                        return Integer.MAX_VALUE;
+                    }
+                });
         return real;
     }
-    
 }

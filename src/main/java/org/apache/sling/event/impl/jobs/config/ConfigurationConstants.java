@@ -40,5 +40,4 @@ public abstract class ConfigurationConstants {
     public static final String PROP_KEEP_JOBS = "queue.keepJobs";
     public static final String PROP_THREAD_POOL_SIZE = "queue.threadPoolSize";
     public static final String PROP_PREFER_RUN_ON_CREATION_INSTANCE = "queue.preferRunOnCreationInstance";
-
 }

@@ -84,12 +84,10 @@ public class JobImpl implements Job, Comparable<JobImpl> {
      * @param properties Non-null map of properties, at least containing {@link #PROPERTY_RESOURCE_PATH}
      */
     @SuppressWarnings("unchecked")
-    public JobImpl(final String topic,
-                   final String jobId,
-                   final Map<String, Object> properties) {
+    public JobImpl(final String topic, final String jobId, final Map<String, Object> properties) {
         this.topic = topic;
         this.jobId = jobId;
-        this.path = (String)properties.remove(PROPERTY_RESOURCE_PATH);
+        this.path = (String) properties.remove(PROPERTY_RESOURCE_PATH);
         this.readErrorList = (List<Exception>) properties.remove(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
 
         this.properties = new ValueMapDecorator(properties);
@@ -113,13 +111,13 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     }
 
     public ReadErrorType getReadErrorType() {
-        if ( this.readErrorList == null || this.readErrorList.isEmpty() ) {
+        if (this.readErrorList == null || this.readErrorList.isEmpty()) {
             return ReadErrorType.NONE;
         } else {
-            for(final Exception e : this.readErrorList) {
-                if ( e instanceof RuntimeException ) {
+            for (final Exception e : this.readErrorList) {
+                if (e instanceof RuntimeException) {
                     return ReadErrorType.RUNTIMEEXCEPTION;
-                } else if ( e.getCause() != null && e.getCause() instanceof ClassNotFoundException ) {
+                } else if (e.getCause() != null && e.getCause() instanceof ClassNotFoundException) {
                     return ReadErrorType.CLASSNOTFOUNDEXCEPTION;
                 }
             }
@@ -242,7 +240,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     }
 
     public void setProperty(final String name, final Object value) {
-        if ( value == null ) {
+        if (value == null) {
             this.properties.remove(name);
         } else {
             this.properties.put(name, value);
@@ -261,16 +259,23 @@ public class JobImpl implements Job, Comparable<JobImpl> {
         this.properties.remove(Job.PROPERTY_JOB_PROGRESS_STEP);
         this.properties.remove(Job.PROPERTY_RESULT_MESSAGE);
         this.properties.put(Job.PROPERTY_JOB_STARTED_TIME, Calendar.getInstance());
-        return new String[] {Job.PROPERTY_JOB_QUEUE_NAME, Job.PROPERTY_JOB_RETRIES,
-                Job.PROPERTY_JOB_PROGRESS_LOG, Job.PROPERTY_JOB_PROGRESS_ETA, PROPERTY_JOB_PROGRESS_STEPS,
-                PROPERTY_JOB_PROGRESS_STEP, Job.PROPERTY_RESULT_MESSAGE, Job.PROPERTY_JOB_STARTED_TIME};
+        return new String[] {
+            Job.PROPERTY_JOB_QUEUE_NAME,
+            Job.PROPERTY_JOB_RETRIES,
+            Job.PROPERTY_JOB_PROGRESS_LOG,
+            Job.PROPERTY_JOB_PROGRESS_ETA,
+            PROPERTY_JOB_PROGRESS_STEPS,
+            PROPERTY_JOB_PROGRESS_STEP,
+            Job.PROPERTY_RESULT_MESSAGE,
+            Job.PROPERTY_JOB_STARTED_TIME
+        };
     }
 
     public String[] startProgress(final int steps, final long eta) {
-        if ( steps > 0 ) {
+        if (steps > 0) {
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_STEPS, steps);
         }
-        if ( eta > 0 ) {
+        if (eta > 0) {
             final Date finishDate = new Date(System.currentTimeMillis() + eta * 1000);
             final Calendar finishCal = Calendar.getInstance();
             finishCal.setTime(finishDate);
@@ -281,16 +286,17 @@ public class JobImpl implements Job, Comparable<JobImpl> {
 
     public String[] setProgress(final int step) {
         final int steps = this.getProperty(Job.PROPERTY_JOB_PROGRESS_STEPS, -1);
-        if ( steps > 0 && step > 0 ) {
+        if (steps > 0 && step > 0) {
             int current = this.getProperty(Job.PROPERTY_JOB_PROGRESS_STEP, 0);
             current += step;
-            if ( current > steps ) {
+            if (current > steps) {
                 current = steps;
             }
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_STEP, current);
 
             final Calendar now = Calendar.getInstance();
-            final long elapsed = now.getTimeInMillis() - this.getProcessingStarted().getTimeInMillis();
+            final long elapsed =
+                    now.getTimeInMillis() - this.getProcessingStarted().getTimeInMillis();
 
             final long eta = System.currentTimeMillis() + (elapsed / current) * (steps - current);
             now.setTimeInMillis(eta);
@@ -301,7 +307,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     }
 
     public String update(final long eta) {
-        if ( eta > 0 ) {
+        if (eta > 0) {
             final Date finishDate = new Date(System.currentTimeMillis() + eta * 1000);
             final Calendar finishCal = Calendar.getInstance();
             finishCal.setTime(finishDate);
@@ -321,7 +327,7 @@ public class JobImpl implements Job, Comparable<JobImpl> {
 
         final String logEntry = MessageFormat.format(message, args);
         final String[] entries = this.getProperty(Job.PROPERTY_JOB_PROGRESS_LOG, String[].class);
-        if ( entries == null ) {
+        if (entries == null) {
             this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, new String[] {logEntry});
         } else {
             addLog(logEntry, entries, logMaxCount);
@@ -332,8 +338,8 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     @Override
     public JobState getJobState() {
         final String enumValue = this.getProperty(JobImpl.PROPERTY_FINISHED_STATE, String.class);
-        if ( enumValue == null ) {
-            if ( this.getProcessingStarted() != null ) {
+        if (enumValue == null) {
+            if (this.getProcessingStarted() != null) {
                 return JobState.ACTIVE;
             }
             return JobState.QUEUED;
@@ -392,10 +398,10 @@ public class JobImpl implements Job, Comparable<JobImpl> {
     @Override
     public int compareTo(final JobImpl o) {
         int result = this.getCreated().compareTo(o.getCreated());
-        if ( result == 0 ) {
-            if ( this.counter < o.counter ) {
+        if (result == 0) {
+            if (this.counter < o.counter) {
                 result = -1;
-            } else if ( this.counter > o.counter ) {
+            } else if (this.counter > o.counter) {
                 result = 1;
             } else {
                 result = this.jobId.compareTo(o.jobId);
@@ -411,19 +417,18 @@ public class JobImpl implements Job, Comparable<JobImpl> {
 
     @Override
     public boolean equals(final Object obj) {
-        if ( obj == this ) {
+        if (obj == this) {
             return true;
         }
-        if ( obj instanceof JobImpl ) {
-            return this.jobId.equals(((JobImpl)obj).jobId);
+        if (obj instanceof JobImpl) {
+            return this.jobId.equals(((JobImpl) obj).jobId);
         }
         return false;
     }
 
     @Override
     public String toString() {
-        return "JobImpl [properties=" + properties + ", topic=" + topic
-                + ", path=" + path + ", jobId=" + jobId + "]";
+        return "JobImpl [properties=" + properties + ", topic=" + topic + ", path=" + path + ", jobId=" + jobId + "]";
     }
 
     // helper methods
@@ -434,13 +439,13 @@ public class JobImpl implements Job, Comparable<JobImpl> {
             newEntries = new String[maxSize];
             System.arraycopy(entries, entries.length - maxSize + 1, newEntries, 0, maxSize - 2);
             final String prevLastLog = entries[entries.length - 1];
-            newEntries[maxSize - 2] = prevLastLog.endsWith(TRUNCATED_LOG) ? prevLastLog.replace(TRUNCATED_LOG, "") : prevLastLog;
+            newEntries[maxSize - 2] =
+                    prevLastLog.endsWith(TRUNCATED_LOG) ? prevLastLog.replace(TRUNCATED_LOG, "") : prevLastLog;
             newEntries[maxSize - 1] = logEntry.endsWith(TRUNCATED_LOG) ? logEntry : logEntry + TRUNCATED_LOG;
         } else {
             newEntries = new String[entries.length + 1];
             System.arraycopy(entries, 0, newEntries, 0, entries.length);
             newEntries[entries.length] = logEntry;
-
         }
         this.setProperty(Job.PROPERTY_JOB_PROGRESS_LOG, newEntries);
     }

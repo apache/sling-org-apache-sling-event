@@ -69,7 +69,7 @@ public class UpgradeTask {
      * Upgrade
      */
     public void run() {
-        if ( caps.isLeader() ) {
+        if (caps.isLeader()) {
             this.processJobsFromPreviousVersions();
         }
         this.upgradeBridgedJobs();
@@ -83,15 +83,16 @@ public class UpgradeTask {
     private void upgradeBridgedJobs() {
         final String path = configuration.getLocalJobsPath() + "/slingevent:eventadmin";
         final ResourceResolver resolver = configuration.createResourceResolver();
-        if ( resolver != null ) {
+        if (resolver != null) {
             try {
                 final Resource rootResource = resolver.getResource(path);
-                if ( rootResource != null ) {
+                if (rootResource != null) {
                     upgradeBridgedJobs(rootResource);
                 }
-                if ( caps.isLeader() ) {
-                    final Resource unassignedRoot = resolver.getResource(configuration.getUnassignedJobsPath() + "/slingevent:eventadmin");
-                    if ( unassignedRoot != null ) {
+                if (caps.isLeader()) {
+                    final Resource unassignedRoot =
+                            resolver.getResource(configuration.getUnassignedJobsPath() + "/slingevent:eventadmin");
+                    if (unassignedRoot != null) {
                         upgradeBridgedJobs(unassignedRoot);
                     }
                 }
@@ -108,7 +109,7 @@ public class UpgradeTask {
     private void upgradeBridgedJobs(final Resource topicResource) {
         final String topicName = topicResource.getName().replace('.', '/');
         final QueueConfigurationManager qcm = configuration.getQueueConfigurationManager();
-        if ( qcm == null ) {
+        if (qcm == null) {
             return;
         }
         final QueueInfo info = qcm.getQueueInfo(topicName);
@@ -122,12 +123,22 @@ public class UpgradeTask {
 
                     final Map<String, Object> props = new HashMap<>(vm);
                     final String newPath;
-                    if ( targetId != null ) {
-                        newPath = configuration.getAssginedJobsPath() + '/' + targetId + '/' + topicResource.getName() + rsrc.getPath().substring(topicResource.getPath().length());
+                    if (targetId != null) {
+                        newPath = configuration.getAssginedJobsPath()
+                                + '/'
+                                + targetId
+                                + '/'
+                                + topicResource.getName()
+                                + rsrc.getPath()
+                                        .substring(topicResource.getPath().length());
                         props.put(Job.PROPERTY_JOB_QUEUE_NAME, info.queueName);
                         props.put(Job.PROPERTY_JOB_TARGET_INSTANCE, targetId);
                     } else {
-                        newPath = configuration.getUnassignedJobsPath() + '/' + topicResource.getName() + rsrc.getPath().substring(topicResource.getPath().length());
+                        newPath = configuration.getUnassignedJobsPath()
+                                + '/'
+                                + topicResource.getName()
+                                + rsrc.getPath()
+                                        .substring(topicResource.getPath().length());
                         props.remove(Job.PROPERTY_JOB_QUEUE_NAME);
                         props.remove(Job.PROPERTY_JOB_TARGET_INSTANCE);
                     }
@@ -136,7 +147,7 @@ public class UpgradeTask {
                         ResourceHelper.getOrCreateResource(topicResource.getResourceResolver(), newPath, props);
                         topicResource.getResourceResolver().delete(rsrc);
                         topicResource.getResourceResolver().commit();
-                    } catch ( final PersistenceException pe ) {
+                    } catch (final PersistenceException pe) {
                         logger.warn("Unable to move job from previous version " + rsrc.getPath(), pe);
                         topicResource.getResourceResolver().refresh();
                         topicResource.getResourceResolver().revert();
@@ -156,11 +167,12 @@ public class UpgradeTask {
      */
     private void processJobsFromPreviousVersions() {
         final ResourceResolver resolver = configuration.createResourceResolver();
-        if ( resolver != null ) {
+        if (resolver != null) {
             try {
                 this.processJobsFromPreviousVersions(resolver.getResource(configuration.getPreviousVersionAnonPath()));
-                this.processJobsFromPreviousVersions(resolver.getResource(configuration.getPreviousVersionIdentifiedPath()));
-            } catch ( final PersistenceException pe ) {
+                this.processJobsFromPreviousVersions(
+                        resolver.getResource(configuration.getPreviousVersionIdentifiedPath()));
+            } catch (final PersistenceException pe) {
                 this.logger.warn("Problems moving jobs from previous version.", pe);
             } finally {
                 resolver.close();
@@ -172,14 +184,14 @@ public class UpgradeTask {
      * Recursively find jobs and move them
      */
     private void processJobsFromPreviousVersions(final Resource rsrc) throws PersistenceException {
-        if ( rsrc != null && caps.isActive() ) {
-            if ( rsrc.isResourceType(ResourceHelper.RESOURCE_TYPE_JOB) ) {
+        if (rsrc != null && caps.isActive()) {
+            if (rsrc.isResourceType(ResourceHelper.RESOURCE_TYPE_JOB)) {
                 this.moveJobFromPreviousVersion(rsrc);
             } else {
-                for(final Resource child : rsrc.getChildren()) {
+                for (final Resource child : rsrc.getChildren()) {
                     this.processJobsFromPreviousVersions(child);
                 }
-                if ( caps.isActive() ) {
+                if (caps.isActive()) {
                     rsrc.getResourceResolver().delete(rsrc);
                     rsrc.getResourceResolver().commit();
                     rsrc.getResourceResolver().refresh();
@@ -191,8 +203,7 @@ public class UpgradeTask {
     /**
      * Move a single job
      */
-    private void moveJobFromPreviousVersion(final Resource jobResource)
-    throws PersistenceException {
+    private void moveJobFromPreviousVersion(final Resource jobResource) throws PersistenceException {
         final ResourceResolver resolver = jobResource.getResourceResolver();
 
         try {
@@ -200,11 +211,11 @@ public class UpgradeTask {
             // check for binary properties
             Map<String, Object> binaryProperties = new HashMap<>();
             final ObjectInputStream ois = vm.get("slingevent:properties", ObjectInputStream.class);
-            if ( ois != null ) {
+            if (ois != null) {
                 try {
                     int length = ois.readInt();
-                    for(int i=0;i<length;i++) {
-                        final String key = (String)ois.readObject();
+                    for (int i = 0; i < length; i++) {
+                        final String key = (String) ois.readObject();
                         final Object value = ois.readObject();
                         binaryProperties.put(key, value);
                     }
@@ -225,7 +236,7 @@ public class UpgradeTask {
 
             final Map<String, Object> properties = ResourceHelper.cloneValueMap(vm);
 
-            final String topic = (String)properties.remove("slingevent:topic");
+            final String topic = (String) properties.remove("slingevent:topic");
             properties.put(ResourceHelper.PROPERTY_JOB_TOPIC, topic);
 
             properties.remove(Job.PROPERTY_JOB_QUEUE_NAME);
@@ -234,25 +245,26 @@ public class UpgradeTask {
             properties.putAll(binaryProperties);
             properties.remove("slingevent:properties");
 
-            if ( !properties.containsKey(Job.PROPERTY_JOB_RETRIES) ) {
-                properties.put(Job.PROPERTY_JOB_RETRIES, 10); // we put a dummy value here; this gets updated by the queue
+            if (!properties.containsKey(Job.PROPERTY_JOB_RETRIES)) {
+                properties.put(
+                        Job.PROPERTY_JOB_RETRIES, 10); // we put a dummy value here; this gets updated by the queue
             }
-            if ( !properties.containsKey(Job.PROPERTY_JOB_RETRY_COUNT) ) {
+            if (!properties.containsKey(Job.PROPERTY_JOB_RETRY_COUNT)) {
                 properties.put(Job.PROPERTY_JOB_RETRY_COUNT, 0);
             }
 
             final List<InstanceDescription> potentialTargets = caps.getPotentialTargets(topic);
             String targetId = null;
-            if ( potentialTargets != null && potentialTargets.size() > 0 ) {
+            if (potentialTargets != null && potentialTargets.size() > 0) {
                 final QueueConfigurationManager qcm = configuration.getQueueConfigurationManager();
-                if ( qcm == null ) {
+                if (qcm == null) {
                     resolver.revert();
                     return;
                 }
                 final QueueInfo info = qcm.getQueueInfo(topic);
                 logger.debug("Found queue {} for {}", info.queueConfiguration, topic);
                 targetId = caps.detectTarget(topic, vm, info);
-                if ( targetId != null ) {
+                if (targetId != null) {
                     properties.put(Job.PROPERTY_JOB_QUEUE_NAME, info.queueName);
                     properties.put(Job.PROPERTY_JOB_TARGET_INSTANCE, targetId);
                     properties.put(Job.PROPERTY_JOB_RETRIES, info.queueConfiguration.getMaxRetries());

@@ -37,13 +37,11 @@ public abstract class NotificationUtility {
     /**
      * Helper method for sending the notification events.
      */
-    public static void sendNotification(final EventAdmin eventAdmin,
-            final String eventTopic,
-            final Job job,
-            final Long time) {
-        if ( eventAdmin != null ) {
+    public static void sendNotification(
+            final EventAdmin eventAdmin, final String eventTopic, final Job job, final Long time) {
+        if (eventAdmin != null) {
             // create new copy of job object
-            final Job jobCopy = new JobImpl(job.getTopic(), job.getId(), ((JobImpl)job).getProperties());
+            final Job jobCopy = new JobImpl(job.getTopic(), job.getId(), ((JobImpl) job).getProperties());
             sendNotificationInternal(eventAdmin, eventTopic, jobCopy, time);
         }
     }
@@ -51,16 +49,14 @@ public abstract class NotificationUtility {
     /**
      * Helper method for sending the notification events.
      */
-    private static void sendNotificationInternal(final EventAdmin eventAdmin,
-            final String eventTopic,
-            final Job job,
-            final Long time) {
+    private static void sendNotificationInternal(
+            final EventAdmin eventAdmin, final String eventTopic, final Job job, final Long time) {
         final Dictionary<String, Object> eventProps = new Hashtable<String, Object>();
         // add basic job properties
         eventProps.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_ID, job.getId());
         eventProps.put(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC, job.getTopic());
         // copy payload
-        for(final String name : job.getPropertyNames()) {
+        for (final String name : job.getPropertyNames()) {
             eventProps.put(name, job.getProperty(name));
         }
         // remove async handler
@@ -68,10 +64,9 @@ public abstract class NotificationUtility {
         // add timestamp
         eventProps.put(EventConstants.TIMESTAMP, System.currentTimeMillis());
         // add internal time information
-        if ( time != null ) {
+        if (time != null) {
             eventProps.put(PROPERTY_TIME, time);
         }
         eventAdmin.postEvent(new Event(eventTopic, eventProps));
     }
-
 }

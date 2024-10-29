@@ -18,15 +18,10 @@
  */
 package org.apache.sling.event.impl.jobs.queues;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.math.BigInteger;
 import java.util.HashMap;
 
+import com.codahale.metrics.MetricRegistry;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
@@ -56,7 +51,11 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
 
-import com.codahale.metrics.MetricRegistry;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class JobExecutionContextImplTest {
 
@@ -95,9 +94,11 @@ public class JobExecutionContextImplTest {
         context.registerService(StatisticsManager.class, statisticsManager);
         context.registerService(QueuesMBean.class, queuesMBean);
         context.registerService(Scheduler.class, scheduler);
-        context.registerService(JobExecutor.class, new TestJobExecutor(), new HashMap<String, Object>() {{
-            put(JobExecutor.PROPERTY_TOPICS, "test");
-        }});
+        context.registerService(JobExecutor.class, new TestJobExecutor(), new HashMap<String, Object>() {
+            {
+                put(JobExecutor.PROPERTY_TOPICS, "test");
+            }
+        });
 
         jobManager = new JobManagerImpl();
         context.registerInjectActivateService(jobManager, new HashMap<String, Object>());
@@ -116,7 +117,9 @@ public class JobExecutionContextImplTest {
         assertEquals("testValue", job.getProperty("test", String.class));
 
         final String testValue;
-        Iterable<Resource> resources = context.resourceResolver().getResource("/var/eventing/jobs/assigned").getChildren();
+        Iterable<Resource> resources = context.resourceResolver()
+                .getResource("/var/eventing/jobs/assigned")
+                .getChildren();
         ValueMap props = resources.iterator().next().adaptTo(ValueMap.class);
         testValue = props.get("test", String.class);
         assertEquals("testValue", testValue);
@@ -139,23 +142,24 @@ public class JobExecutionContextImplTest {
         when(jobManagerConfig.getUniqueId(anyString())).then(new Answer<String>() {
             @Override
             public String answer(InvocationOnMock invocation) throws Throwable {
-                byte [] digest = java.security.MessageDigest.getInstance("md5").digest(String.valueOf(Math.random()).getBytes("UTF-8"));
+                byte[] digest = java.security.MessageDigest.getInstance("md5")
+                        .digest(String.valueOf(Math.random()).getBytes("UTF-8"));
                 BigInteger bigInt = new BigInteger(1, digest);
                 String hashtext = bigInt.toString(16);
-                return hashtext + "_" + String.valueOf((int)(Math.random()* 1000000));
+                return hashtext + "_" + String.valueOf((int) (Math.random() * 1000000));
             }
         });
         when(jobManagerConfig.getScheduledJobsPath(false)).thenReturn(jobsPath + "/scheduled-jobs");
-        when(jobManagerConfig.getUniquePath(eq(null), anyString(), anyString(), eq(null))).then(
-            new Answer<String>() {
-                @Override
-                public String answer(InvocationOnMock invocation) throws Throwable {
-                    String jobNodePath = jobsPath + "/jobs/assigned/" + invocation.getArgument(2);
-                    return jobNodePath;
-                }
-            }
-        );
-        when(jobManagerConfig.getAuditLogger()).thenReturn(LoggerFactory.getLogger("org.apache.sling.event.jobs.audit"));
+        when(jobManagerConfig.getUniquePath(eq(null), anyString(), anyString(), eq(null)))
+                .then(new Answer<String>() {
+                    @Override
+                    public String answer(InvocationOnMock invocation) throws Throwable {
+                        String jobNodePath = jobsPath + "/jobs/assigned/" + invocation.getArgument(2);
+                        return jobNodePath;
+                    }
+                });
+        when(jobManagerConfig.getAuditLogger())
+                .thenReturn(LoggerFactory.getLogger("org.apache.sling.event.jobs.audit"));
         ResourceResolver resolver = context.resourceResolver();
         when(jobManagerConfig.createResourceResolver()).thenReturn(resolver);
         return jobManagerConfig;

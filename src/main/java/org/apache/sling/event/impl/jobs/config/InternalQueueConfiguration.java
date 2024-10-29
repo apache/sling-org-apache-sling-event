@@ -35,97 +35,109 @@ import org.osgi.service.metatype.annotations.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(service=InternalQueueConfiguration.class,
-           name="org.apache.sling.event.jobs.QueueConfiguration",
-           configurationPolicy=ConfigurationPolicy.REQUIRE,
-           property={
-                   Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-           })
+@Component(
+        service = InternalQueueConfiguration.class,
+        name = "org.apache.sling.event.jobs.QueueConfiguration",
+        configurationPolicy = ConfigurationPolicy.REQUIRE,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 @Designate(ocd = InternalQueueConfiguration.Config.class, factory = true)
-public class InternalQueueConfiguration
-    implements QueueConfiguration, Comparable<InternalQueueConfiguration> {
+public class InternalQueueConfiguration implements QueueConfiguration, Comparable<InternalQueueConfiguration> {
 
-    @ObjectClassDefinition(name = "Apache Sling Job Queue Configuration",
-            description="The configuration of a job processing queue.")
+    @ObjectClassDefinition(
+            name = "Apache Sling Job Queue Configuration",
+            description = "The configuration of a job processing queue.")
     public @interface Config {
 
-        @AttributeDefinition(name="Name",
-              description="The name of the queue. If matching is used the token {0} can be used to substitute the real value.")
+        @AttributeDefinition(
+                name = "Name",
+                description =
+                        "The name of the queue. If matching is used the token {0} can be used to substitute the real value.")
         String queue_name();
 
-        @AttributeDefinition(name="Topics",
-              description="This value is required and lists the topics processed by "
+        @AttributeDefinition(
+                name = "Topics",
+                description = "This value is required and lists the topics processed by "
                         + "this queue. The value is a list of strings. If a string ends with a dot, "
                         + "all topics in exactly this package match. If the string ends with a star, "
                         + "all topics in this package and all subpackages match. If the string neither "
                         + "ends with a dot nor with a star, this is assumed to define an exact topic.")
         String[] queue_topics();
 
-        @AttributeDefinition(name = "Type",
-              description="The queue type.",
-              options = {@Option(label="Parallel",value="UNORDERED"),
-                      @Option(label="Ordered",value="ORDERED"),
-                      @Option(label="Topic Round Robin",value="TOPIC_ROUND_ROBIN")})
+        @AttributeDefinition(
+                name = "Type",
+                description = "The queue type.",
+                options = {
+                    @Option(label = "Parallel", value = "UNORDERED"),
+                    @Option(label = "Ordered", value = "ORDERED"),
+                    @Option(label = "Topic Round Robin", value = "TOPIC_ROUND_ROBIN")
+                })
         String queue_type() default "UNORDERED";
 
         @AttributeDefinition(
-                 name="Priority",
-                 description="The priority for the threads used by this queue. Default is norm.",
-                 options = {
-                         @Option(label="Norm",value="NORM"),
-                         @Option(label="Min",value="MIN"),
-                         @Option(label="Max",value="MAX")
-                 })
-         String queue_priority() default ConfigurationConstants.DEFAULT_PRIORITY;
+                name = "Priority",
+                description = "The priority for the threads used by this queue. Default is norm.",
+                options = {
+                    @Option(label = "Norm", value = "NORM"),
+                    @Option(label = "Min", value = "MIN"),
+                    @Option(label = "Max", value = "MAX")
+                })
+        String queue_priority() default ConfigurationConstants.DEFAULT_PRIORITY;
 
-         @AttributeDefinition(name="Maximum Retries",
-                 description="The maximum number of times a failed job slated "
-                         + "for retries is actually retried. If a job has been retried this number of "
-                         + "times and still fails, it is not rescheduled and assumed to have failed. The "
-                         + "default value is 10.")
-         int queue_retries() default ConfigurationConstants.DEFAULT_RETRIES;
+        @AttributeDefinition(
+                name = "Maximum Retries",
+                description = "The maximum number of times a failed job slated "
+                        + "for retries is actually retried. If a job has been retried this number of "
+                        + "times and still fails, it is not rescheduled and assumed to have failed. The "
+                        + "default value is 10.")
+        int queue_retries() default ConfigurationConstants.DEFAULT_RETRIES;
 
-         @AttributeDefinition(name="Retry Delay",
-                 description="The number of milliseconds to sleep between two "
-                         + "consecutive retries of a job which failed and was set to be retried. The "
-                         + "default value is 2 seconds. This value is only relevant if there is a single "
-                         + "failed job in the queue. If there are multiple failed jobs, each job is "
-                         + "retried in turn without an intervening delay.")
-         long queue_retrydelay() default ConfigurationConstants.DEFAULT_RETRY_DELAY;
+        @AttributeDefinition(
+                name = "Retry Delay",
+                description = "The number of milliseconds to sleep between two "
+                        + "consecutive retries of a job which failed and was set to be retried. The "
+                        + "default value is 2 seconds. This value is only relevant if there is a single "
+                        + "failed job in the queue. If there are multiple failed jobs, each job is "
+                        + "retried in turn without an intervening delay.")
+        long queue_retrydelay() default ConfigurationConstants.DEFAULT_RETRY_DELAY;
 
-         @AttributeDefinition(name="Maximum Parallel Jobs",
-                 description="The maximum number of parallel jobs started for this queue. "
-                         + "A value of -1 is substituted with the number of available processors. "
-                         + "Positive integer values specify number of processors to use.  Can be greater than number of processors. "
-                         + "A decimal number between 0.0 and 1.0 is treated as a fraction of available processors. "
-                         + "For example 0.5 means half of the available processors. For ordered queue types this value is ignored (always enforced to be 1).")
-         double queue_maxparallel() default ConfigurationConstants.DEFAULT_MAX_PARALLEL;
+        @AttributeDefinition(
+                name = "Maximum Parallel Jobs",
+                description =
+                        "The maximum number of parallel jobs started for this queue. "
+                                + "A value of -1 is substituted with the number of available processors. "
+                                + "Positive integer values specify number of processors to use.  Can be greater than number of processors. "
+                                + "A decimal number between 0.0 and 1.0 is treated as a fraction of available processors. "
+                                + "For example 0.5 means half of the available processors. For ordered queue types this value is ignored (always enforced to be 1).")
+        double queue_maxparallel() default ConfigurationConstants.DEFAULT_MAX_PARALLEL;
 
-         @AttributeDefinition(name="Keep History",
-              description="If this option is enabled, successful finished jobs are kept "
+        @AttributeDefinition(
+                name = "Keep History",
+                description = "If this option is enabled, successful finished jobs are kept "
                         + "to provide a complete history.")
-         boolean queue_keepJobs() default false;
+        boolean queue_keepJobs() default false;
 
-         @AttributeDefinition(name="Prefer Creation Instance",
-              description="If this option is enabled, the jobs are tried to "
+        @AttributeDefinition(
+                name = "Prefer Creation Instance",
+                description = "If this option is enabled, the jobs are tried to "
                         + "be run on the instance where the job was created.")
-         boolean queue_preferRunOnCreationInstance() default false;
+        boolean queue_preferRunOnCreationInstance() default false;
 
-         @AttributeDefinition(name="Thread Pool Size",
-                 description="Optional configuration value for a thread pool to be used by "
-                         + "this queue. If this is value has a positive number of threads configuration, this queue uses "
-                         + "an own thread pool with the configured number of threads.")
-         int queue_threadPoolSize() default 0;
+        @AttributeDefinition(
+                name = "Thread Pool Size",
+                description = "Optional configuration value for a thread pool to be used by "
+                        + "this queue. If this is value has a positive number of threads configuration, this queue uses "
+                        + "an own thread pool with the configured number of threads.")
+        int queue_threadPoolSize() default 0;
 
-         @AttributeDefinition(name="Ranking",
-              description="Integer value defining the ranking of this queue configuration. "
+        @AttributeDefinition(
+                name = "Ranking",
+                description = "Integer value defining the ranking of this queue configuration. "
                         + "If more than one queue matches a job topic, the one with the highest ranking is used.")
-         int service_ranking() default 0;
+        int service_ranking() default 0;
 
-         // Internal Name hint for web console.
-         String webconsole_configurationFactory_nameHint() default "Queue: {" + ConfigurationConstants.PROP_NAME + "}";
-
-     }
+        // Internal Name hint for web console.
+        String webconsole_configurationFactory_nameHint() default "Queue: {" + ConfigurationConstants.PROP_NAME + "}";
+    }
 
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -192,13 +204,13 @@ public class InternalQueueConfiguration
         this.name = config.queue_name();
         try {
             this.priority = ThreadPriority.valueOf(config.queue_priority());
-        } catch ( final IllegalArgumentException iae) {
+        } catch (final IllegalArgumentException iae) {
             logger.warn("Invalid value for queue priority. Using default instead of : {}", config.queue_priority());
             this.priority = ThreadPriority.valueOf(ConfigurationConstants.DEFAULT_PRIORITY);
         }
         try {
             this.type = Type.valueOf(config.queue_type());
-        } catch ( final IllegalArgumentException iae) {
+        } catch (final IllegalArgumentException iae) {
             logger.error("Invalid value for queue type configuration: {}", config.queue_type());
             this.type = null;
         }
@@ -222,18 +234,18 @@ public class InternalQueueConfiguration
                 this.maxParallelProcesses = (int) Math.round(cores * inMaxParallel);
             } else {
                 logger.warn("Invalid queue max parallel value for queue {}. Using {}", this.name, cores);
-                this.maxParallelProcesses =  cores;
+                this.maxParallelProcesses = cores;
             }
         }
         logger.debug("Thread pool size for {} was set to {}", this.name, this.maxParallelProcesses);
 
         // ignore parallel setting for ordered queues
-        if ( this.type == Type.ORDERED ) {
+        if (this.type == Type.ORDERED) {
             this.maxParallelProcesses = 1;
         }
         final String[] topicsParam = config.queue_topics();
         this.matchers = TopicMatcherHelper.buildMatchers(topicsParam);
-        if ( this.matchers == null ) {
+        if (this.matchers == null) {
             this.topics = null;
         } else {
             this.topics = topicsParam;
@@ -242,7 +254,7 @@ public class InternalQueueConfiguration
         this.serviceRanking = config.service_ranking();
         this.ownThreadPoolSize = config.queue_threadPoolSize();
         this.preferCreationInstance = config.queue_preferRunOnCreationInstance();
-        this.pid = (String)props.get(Constants.SERVICE_PID);
+        this.pid = (String) props.get(Constants.SERVICE_PID);
         this.valid = this.checkIsValid();
     }
 
@@ -251,28 +263,28 @@ public class InternalQueueConfiguration
      * If it is invalid, it is ignored.
      */
     private boolean checkIsValid() {
-        if ( type == null ) {
+        if (type == null) {
             return false;
         }
         boolean hasMatchers = false;
-        if ( this.matchers != null ) {
-            for(final TopicMatcher m : this.matchers ) {
-                if ( m != null ) {
+        if (this.matchers != null) {
+            for (final TopicMatcher m : this.matchers) {
+                if (m != null) {
                     hasMatchers = true;
                     break;
                 }
             }
         }
-        if ( !hasMatchers ) {
+        if (!hasMatchers) {
             return false;
         }
-        if ( name == null || name.length() == 0 ) {
+        if (name == null || name.length() == 0) {
             return false;
         }
-        if ( retries < -1 ) {
+        if (retries < -1) {
             return false;
         }
-        if ( maxParallelProcesses < 1 ) {
+        if (maxParallelProcesses < 1) {
             return false;
         }
         return true;
@@ -288,11 +300,11 @@ public class InternalQueueConfiguration
      * @return The queue name or <code>null</code>
      */
     public String match(final String topic) {
-        if ( this.matchers != null ) {
-            for(final TopicMatcher m : this.matchers ) {
-                if ( m != null ) {
+        if (this.matchers != null) {
+            for (final TopicMatcher m : this.matchers) {
+                if (m != null) {
                     final String rep = m.match(topic);
-                    if ( rep != null ) {
+                    if (rep != null) {
                         return this.name.replace("{0}", rep);
                     }
                 }
@@ -377,26 +389,26 @@ public class InternalQueueConfiguration
 
     @Override
     public String toString() {
-        return "Queue-Configuration(" + this.hashCode() + ") : {" +
-            "name=" + this.name +
-            ", type=" + this.type +
-            ", topics=" + (this.matchers == null ? "[]" : Arrays.toString(this.matchers)) +
-            ", maxParallelProcesses=" + this.maxParallelProcesses +
-            ", retries=" + this.retries +
-            ", retryDelayInMs=" + this.retryDelay +
-            ", keepJobs=" + this.keepJobs +
-            ", preferRunOnCreationInstance=" + this.preferCreationInstance +
-            ", ownThreadPoolSize=" + this.ownThreadPoolSize +
-            ", serviceRanking=" + this.serviceRanking +
-            ", pid=" + this.pid +
-            ", isValid=" + this.isValid() + "}";
+        return "Queue-Configuration(" + this.hashCode() + ") : {" + "name="
+                + this.name + ", type="
+                + this.type + ", topics="
+                + (this.matchers == null ? "[]" : Arrays.toString(this.matchers)) + ", maxParallelProcesses="
+                + this.maxParallelProcesses + ", retries="
+                + this.retries + ", retryDelayInMs="
+                + this.retryDelay + ", keepJobs="
+                + this.keepJobs + ", preferRunOnCreationInstance="
+                + this.preferCreationInstance + ", ownThreadPoolSize="
+                + this.ownThreadPoolSize + ", serviceRanking="
+                + this.serviceRanking + ", pid="
+                + this.pid + ", isValid="
+                + this.isValid() + "}";
     }
 
     @Override
     public int compareTo(final InternalQueueConfiguration other) {
-        if ( this.serviceRanking < other.serviceRanking ) {
+        if (this.serviceRanking < other.serviceRanking) {
             return 1;
-        } else if ( this.serviceRanking > other.serviceRanking ) {
+        } else if (this.serviceRanking > other.serviceRanking) {
             return -1;
         }
         return 0;

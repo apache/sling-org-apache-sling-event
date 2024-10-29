@@ -89,8 +89,8 @@ public abstract class ResourceHelper {
      * Check if this property should be ignored
      */
     public static boolean ignoreProperty(final String name) {
-        for(final String prop : IGNORE_PROPERTIES) {
-            if ( prop.equals(name) ) {
+        for (final String prop : IGNORE_PROPERTIES) {
+            if (prop.equals(name)) {
                 return true;
             }
         }
@@ -122,7 +122,7 @@ public abstract class ResourceHelper {
      * @return the filtered queue name
      */
     public static String filterQueueName(final String queueName) {
-        if ( queueName.equals(MainQueueConfiguration.MAIN_QUEUE_NAME) ) {
+        if (queueName.equals(MainQueueConfiguration.MAIN_QUEUE_NAME)) {
             return queueName;
         } else {
             return ResourceHelper.filterName(queueName);
@@ -135,13 +135,13 @@ public abstract class ResourceHelper {
      * @return The filtered node name.
      */
     public static String filterName(final String resourceName) {
-        if ( resourceName == null ) {
+        if (resourceName == null) {
             return null;
         }
         final StringBuilder sb = new StringBuilder(resourceName.length());
         char lastAdded = 0;
 
-        for(int i=0; i < resourceName.length(); i++) {
+        for (int i = 0; i < resourceName.length(); i++) {
             final char c = resourceName.charAt(i);
             char toAdd = c;
 
@@ -152,7 +152,7 @@ public abstract class ResourceHelper {
                 }
                 toAdd = REPLACEMENT_CHAR;
 
-            } else if(i == 0 && Character.isDigit(c)) {
+            } else if (i == 0 && Character.isDigit(c)) {
                 sb.append(REPLACEMENT_CHAR);
             }
 
@@ -160,7 +160,7 @@ public abstract class ResourceHelper {
             lastAdded = toAdd;
         }
 
-        if (sb.length()==0) {
+        if (sb.length() == 0) {
             sb.append(REPLACEMENT_CHAR);
         }
 
@@ -173,53 +173,57 @@ public abstract class ResourceHelper {
         List<Exception> hasReadError = null;
         try {
             final Map<String, Object> result = new HashMap<>(vm);
-            for(final Map.Entry<String, Object> entry : result.entrySet()) {
-                if ( entry.getKey().equals(PROPERTY_SCHEDULE_INFO) ) {
+            for (final Map.Entry<String, Object> entry : result.entrySet()) {
+                if (entry.getKey().equals(PROPERTY_SCHEDULE_INFO)) {
                     final String[] infoArray = vm.get(entry.getKey(), String[].class);
-                    if ( infoArray == null || infoArray.length == 0 ) {
-                        if ( hasReadError == null ) {
+                    if (infoArray == null || infoArray.length == 0) {
+                        if (hasReadError == null) {
                             hasReadError = new ArrayList<>();
                         }
-                        hasReadError.add(new Exception("Unable to deserialize property '" + entry.getKey() + "' : " + entry.getValue()));
+                        hasReadError.add(new Exception(
+                                "Unable to deserialize property '" + entry.getKey() + "' : " + entry.getValue()));
                     } else {
                         final List<ScheduleInfo> infos = new ArrayList<>();
-                        for(final String i : infoArray) {
+                        for (final String i : infoArray) {
                             final ScheduleInfoImpl info = ScheduleInfoImpl.deserialize(i);
-                            if ( info != null ) {
+                            if (info != null) {
                                 infos.add(info);
                             }
                         }
-                        if ( infos.size() < infoArray.length ) {
-                            if ( hasReadError == null ) {
+                        if (infos.size() < infoArray.length) {
+                            if (hasReadError == null) {
                                 hasReadError = new ArrayList<>();
                             }
-                            hasReadError.add(new Exception("Unable to deserialize property '" + entry.getKey() + "' : " + Arrays.toString(infoArray)));
+                            hasReadError.add(new Exception("Unable to deserialize property '" + entry.getKey() + "' : "
+                                    + Arrays.toString(infoArray)));
                         } else {
                             entry.setValue(infos);
                         }
                     }
                 }
-                if ( entry.getValue() instanceof InputStream ) {
+                if (entry.getValue() instanceof InputStream) {
                     final Object value = vm.get(entry.getKey(), Serializable.class);
-                    if ( value != null ) {
+                    if (value != null) {
                         entry.setValue(value);
                     } else {
-                        if ( hasReadError == null ) {
+                        if (hasReadError == null) {
                             hasReadError = new ArrayList<>();
                         }
                         // let's find out which class might be missing
                         ObjectInputStream ois = null;
                         try {
-                            ois = new ObjectInputStream((InputStream)entry.getValue());
+                            ois = new ObjectInputStream((InputStream) entry.getValue());
                             ois.readObject();
 
                             hasReadError.add(new Exception("Unable to deserialize property '" + entry.getKey() + "'"));
                         } catch (final ClassNotFoundException cnfe) {
-                             hasReadError.add(new Exception("Unable to deserialize property '" + entry.getKey() + "'", cnfe));
+                            hasReadError.add(
+                                    new Exception("Unable to deserialize property '" + entry.getKey() + "'", cnfe));
                         } catch (final IOException ioe) {
-                            hasReadError.add(new RuntimeException("Unable to deserialize property '" + entry.getKey() + "'", ioe));
+                            hasReadError.add(new RuntimeException(
+                                    "Unable to deserialize property '" + entry.getKey() + "'", ioe));
                         } finally {
-                            if ( ois != null ) {
+                            if (ois != null) {
                                 try {
                                     ois.close();
                                 } catch (IOException ignore) {
@@ -230,13 +234,13 @@ public abstract class ResourceHelper {
                     }
                 }
             }
-            if ( hasReadError != null ) {
+            if (hasReadError != null) {
                 result.put(PROPERTY_MARKER_READ_ERROR_LIST, hasReadError);
             }
             return result;
-        } catch ( final IllegalArgumentException iae) {
+        } catch (final IllegalArgumentException iae) {
             // the JCR implementation might throw an IAE if something goes wrong
-            throw (InstantiationException)new InstantiationException(iae.getMessage()).initCause(iae);
+            throw (InstantiationException) new InstantiationException(iae.getMessage()).initCause(iae);
         }
     }
 
@@ -245,21 +249,17 @@ public abstract class ResourceHelper {
         // trigger full loading
         try {
             vm.size();
-        } catch ( final IllegalArgumentException iae) {
+        } catch (final IllegalArgumentException iae) {
             // the JCR implementation might throw an IAE if something goes wrong
-            throw (InstantiationException)new InstantiationException(iae.getMessage()).initCause(iae);
+            throw (InstantiationException) new InstantiationException(iae.getMessage()).initCause(iae);
         }
         return vm;
     }
 
-    public static void getOrCreateBasePath(final ResourceResolver resolver,
-            final String path)
-    throws PersistenceException {
-        ResourceUtil.getOrCreateResource(resolver,
-                        path,
-                        ResourceHelper.RESOURCE_TYPE_FOLDER,
-                        ResourceHelper.RESOURCE_TYPE_FOLDER,
-                        true);
+    public static void getOrCreateBasePath(final ResourceResolver resolver, final String path)
+            throws PersistenceException {
+        ResourceUtil.getOrCreateResource(
+                resolver, path, ResourceHelper.RESOURCE_TYPE_FOLDER, ResourceHelper.RESOURCE_TYPE_FOLDER, true);
     }
 
     /**
@@ -270,17 +270,11 @@ public abstract class ResourceHelper {
      * @return The created resource
      * @throws PersistenceException If something goes wrong
      */
-    public static Resource createAndCommitResource(final ResourceResolver resolver,
-            final String path,
-            final Map<String, Object> props)
-    throws PersistenceException {
-       return ResourceUtil.getOrCreateResource(resolver,
-                        path,
-                        props,
-                        ResourceHelper.RESOURCE_TYPE_FOLDER,
-                        true);
+    public static Resource createAndCommitResource(
+            final ResourceResolver resolver, final String path, final Map<String, Object> props)
+            throws PersistenceException {
+        return ResourceUtil.getOrCreateResource(resolver, path, props, ResourceHelper.RESOURCE_TYPE_FOLDER, true);
     }
-
 
     /**
      * Creates or gets the resource at the given path.
@@ -294,22 +288,14 @@ public abstract class ResourceHelper {
      * @return The resource for the path.
      * @throws PersistenceException If something goes wrong
      */
-    public static Resource getOrCreateResource(final ResourceResolver resolver,
-            final String path,
-            final Map<String, Object> props)
-    throws PersistenceException {
+    public static Resource getOrCreateResource(
+            final ResourceResolver resolver, final String path, final Map<String, Object> props)
+            throws PersistenceException {
         // create parent path with auto commit set to true
         final String parentPath = ResourceUtil.getParent(path);
-        ResourceUtil.getOrCreateResource(resolver,
-                parentPath,
-                ResourceHelper.RESOURCE_TYPE_FOLDER,
-                ResourceHelper.RESOURCE_TYPE_FOLDER,
-                true);
+        ResourceUtil.getOrCreateResource(
+                resolver, parentPath, ResourceHelper.RESOURCE_TYPE_FOLDER, ResourceHelper.RESOURCE_TYPE_FOLDER, true);
         // now create resource itself
-        return ResourceUtil.getOrCreateResource(resolver,
-                        path,
-                        props,
-                        ResourceHelper.RESOURCE_TYPE_FOLDER,
-                        false);
+        return ResourceUtil.getOrCreateResource(resolver, path, props, ResourceHelper.RESOURCE_TYPE_FOLDER, false);
     }
 }

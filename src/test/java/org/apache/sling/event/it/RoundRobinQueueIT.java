@@ -59,17 +59,16 @@ public class RoundRobinQueueIT extends AbstractJobHandlingIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            // create round robin test queue
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, QUEUE_NAME)
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
-                .put(ConfigurationConstants.PROP_TOPICS, TOPIC + "/*")
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PAR)
-                .asOption()
-        );
+                baseConfiguration(),
+                // create round robin test queue
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, QUEUE_NAME)
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, TOPIC + "/*")
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PAR)
+                        .asOption());
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
@@ -77,47 +76,44 @@ public class RoundRobinQueueIT extends AbstractJobHandlingIT {
 
         final Barrier cb = new Barrier(2);
 
-        this.registerJobConsumer(TOPIC + "/start",
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC + "/start", new JobConsumer() {
 
-                    @Override
-                    public JobResult process(final Job job) {
-                        cb.block();
-                        return JobResult.OK;
-                    }
-                });
+            @Override
+            public JobResult process(final Job job) {
+                cb.block();
+                return JobResult.OK;
+            }
+        });
 
         // register new consumer and event handle
         final AtomicInteger count = new AtomicInteger(0);
         final AtomicInteger parallelCount = new AtomicInteger(0);
         final Set<Integer> maxParticipants = new HashSet<Integer>();
 
-        this.registerJobConsumer(TOPIC + "/*",
-                new JobConsumer() {
+        this.registerJobConsumer(TOPIC + "/*", new JobConsumer() {
 
-                    @Override
-                    public JobResult process(final Job job) {
-                        final int max = parallelCount.incrementAndGet();
-                        if ( max > MAX_PAR ) {
-                            parallelCount.decrementAndGet();
-                            return JobResult.FAILED;
-                        }
-                        synchronized ( maxParticipants ) {
-                            maxParticipants.add(max);
-                        }
-                        sleep(job.getProperty("sleep", 30));
-                        parallelCount.decrementAndGet();
-                        return JobResult.OK;
-                    }
-                });
-        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED,
-                new EventHandler() {
+            @Override
+            public JobResult process(final Job job) {
+                final int max = parallelCount.incrementAndGet();
+                if (max > MAX_PAR) {
+                    parallelCount.decrementAndGet();
+                    return JobResult.FAILED;
+                }
+                synchronized (maxParticipants) {
+                    maxParticipants.add(max);
+                }
+                sleep(job.getProperty("sleep", 30));
+                parallelCount.decrementAndGet();
+                return JobResult.OK;
+            }
+        });
+        this.registerEventHandler(NotificationConstants.TOPIC_JOB_FINISHED, new EventHandler() {
 
-                    @Override
-                    public void handleEvent(final Event event) {
-                        count.incrementAndGet();
-                    }
-                });
+            @Override
+            public void handleEvent(final Event event) {
+                count.incrementAndGet();
+            }
+        });
 
         // we first sent one event to get the queue started
         jobManager.addJob(TOPIC + "/start", null);
@@ -132,10 +128,10 @@ public class RoundRobinQueueIT extends AbstractJobHandlingIT {
         q.suspend();
 
         // we start "some" jobs:
-        for(int i = 0; i < NUM_JOBS; i++ ) {
+        for (int i = 0; i < NUM_JOBS; i++) {
             final String subTopic = TOPIC + "/sub" + (i % 10);
             final Map<String, Object> props = new HashMap<String, Object>();
-            if ( i < 10 ) {
+            if (i < 10) {
                 props.put("sleep", 300);
             } else {
                 props.put("sleep", 30);
@@ -144,7 +140,7 @@ public class RoundRobinQueueIT extends AbstractJobHandlingIT {
         }
         // start the queue
         q.resume();
-        while ( count.get() < NUM_JOBS  + 1 ) {
+        while (count.get() < NUM_JOBS + 1) {
             assertEquals("Failed count", 0, q.getStatistics().getNumberOfFailedJobs());
             assertEquals("Cancelled count", 0, q.getStatistics().getNumberOfCancelledJobs());
             sleep(300);
@@ -155,9 +151,9 @@ public class RoundRobinQueueIT extends AbstractJobHandlingIT {
         assertEquals("Finished count", NUM_JOBS + 1, q.getStatistics().getNumberOfFinishedJobs());
         assertEquals("Failed count", 0, q.getStatistics().getNumberOfFailedJobs());
         assertEquals("Cancelled count", 0, q.getStatistics().getNumberOfCancelledJobs());
-        for(int i=1; i <= MAX_PAR; i++) {
-            assertTrue("# Participants " + String.valueOf(i) + " not in " + maxParticipants,
-                    maxParticipants.contains(i));
+        for (int i = 1; i <= MAX_PAR; i++) {
+            assertTrue(
+                    "# Participants " + String.valueOf(i) + " not in " + maxParticipants, maxParticipants.contains(i));
         }
     }
 }
