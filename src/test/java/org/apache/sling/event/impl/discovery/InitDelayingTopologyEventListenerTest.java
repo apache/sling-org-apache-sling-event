@@ -54,10 +54,16 @@ public class InitDelayingTopologyEventListenerTest {
             }
         }
 
+        /**
+         * Waits until the number of received events is equal or greater than the expected number of events or until the timeout elapsed
+         * @param cnt the expected number of events
+         * @param timeout the timeout in milliseconds
+         * @throws InterruptedException
+         */
         public void waitForEventCnt(int cnt, long timeout) throws InterruptedException {
             final long start = System.currentTimeMillis();
             synchronized (events) {
-                while (events.size() != cnt) {
+                while (events.size() < cnt) {
                     final long now = System.currentTimeMillis();
                     final long remaining = (start + timeout) - now;
                     if (remaining > 0) {
@@ -70,6 +76,12 @@ public class InitDelayingTopologyEventListenerTest {
             }
         }
 
+        /**
+         * Assure that the number of received events is equal to the expected number of events and stays like that until the timeout elapsed.
+         * @param cnt expected number of events
+         * @param timeout milliseconds to wait for events
+         * @throws InterruptedException
+         */
         public void assureEventCnt(int cnt, int timeout) throws InterruptedException {
             final long start = System.currentTimeMillis();
             synchronized (events) {
@@ -91,7 +103,7 @@ public class InitDelayingTopologyEventListenerTest {
         void dumpEvents() {
             int i = 0;
             for (TopologyEvent event : events) {
-                System.err.printf("event %2d: %s%n", ++i, event.getType());
+                System.err.printf("Event %2d: %s%n", ++i, event.getType());
             }
         }
     }
