@@ -18,10 +18,12 @@
  */
 package org.apache.sling.event.it;
 
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.sling.event.impl.jobs.JobImpl;
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.JobManager;
@@ -99,6 +101,8 @@ public class HistoryIT extends AbstractJobHandlingIT {
                     }
 
                 });
+
+        OffsetDateTime start = OffsetDateTime.now();
         for(int i = 0; i< 10; i++) {
             this.addJob(i);
         }
@@ -117,6 +121,11 @@ public class HistoryIT extends AbstractJobHandlingIT {
         assertEquals(0, jobManager.findJobs(JobManager.QueryType.GIVEN_UP, TOPIC, -1, (Map<String, Object>[])null).size());
         assertEquals(0, jobManager.findJobs(JobManager.QueryType.STOPPED, TOPIC, -1, (Map<String, Object>[])null).size());
         assertEquals(7, jobManager.findJobs(JobManager.QueryType.SUCCEEDED, TOPIC, -1, (Map<String, Object>[])null).size());
+
+        Map<String, Object> template = new HashMap<>();
+        template.put(">=" + JobImpl.PROPERTY_JOB_STARTED_TIME, start.toString());
+        template.put("<" + JobImpl.PROPERTY_FINISHED_DATE, OffsetDateTime.now().toString());
+        assertEquals(7, jobManager.findJobs(JobManager.QueryType.SUCCEEDED, TOPIC, -1, template).size());
 
         // find all topics
         assertEquals(7, jobManager.findJobs(JobManager.QueryType.SUCCEEDED, null, -1, (Map<String, Object>[])null).size());
