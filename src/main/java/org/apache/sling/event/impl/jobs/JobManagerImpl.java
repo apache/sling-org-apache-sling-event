@@ -48,9 +48,6 @@ import org.apache.sling.event.impl.jobs.scheduling.JobSchedulerImpl;
 import org.apache.sling.event.impl.jobs.stats.StatisticsManager;
 import org.apache.sling.event.impl.jobs.tasks.CleanUpTask;
 import org.apache.sling.event.impl.support.Environment;
-import org.apache.sling.event.impl.support.Operation;
-import org.apache.sling.event.impl.support.PropertyNameAndOperation;
-import org.apache.sling.event.impl.support.PropertyNameAndOperationExtractor;
 import org.apache.sling.event.impl.support.ResourceHelper;
 import org.apache.sling.event.impl.support.ScheduleInfoImpl;
 import org.apache.sling.event.jobs.Job;
@@ -379,6 +376,14 @@ public class JobManagerImpl
         return this.internalRemoveJobById(jobId, true);
     }
 
+    private enum Operation {
+        LESS,
+        LESS_OR_EQUALS,
+        EQUALS,
+        GREATER_OR_EQUALS,
+        GREATER
+    }
+
     /**
      * @see org.apache.sling.event.jobs.JobManager#findJobs(org.apache.sling.event.jobs.JobManager.QueryType, java.lang.String, long, java.util.Map[])
      */
@@ -397,7 +402,6 @@ public class JobManagerImpl
         final List<Job> result = new ArrayList<>();
         final ResourceResolver resolver = this.configuration.createResourceResolver();
         final StringBuilder buf = new StringBuilder(64);
-        final PropertyNameAndOperationExtractor extractor = new PropertyNameAndOperationExtractor();
         try {
             buf.append(buildBaseQuery(this.configuration.getJobsBasePathWithSlash(), topic, type, isHistoryQuery));
 
@@ -418,10 +422,35 @@ public class JobManagerImpl
                     boolean first = true;
                     while ( i.hasNext() ) {
                         final Map.Entry<String, Object> current = i.next();
-
-                        PropertyNameAndOperation propertyNameAndOperation = extractor.extractPropertyNameAndOperation(current.getKey());
-                        String propName = ISO9075.encode(propertyNameAndOperation.getPropertyName());
-                        Operation op = propertyNameAndOperation.getOperation();
+                        final String key = ISO9075.encode(current.getKey());
+                        final char firstChar = key.length() > 0 ? key.charAt(0) : 0;
+                        final String propName;
+                        final Operation op;
+                        if ( firstChar == '=' ) {
+                            propName = key.substring(1);
+                            op  = Operation.EQUALS;
+                        } else if ( firstChar == '<' ) {
+                            final char secondChar = key.length() > 1 ? key.charAt(1) : 0;
+                            if ( secondChar == '=' ) {
+                                op = Operation.LESS_OR_EQUALS;
+                                propName = key.substring(2);
+                            } else {
+                                op = Operation.LESS;
+                                propName = key.substring(1);
+                            }
+                        } else if ( firstChar == '>' ) {
+                            final char secondChar = key.length() > 1 ? key.charAt(1) : 0;
+                            if ( secondChar == '=' ) {
+                                op = Operation.GREATER_OR_EQUALS;
+                                propName = key.substring(2);
+                            } else {
+                                op = Operation.GREATER;
+                                propName = key.substring(1);
+                            }
+                        } else {
+                            propName = key;
+                            op  = Operation.EQUALS;
+                        }
 
                         if ( first ) {
                             first = false;
@@ -748,6 +777,4 @@ public class JobManagerImpl
     public JobSchedulerImpl getJobScheduler() {
         return this.jobScheduler;
     }
-
-
 }

@@ -42,9 +42,6 @@ import org.apache.sling.event.impl.jobs.Utility;
 import org.apache.sling.event.impl.jobs.config.ConfigurationChangeListener;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
-import org.apache.sling.event.impl.support.Operation;
-import org.apache.sling.event.impl.support.PropertyNameAndOperation;
-import org.apache.sling.event.impl.support.PropertyNameAndOperationExtractor;
 import org.apache.sling.event.impl.support.ResourceHelper;
 import org.apache.sling.event.impl.support.ScheduleInfoImpl;
 import org.apache.sling.event.jobs.JobBuilder;
@@ -352,17 +349,49 @@ public class JobSchedulerImpl
         return (info.isSuspended() ? sb.suspend() : sb);
     }
 
+    private enum Operation {
+        LESS,
+        LESS_OR_EQUALS,
+        EQUALS,
+        GREATER_OR_EQUALS,
+        GREATER
+    }
+
     /**
      * Check if the job matches the template
      */
     private boolean match(final ScheduledJobInfoImpl job, final Map<String, Object> template) {
-        final PropertyNameAndOperationExtractor extractor = new PropertyNameAndOperationExtractor();
         if ( template != null ) {
             for(final Map.Entry<String, Object> current : template.entrySet()) {
                 final String key = current.getKey();
-                PropertyNameAndOperation propertyNameAndOperation = extractor.extractPropertyNameAndOperation(key);
-                String propName = propertyNameAndOperation.getPropertyName();
-                Operation op = propertyNameAndOperation.getOperation();
+                final char firstChar = key.length() > 0 ? key.charAt(0) : 0;
+                final String propName;
+                final Operation op;
+                if ( firstChar == '=' ) {
+                    propName = key.substring(1);
+                    op  = Operation.EQUALS;
+                } else if ( firstChar == '<' ) {
+                    final char secondChar = key.length() > 1 ? key.charAt(1) : 0;
+                    if ( secondChar == '=' ) {
+                        op = Operation.LESS_OR_EQUALS;
+                        propName = key.substring(2);
+                    } else {
+                        op = Operation.LESS;
+                        propName = key.substring(1);
+                    }
+                } else if ( firstChar == '>' ) {
+                    final char secondChar = key.length() > 1 ? key.charAt(1) : 0;
+                    if ( secondChar == '=' ) {
+                        op = Operation.GREATER_OR_EQUALS;
+                        propName = key.substring(2);
+                    } else {
+                        op = Operation.GREATER;
+                        propName = key.substring(1);
+                    }
+                } else {
+                    propName = key;
+                    op  = Operation.EQUALS;
+                }
                 final Object value = current.getValue();
 
                 if ( op == Operation.EQUALS ) {
