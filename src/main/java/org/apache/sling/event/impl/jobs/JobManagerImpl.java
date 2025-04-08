@@ -60,6 +60,8 @@ import org.apache.sling.event.jobs.ScheduledJobInfo;
 import org.apache.sling.event.jobs.Statistics;
 import org.apache.sling.event.jobs.TopicStatistics;
 import org.apache.sling.event.jobs.jmx.QueuesMBean;
+import org.apache.felix.hc.api.HealthCheck;
+import org.apache.felix.hc.api.Result;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -84,17 +86,20 @@ import com.codahale.metrics.MetricRegistry;
  * Implementation of the job manager.
  */
 @Component(immediate=true,
-    service={JobManager.class, EventHandler.class, Runnable.class},
+    service={JobManager.class, EventHandler.class, Runnable.class, HealthCheck.class},
     property = {
             Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
             Scheduler.PROPERTY_SCHEDULER_PERIOD + ":Long=60",
             Scheduler.PROPERTY_SCHEDULER_CONCURRENT + ":Boolean=false",
             Scheduler.PROPERTY_SCHEDULER_THREAD_POOL + "=" + ScheduleInfoImpl.EVENTING_THREADPOOL_NAME,
             EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_STARTED,
-            EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_UPDATED
+            EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_UPDATED,
+            "hc.name=JobManagerHealthCheck",
+            "hc.tags=sling,event,job,manager",
+            "hc.mbean.name=JobManagerHealthCheck"
     })
 public class JobManagerImpl
-    implements JobManager, EventHandler, Runnable {
+    implements JobManager, EventHandler, Runnable, HealthCheck {
     
     private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "event.scheduledJobs.count";
 
@@ -136,6 +141,8 @@ public class JobManagerImpl
     private org.apache.sling.event.impl.jobs.scheduling.JobSchedulerImpl jobScheduler;
 
     private volatile ServiceRegistration<ResourceChangeListener> changeListenerReg;
+
+    private volatile boolean isHealthy = true;
 
     /**
      * Activate this component.
@@ -190,6 +197,11 @@ public class JobManagerImpl
      */
     @Override
     public void run() {
+        // Check health status before running maintenance
+        if (!isHealthy) {
+            logger.warn("Skipping maintenance task due to unhealthy system state");
+            return;
+        }
         // invoke maintenance task
         final CleanUpTask task = this.maintenanceTask;
         if ( task != null ) {
@@ -202,6 +214,11 @@ public class JobManagerImpl
      */
     @Override
     public void handleEvent(final Event event) {
+        // Check health status before handling events
+        if (!isHealthy) {
+            logger.warn("Skipping event handling due to unhealthy system state");
+            return;
+        }
         this.jobScheduler.handleEvent(event);
     }
 
@@ -300,6 +317,11 @@ public class JobManagerImpl
      */
     @Override
     public Job addJob(String topic, Map<String, Object> properties) {
+        // Check health status before adding a job
+        if (!isHealthy) {
+            logger.warn("Skipping job addition due to unhealthy system state");
+            return null;
+        }
         return this.addJob(topic, properties, null);
     }
 
@@ -776,5 +798,36 @@ public class JobManagerImpl
 
     public JobSchedulerImpl getJobScheduler() {
         return this.jobScheduler;
+    }
+
+    @Override
+    public Result execute() {
+        try {
+            // Check if job processing is active
+            if (!configuration.isActive()) {
+                isHealthy = false;
+                return new Result(Result.Status.CRITICAL, "Job processing is not active");
+            }
+
+            // Check if topology capabilities are available
+            if (configuration.getTopologyCapabilities() == null) {
+                isHealthy = false;
+                return new Result(Result.Status.CRITICAL, "Topology capabilities not available");
+            }
+
+            // Check if instance is leader
+            if (!configuration.getTopologyCapabilities().isLeader()) {
+                isHealthy = false;
+                return new Result(Result.Status.CRITICAL, "Instance is not the leader");
+            }
+
+            isHealthy = true;
+            return new Result(Result.Status.OK, "Job manager is healthy");
+
+        } catch (Exception e) {
+            isHealthy = false;
+            logger.error("Error checking job manager health", e);
+            return new Result(Result.Status.CRITICAL, "Error checking health: " + e.getMessage());
+        }
     }
 }
