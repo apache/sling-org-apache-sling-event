@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigInteger;
 import java.util.HashMap;
 
+import org.apache.felix.hc.api.execution.HealthCheckExecutor;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
@@ -84,6 +85,7 @@ public class JobExecutionContextImplTest {
         StatisticsManager statisticsManager = mock(StatisticsManager.class);
         QueuesMBean queuesMBean = mock(QueuesMBean.class);
         Scheduler scheduler = mock(Scheduler.class);
+        HealthCheckExecutor healthCheckExecutor = mock(HealthCheckExecutor.class);
 
         context.registerService(JobManagerConfiguration.class, configuration);
         context.registerService(TopologyCapabilities.class, capabilities);
@@ -95,6 +97,9 @@ public class JobExecutionContextImplTest {
         context.registerService(StatisticsManager.class, statisticsManager);
         context.registerService(QueuesMBean.class, queuesMBean);
         context.registerService(Scheduler.class, scheduler);
+        context.registerService(HealthCheckExecutor.class, healthCheckExecutor, new HashMap<String, Object>() {{
+            put("service.pid", "healthCheckExecutor");
+        }});
         context.registerService(JobExecutor.class, new TestJobExecutor(), new HashMap<String, Object>() {{
             put(JobExecutor.PROPERTY_TOPICS, "test");
         }});
