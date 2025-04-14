@@ -744,13 +744,6 @@ public class JobManagerImpl
     public Job addJob(final String topic,
             final Map<String, Object> properties,
             final List<String> errors) {
-        if (!isEnabled()) {
-            logger.debug("Job Manager is disabled, cannot add job for topic {}", topic);
-            if (errors != null) {
-                errors.add("Job Manager is disabled");
-            }
-            return null;
-        }
         final String errorMessage = Utility.checkJob(topic, properties);
         if ( errorMessage != null ) {
             logger.warn("{}", errorMessage);
