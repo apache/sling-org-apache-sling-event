@@ -27,7 +27,6 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.jackrabbit.util.ISO9075;
 import org.apache.sling.api.resource.LoginException;
@@ -61,10 +60,6 @@ import org.apache.sling.event.jobs.ScheduledJobInfo;
 import org.apache.sling.event.jobs.Statistics;
 import org.apache.sling.event.jobs.TopicStatistics;
 import org.apache.sling.event.jobs.jmx.QueuesMBean;
-import org.apache.felix.hc.api.Result;
-import org.apache.felix.hc.api.execution.HealthCheckExecutor;
-import org.apache.felix.hc.api.execution.HealthCheckSelector;
-import org.apache.felix.hc.api.execution.HealthCheckExecutionResult;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -73,6 +68,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -83,6 +79,7 @@ import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import org.osgi.service.condition.Condition;
 
 
 /**
@@ -96,7 +93,8 @@ import com.codahale.metrics.MetricRegistry;
             Scheduler.PROPERTY_SCHEDULER_CONCURRENT + ":Boolean=false",
             Scheduler.PROPERTY_SCHEDULER_THREAD_POOL + "=" + ScheduleInfoImpl.EVENTING_THREADPOOL_NAME,
             EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_STARTED,
-            EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_UPDATED
+            EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_UPDATED,
+            "service.description=Job Manager"
     })
 public class JobManagerImpl
     implements JobManager, EventHandler, Runnable {
@@ -135,8 +133,11 @@ public class JobManagerImpl
     @Reference
     private QueueManager qManager;
 
-    @Reference
-    private HealthCheckExecutor healthCheckExecutor;
+    @Reference(
+        cardinality = ReferenceCardinality.OPTIONAL,
+        policy = ReferencePolicy.DYNAMIC
+    )
+    private volatile Condition condition;
 
     private volatile CleanUpTask maintenanceTask;
 
@@ -144,8 +145,6 @@ public class JobManagerImpl
     private org.apache.sling.event.impl.jobs.scheduling.JobSchedulerImpl jobScheduler;
 
     private volatile ServiceRegistration<ResourceChangeListener> changeListenerReg;
-
-    private volatile boolean isHealthy = true;
 
     /**
      * Activate this component.
@@ -200,12 +199,6 @@ public class JobManagerImpl
      */
     @Override
     public void run() {
-        // Check health status before running maintenance
-        checkHealthStatus();
-        if (!isHealthy) {
-            logger.warn("System is not healthy. Aborting operation.");
-            return;
-        }
         // invoke maintenance task
         final CleanUpTask task = this.maintenanceTask;
         if ( task != null ) {
@@ -218,12 +211,6 @@ public class JobManagerImpl
      */
     @Override
     public void handleEvent(final Event event) {
-        // Check health status before handling events
-        checkHealthStatus();
-        if (!isHealthy) {
-            logger.warn("System is not healthy. Aborting operation.");
-            return;
-        }
         this.jobScheduler.handleEvent(event);
     }
 
@@ -322,12 +309,6 @@ public class JobManagerImpl
      */
     @Override
     public Job addJob(String topic, Map<String, Object> properties) {
-        // Check health status before adding a job
-        checkHealthStatus();
-        if (!isHealthy) {
-            logger.warn("System is not healthy. Aborting operation.");
-            return null;
-        }
         return this.addJob(topic, properties, null);
     }
 
@@ -806,38 +787,4 @@ public class JobManagerImpl
         return this.jobScheduler;
     }
 
-    /**
-     * Check the health status of the system by executing health checks with the configured tag
-     */
-    private void checkHealthStatus() {
-        try {
-            // Execute health checks with the configured tag
-            List<HealthCheckExecutionResult> results = healthCheckExecutor != null
-                    ? healthCheckExecutor.execute(HealthCheckSelector.tags("sling"))
-                    : null;
-
-            if (results == null || results.isEmpty()) {
-                isHealthy = false;
-                logger.warn("No health check results available. Marking system as unhealthy.");
-                return;
-            }
-
-            // Consider the system healthy only if all health checks pass
-            isHealthy = results.stream()
-                    .filter(result -> result != null && result.getHealthCheckResult() != null)
-                    .allMatch(result -> result.getHealthCheckResult().getStatus() == Result.Status.OK);
-
-            if (!isHealthy) {
-                logger.warn("System health check failed. Results: {}",
-                        results.stream()
-                                .filter(result -> result != null && result.getHealthCheckResult() != null &&
-                                        result.getHealthCheckResult().getStatus() != Result.Status.OK)
-                                .map(result -> result.getHealthCheckMetadata().getName() + ": " + result.getHealthCheckResult().getStatus())
-                                .collect(Collectors.joining(", ")));
-            }
-        } catch (Exception e) {
-            logger.error("Error executing health checks", e);
-            isHealthy = false;
-        }
-    }
 }

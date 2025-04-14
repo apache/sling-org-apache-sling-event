@@ -21,19 +21,12 @@ package org.apache.sling.event.impl.jobs.queues;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.math.BigInteger;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 
-import org.apache.felix.hc.api.Result;
-import org.apache.felix.hc.api.execution.HealthCheckExecutionResult;
-import org.apache.felix.hc.api.execution.HealthCheckExecutor;
-import org.apache.felix.hc.api.execution.HealthCheckSelector;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
@@ -91,33 +84,17 @@ public class JobExecutionContextImplTest {
         StatisticsManager statisticsManager = mock(StatisticsManager.class);
         QueuesMBean queuesMBean = mock(QueuesMBean.class);
         Scheduler scheduler = mock(Scheduler.class);
-        HealthCheckExecutor healthCheckExecutor = mock(HealthCheckExecutor.class);
-
-        // Mock health check to return OK status
-        when(healthCheckExecutor.execute(any(HealthCheckSelector.class))).thenAnswer(new Answer<List<HealthCheckExecutionResult>>() {
-            @Override
-            public List<HealthCheckExecutionResult> answer(InvocationOnMock invocation) {
-                HealthCheckExecutionResult result = mock(HealthCheckExecutionResult.class);
-                Result healthResult = mock(Result.class);
-                when(healthResult.getStatus()).thenReturn(Result.Status.OK);
-                when(result.getHealthCheckResult()).thenReturn(healthResult);
-                return Collections.singletonList(result);
-            }
-        });
 
         context.registerService(JobManagerConfiguration.class, configuration);
         context.registerService(TopologyCapabilities.class, capabilities);
         context.registerService(QueueConfigurationManager.class, queueConfigMgr);
         context.registerService(MetricRegistry.class, metric);
-        context.registerService(ThreadPoolManager.class, threadPoolManager);
         context.registerService(QueueManager.class, qManager);
         context.registerService(JobConsumerManager.class, jobConsumerManager);
+        context.registerService(ThreadPoolManager.class, threadPoolManager);
         context.registerService(StatisticsManager.class, statisticsManager);
         context.registerService(QueuesMBean.class, queuesMBean);
         context.registerService(Scheduler.class, scheduler);
-        context.registerService(HealthCheckExecutor.class, healthCheckExecutor, new HashMap<String, Object>() {{
-            put("service.pid", "healthCheckExecutor");
-        }});
         context.registerService(JobExecutor.class, new TestJobExecutor(), new HashMap<String, Object>() {{
             put(JobExecutor.PROPERTY_TOPICS, "test");
         }});
