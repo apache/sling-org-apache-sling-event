@@ -45,6 +45,7 @@ import org.apache.sling.event.jobs.JobManager.QueryType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.osgi.service.condition.Condition;
 import org.slf4j.Logger;
 
 public class JobManagerImplTest {
@@ -155,6 +156,8 @@ public class JobManagerImplTest {
 
         Object logger = FieldUtils.readDeclaredField(jobManager, "logger", true);
         FieldUtils.writeDeclaredField(logger, "currentLogLevel", level, true);
+        Condition condition = mock(Condition.class);
+        FieldUtils.writeDeclaredField(jobManager, "condition", condition, true);
 
         FieldUtils.writeDeclaredField(jobManager, "configuration", configuration, true);
         return jobManager;

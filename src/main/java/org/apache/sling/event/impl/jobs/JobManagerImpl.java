@@ -133,6 +133,7 @@ public class JobManagerImpl
     private QueueManager qManager;
 
     @Reference(
+        target = "(osgi.condition.id=true)",
         cardinality = ReferenceCardinality.OPTIONAL,
         policy = ReferencePolicy.DYNAMIC
     )
@@ -198,6 +199,9 @@ public class JobManagerImpl
      */
     @Override
     public void run() {
+        if (!isEnabled()) {
+            return;
+        }
         // invoke maintenance task
         final CleanUpTask task = this.maintenanceTask;
         if ( task != null ) {
@@ -210,6 +214,9 @@ public class JobManagerImpl
      */
     @Override
     public void handleEvent(final Event event) {
+        if (!isEnabled()) {
+            return;
+        }
         this.jobScheduler.handleEvent(event);
     }
 
@@ -737,6 +744,13 @@ public class JobManagerImpl
     public Job addJob(final String topic,
             final Map<String, Object> properties,
             final List<String> errors) {
+        if (!isEnabled()) {
+            logger.debug("Job Manager is disabled, cannot add job for topic {}", topic);
+            if (errors != null) {
+                errors.add("Job Manager is disabled");
+            }
+            return null;
+        }
         final String errorMessage = Utility.checkJob(topic, properties);
         if ( errorMessage != null ) {
             logger.warn("{}", errorMessage);
@@ -784,5 +798,13 @@ public class JobManagerImpl
 
     public JobSchedulerImpl getJobScheduler() {
         return this.jobScheduler;
+    }
+
+    /**
+     * Check if the job manager is enabled.
+     * @return true if the job manager is enabled, false otherwise
+     */
+    private boolean isEnabled() {
+        return condition != null;
     }
 }

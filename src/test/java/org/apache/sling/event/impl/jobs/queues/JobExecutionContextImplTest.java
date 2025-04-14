@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigInteger;
 import java.util.HashMap;
 
+import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
@@ -54,6 +55,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.osgi.service.condition.Condition;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
@@ -106,6 +108,12 @@ public class JobExecutionContextImplTest {
     @Test
     public void testSetProperty() {
         // Create a job - it will be written to the mock jcr
+        Condition condition = mock(Condition.class);
+        try {
+            FieldUtils.writeDeclaredField(jobManager, "condition", condition, true);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
         Job job = jobManager.addJob("test", null);
 
         // Process the job
