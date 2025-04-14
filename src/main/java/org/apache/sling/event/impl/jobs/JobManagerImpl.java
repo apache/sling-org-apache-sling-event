@@ -93,8 +93,7 @@ import org.osgi.service.condition.Condition;
             Scheduler.PROPERTY_SCHEDULER_CONCURRENT + ":Boolean=false",
             Scheduler.PROPERTY_SCHEDULER_THREAD_POOL + "=" + ScheduleInfoImpl.EVENTING_THREADPOOL_NAME,
             EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_STARTED,
-            EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_UPDATED,
-            "service.description=Job Manager"
+            EventConstants.EVENT_TOPIC + "=" + ResourceHelper.BUNDLE_EVENT_UPDATED
     })
 public class JobManagerImpl
     implements JobManager, EventHandler, Runnable {
@@ -786,5 +785,4 @@ public class JobManagerImpl
     public JobSchedulerImpl getJobScheduler() {
         return this.jobScheduler;
     }
-
 }
