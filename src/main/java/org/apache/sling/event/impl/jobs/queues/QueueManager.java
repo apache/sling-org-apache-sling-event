@@ -426,8 +426,7 @@ public class QueueManager
     private Set<String> scanTopics() {
         final Set<String> topics = new HashSet<>();
 
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
             final Resource baseResource = resolver.getResource(this.configuration.getLocalJobsPath());
 
             // sanity check - should never be null
@@ -440,8 +439,6 @@ public class QueueManager
                     topics.add(topic);
                 }
             }
-        } finally {
-            resolver.close();
         }
         return topics;
     }
