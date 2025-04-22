@@ -122,7 +122,7 @@ public class InternalQueueConfigurationTest {
         };
     }
 
-    @org.junit.Test public void testMaxParallel() {
+    @org.junit.Test public void testMaxParallelUsesProcessorBasedCalculator() {
         InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(-1));
         assertEquals(Runtime.getRuntime().availableProcessors(), c.getMaxParallel());
 
@@ -137,23 +137,9 @@ public class InternalQueueConfigurationTest {
         c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(0.5));
         assertEquals((int) Math.round(Runtime.getRuntime().availableProcessors() * 0.5), c.getMaxParallel());
 
-        // rounding
-        c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(0.90));
-        assertEquals((int) Math.round(Runtime.getRuntime().availableProcessors() * 0.9), c.getMaxParallel());
-
-        c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(0.99));
-        assertEquals((int) Math.round(Runtime.getRuntime().availableProcessors() * 0.99), c.getMaxParallel());
-
-        // Percentages can't go over 99% (0.99)
-        c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(1.01));
-        assertEquals(Runtime.getRuntime().availableProcessors(), c.getMaxParallel());
-
-        // Treat negative values same a -1 (all cores)
-        c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(-0.5));
-        assertEquals(Runtime.getRuntime().availableProcessors(), c.getMaxParallel());
-
-        c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(-2));
-        assertEquals(Runtime.getRuntime().availableProcessors(), c.getMaxParallel());
+        // specific amount
+        c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(5));
+        assertEquals((int) 5, c.getMaxParallel());
     }
 
     @org.junit.Test public void testTopicMatchersDot() {

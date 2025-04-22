@@ -33,6 +33,8 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -53,10 +55,18 @@ public class EventingThreadPool implements ThreadPool {
     public @interface Config {
 
         @AttributeDefinition(name = "Pool Size",
-              description="The size of the thread pool. This pool is used to execute jobs and therefore "
-                        + "limits the maximum number of jobs executed in parallel.")
-        int minPoolSize() default 35;
+                description = "The size of the thread pool. This pool is used to execute jobs and therefore "
+                        + "limits the maximum number of jobs executed in parallel. "
+                        + "A value of -1 is substituted with the number of available processors. "
+                        + "A decimal number between 0.0 and 1.0 is treated as a fraction of available processors. "
+                        + "For example 0.5 means half of the available processors. ")
+        double minPoolSize() default 35;
     }
+
+    /**
+     * Logger.
+     */
+    private static final Logger logger = LoggerFactory.getLogger(EventingThreadPool.class);
 
     @Reference(policyOption=ReferencePolicyOption.GREEDY)
     private ThreadPoolManager threadPoolManager;
@@ -86,9 +96,10 @@ public class EventingThreadPool implements ThreadPool {
         this.configure(config.minPoolSize());
     }
 
-    private void configure(final int maxPoolSize) {
+    private void configure(final double maxPoolSize) {
+        final int poolSize = ProcessorBasedCalculator.calculate(logger, maxPoolSize);
         final ModifiableThreadPoolConfig config = new ModifiableThreadPoolConfig();
-        config.setMinPoolSize(maxPoolSize);
+        config.setMinPoolSize(poolSize);
         config.setMaxPoolSize(config.getMinPoolSize());
         config.setQueueSize(-1); // unlimited
         config.setShutdownGraceful(true);
