@@ -41,7 +41,10 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.condition.Condition;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -198,6 +201,22 @@ public class JobManagerConfiguration {
 
     /** The topology capabilities. */
     private volatile TopologyCapabilities topologyCapabilities;
+
+    /** The condition that determines if the job manager is enabled. */
+    @Reference(
+        target = "(osgi.condition.id=true)",
+        cardinality = ReferenceCardinality.OPTIONAL,
+        policy = ReferencePolicy.DYNAMIC
+    )
+    private volatile Condition condition;
+
+    /**
+     * Get the condition that determines if the job manager is enabled.
+     * @return The condition or null if the job manager is disabled
+     */
+    public boolean isEnable() {
+        return condition != null;
+    }
 
     /**
      * Activate this component.

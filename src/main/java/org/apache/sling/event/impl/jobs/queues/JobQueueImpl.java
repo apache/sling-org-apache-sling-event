@@ -252,6 +252,10 @@ public class JobQueueImpl
      * This method might be called concurrently, therefore we use a guard
      */
     public void startJobs() {
+        if (!services.configuration.isEnable()) {
+            logger.debug("JobManager is disabled, skipping job starts for queue {}", queueName);
+            return;
+        }
         if ( this.startJobsGuard.compareAndSet(false, true) ) {
             // we start as many jobs in parallel as possible
             while ( this.running && !this.isOutdated.get() && !this.isSuspended() && this.available.tryAcquire() ) {

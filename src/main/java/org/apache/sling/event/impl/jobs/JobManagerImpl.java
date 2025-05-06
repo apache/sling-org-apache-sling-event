@@ -68,7 +68,6 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -79,7 +78,6 @@ import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import org.osgi.service.condition.Condition;
 
 
 /**
@@ -97,7 +95,7 @@ import org.osgi.service.condition.Condition;
     })
 public class JobManagerImpl
     implements JobManager, EventHandler, Runnable {
-    
+
     private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "event.scheduledJobs.count";
 
     /** Default logger. */
@@ -124,20 +122,13 @@ public class JobManagerImpl
 
     @Reference
     private StatisticsManager statisticsManager;
-    
-    
+
+
     @Reference(target = "(name=sling)", cardinality = ReferenceCardinality.OPTIONAL)
     private MetricRegistry metricRegistry;
 
     @Reference
     private QueueManager qManager;
-
-    @Reference(
-        target = "(osgi.condition.id=true)",
-        cardinality = ReferenceCardinality.OPTIONAL,
-        policy = ReferencePolicy.DYNAMIC
-    )
-    private volatile Condition condition;
 
     private volatile CleanUpTask maintenanceTask;
 
@@ -199,9 +190,6 @@ public class JobManagerImpl
      */
     @Override
     public void run() {
-        if (!isEnabled()) {
-            return;
-        }
         // invoke maintenance task
         final CleanUpTask task = this.maintenanceTask;
         if ( task != null ) {
@@ -214,9 +202,6 @@ public class JobManagerImpl
      */
     @Override
     public void handleEvent(final Event event) {
-        if (!isEnabled()) {
-            return;
-        }
         this.jobScheduler.handleEvent(event);
     }
 
@@ -791,13 +776,5 @@ public class JobManagerImpl
 
     public JobSchedulerImpl getJobScheduler() {
         return this.jobScheduler;
-    }
-
-    /**
-     * Check if the job manager is enabled.
-     * @return true if the job manager is enabled, false otherwise
-     */
-    private boolean isEnabled() {
-        return condition != null;
     }
 }
