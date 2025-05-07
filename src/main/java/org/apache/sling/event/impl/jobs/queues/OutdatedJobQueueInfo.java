@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore;
 /**
  * Encapsulates data required to survive queue outdating
  */
-class OutdatedJobQueueInfo {
+public class OutdatedJobQueueInfo {
 
     private final Semaphore available;
     private final int maxParallel;

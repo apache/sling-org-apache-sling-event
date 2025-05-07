@@ -314,6 +314,11 @@ public class JobQueueImpl
     }
 
     private void startJob(final JobHandler handler) {
+        if (!services.configuration.isEnable()) {
+            logger.debug("JobManager is disabled, stopping job {} in queue {}", handler.getJob().getId(), queueName);
+            handler.finished(Job.JobState.STOPPED, true, null);
+            return;
+        }
         try {
             this.closeMarker.set(false);
             try {

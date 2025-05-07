@@ -82,7 +82,7 @@ import org.slf4j.LoggerFactory;
 public class QueueManager
     implements Runnable, EventHandler, ConfigurationChangeListener {
 
-    static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
+    public static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
             QueuesMBean queuesMBean, ThreadPoolManager threadPoolManager, ThreadPool threadPool,
             JobManagerConfiguration configuration, StatisticsManager statisticsManager) {
         final QueueManager qm = new QueueManager();
@@ -161,6 +161,8 @@ public class QueueManager
         queueServices.statisticsManager = statisticsManager;
         queueServices.eventingThreadPool = this.threadPool;
         this.configuration.addListener(this);
+        // Start jobs immediately on startup
+        this.maintain();
         logger.info("Apache Sling Queue Manager started on instance {}", Environment.APPLICATION_ID);
     }
 
@@ -191,6 +193,11 @@ public class QueueManager
      * @see java.lang.Runnable#run()
      */
     void maintain() {
+        // Skip maintenance if job manager is disabled
+        if (!this.configuration.isEnable()) {
+            logger.debug("JobManager is disabled, skipping maintenance");
+            return;
+        }
         this.schedulerRuns++;
         logger.debug("Queue manager maintenance: Starting #{}", this.schedulerRuns);
 

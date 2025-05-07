@@ -219,6 +219,18 @@ public class JobManagerConfiguration {
     }
 
     /**
+     * Notify all queues about condition change
+     */
+    private void notifyConditionChange() {
+        synchronized ( this.listeners ) {
+            final TopologyCapabilities topologyCapabilities = this.topologyCapabilities;
+            for(final ConfigurationChangeListener listener : this.listeners) {
+                listener.configurationChanged(topologyCapabilities != null && condition != null);
+            }
+        }
+    }
+
+    /**
      * Activate this component.
      * @param props Configuration properties
      * @param config Configuration properties
