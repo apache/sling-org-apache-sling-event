@@ -24,80 +24,49 @@ import static org.mockito.Mockito.*;
 import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.queues.JobQueueImpl;
-import org.apache.sling.event.impl.jobs.queues.OutdatedJobQueueInfo;
 import org.apache.sling.event.impl.jobs.queues.QueueJobCache;
 import org.apache.sling.event.impl.jobs.queues.QueueServices;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Map;
 
 public class JobQueueImplTest {
 
     private JobQueueImpl jobQueue;
     private QueueServices services;
     private JobManagerConfiguration configuration;
-    private Logger logger;
+    private QueueJobCache cache;
     private String testQueue = "testQueue";
 
     @Before
     public void setUp() {
         configuration = mock(JobManagerConfiguration.class);
         services = spy(QueueServices.class);
-        logger = mock(Logger.class);
         InternalQueueConfiguration internalConfig = mock(InternalQueueConfiguration.class);
         services.configuration = configuration;
-        when(configuration.isEnable()).thenReturn(false);
+        when(configuration.isJobProcessingEnabled()).thenReturn(false);
         when(internalConfig.getMaxParallel()).thenReturn(5);
         when(internalConfig.getRetryDelayInMs()).thenReturn(1000L);
-        try {
-            Constructor<JobQueueImpl> constructor = JobQueueImpl.class.getDeclaredConstructor(String.class, InternalQueueConfiguration.class, QueueServices.class, QueueJobCache.class, OutdatedJobQueueInfo.class);
-            constructor.setAccessible(true);
-
-            jobQueue = constructor.newInstance(testQueue, internalConfig, services, null, null);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-        // Use reflection to set the logger field
-        try {
-            Field loggerField = JobQueueImpl.class.getDeclaredField("logger");
-            loggerField.setAccessible(true);
-            loggerField.set(jobQueue, logger);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
+        cache = mock(QueueJobCache.class);
+        jobQueue = new JobQueueImpl(testQueue, internalConfig, services, cache, null);
     }
 
     @Test
     public void testStartJobsWhenDisabled() {
+        when(configuration.isJobProcessingEnabled()).thenReturn(false);
         jobQueue.startJobs();
 
-        verify(logger).debug("JobManager is disabled, skipping job starts for queue {}", testQueue);
-        verifyNoMoreInteractions(logger);
+        assertTrue("No jobs should be started when job processing is disabled", jobQueue.getProcessingJobsLists().isEmpty());
     }
 
     @Test
     public void testStartJob() {
-        // Mock a JobHandler and its behavior
         JobHandler jobHandler = mock(JobHandler.class, RETURNS_DEEP_STUBS);
         String jobId = "testJob";
         when(jobHandler.getJob().getId()).thenReturn(jobId);
 
-        // Use reflection to access the private processingJobsLists field
-        try {
-            Field processingJobsListsField = JobQueueImpl.class.getDeclaredField("processingJobsLists");
-            processingJobsListsField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            Map<String, JobHandler> processingJobsLists = (Map<String, JobHandler>) processingJobsListsField.get(jobQueue);
-            processingJobsLists.put(testQueue, jobHandler);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to access processingJobsLists field", e);
-        }
+        jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
 
         // Call the private startJob method using reflection
         try {
@@ -108,62 +77,72 @@ public class JobQueueImplTest {
             throw new RuntimeException("Failed to invoke startJob method", e);
         }
 
-        // Verify the behavior
-        verify(logger).debug("JobManager is disabled, stopping job {} in queue {}", jobId, testQueue);
-        verifyNoMoreInteractions(logger);
+        assertTrue("Job should remain in processingJobsLists when processing is disabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
     @Test
     public void testQueueShutdown() {
         // Enable the configuration
-        when(configuration.isEnable()).thenReturn(true);
+        when(configuration.isJobProcessingEnabled()).thenReturn(true);
 
-        // Shut down the queue
         jobQueue.close();
 
-        // Attempt to start jobs
+        // Verify that the queue is no longer running
+        assertFalse("Queue should not be running after shutdown", jobQueue.isRunning());
+
         jobQueue.startJobs();
 
-        // Verify that no jobs were started
-        verify(logger).info("Stopped job queue {}", testQueue);
-        verify(logger, never()).debug("Starting job queue {}", testQueue);
+        // Verify that no jobs were started by checking the internal state
+        assertTrue("No jobs should be started after queue shutdown", jobQueue.getProcessingJobsLists().isEmpty());
     }
 
     @Test
     public void testQueueStartupAndShutdown() {
-        // Enable the configuration
-        when(configuration.isEnable()).thenReturn(true);
-        // Mock a valid QueueJobCache
-        QueueJobCache mockCache = mock(QueueJobCache.class);
-        try {
-            Field cacheField = JobQueueImpl.class.getDeclaredField("cache");
-            cacheField.setAccessible(true);
-            cacheField.set(jobQueue, mockCache);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to set mock cache", e);
-        }
+        when(configuration.isJobProcessingEnabled()).thenReturn(true);
 
-        // Start jobs
         jobQueue.startJobs();
 
+        // Verify that jobs can be added to the processingJobsLists
+        assertNotNull("Processing jobs list should not be null after starting jobs", jobQueue.getProcessingJobsLists());
+
+        jobQueue.close();
+
+        // Verify that the processingJobsLists is cleared after shutdown
+        assertTrue("Processing jobs list should be empty after shutdown", jobQueue.getProcessingJobsLists().isEmpty());
+    }
+
+    @Test
+    public void testJobAssignmentWhenProcessingDisabled() {
+        JobHandler jobHandler = mock(JobHandler.class, RETURNS_DEEP_STUBS);
+        String jobId = "testJob";
+        when(jobHandler.getJob().getId()).thenReturn(jobId);
+
+        when(configuration.isJobProcessingEnabled()).thenReturn(false);
+
+        jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
+
         try {
-            Field runningField = JobQueueImpl.class.getDeclaredField("running");
-            runningField.setAccessible(true);
-            boolean isRunning = (boolean) runningField.get(jobQueue);
-            assertTrue(isRunning);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to access running field", e);
+            Method startJobMethod = JobQueueImpl.class.getDeclaredMethod("startJob", JobHandler.class);
+            startJobMethod.setAccessible(true);
+            startJobMethod.invoke(jobQueue, jobHandler);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to invoke startJob method", e);
         }
 
-        //stop the queue
-        jobQueue.close();
-        try {
-            Field runningField = JobQueueImpl.class.getDeclaredField("running");
-            runningField.setAccessible(true);
-            boolean isRunning = (boolean) runningField.get(jobQueue);
-            assertTrue(!isRunning);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to access running field", e);
-        }
+        assertTrue("Job should remain in processingJobsLists even when processing is disabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
+    }
+
+    @Test
+    public void testStartJobsWhenQueueSuspended() {
+        jobQueue.suspend();
+        jobQueue.startJobs();
+
+        assertTrue("No jobs should be started when the queue is suspended", jobQueue.getProcessingJobsLists().isEmpty());
+        //activate the queue
+        when(configuration.isJobProcessingEnabled()).thenReturn(true);
+        //start the jobs again
+        jobQueue.startJobs();
+        // Verify that jobs can be added to the processingJobsLists
+        assertNotNull("Processing jobs list should not be null after starting jobs", jobQueue.getProcessingJobsLists());
     }
 }

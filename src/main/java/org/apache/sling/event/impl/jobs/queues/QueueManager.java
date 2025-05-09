@@ -161,8 +161,6 @@ public class QueueManager
         queueServices.statisticsManager = statisticsManager;
         queueServices.eventingThreadPool = this.threadPool;
         this.configuration.addListener(this);
-        // Start jobs immediately on startup
-        this.maintain();
         logger.info("Apache Sling Queue Manager started on instance {}", Environment.APPLICATION_ID);
     }
 
@@ -193,11 +191,6 @@ public class QueueManager
      * @see java.lang.Runnable#run()
      */
     void maintain() {
-        // Skip maintenance if job manager is disabled
-        if (!this.configuration.isEnable()) {
-            logger.debug("JobManager is disabled, skipping maintenance");
-            return;
-        }
         this.schedulerRuns++;
         logger.debug("Queue manager maintenance: Starting #{}", this.schedulerRuns);
 
@@ -398,9 +391,22 @@ public class QueueManager
             if ( active ) {
                 fullTopicScan();
             } else {
+                // Stop all running jobs before restarting
+                stopAllJobs();
                 this.restart();
             }
         }
+    }
+
+    /**
+     * Stop all running jobs in all queues
+     */
+    private void stopAllJobs() {
+        logger.debug("Stopping all running jobs...");
+        for (final JobQueueImpl queue : this.queues.values()) {
+            queue.stopAllJobs();
+        }
+        logger.debug("All running jobs stopped");
     }
 
     private void clearHaltedTopics(String logPrefix) {
