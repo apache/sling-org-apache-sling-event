@@ -82,7 +82,7 @@ import org.slf4j.LoggerFactory;
 public class QueueManager
     implements Runnable, EventHandler, ConfigurationChangeListener {
 
-    static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
+    public static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
             QueuesMBean queuesMBean, ThreadPoolManager threadPoolManager, ThreadPool threadPool,
             JobManagerConfiguration configuration, StatisticsManager statisticsManager) {
         final QueueManager qm = new QueueManager();
@@ -391,9 +391,22 @@ public class QueueManager
             if ( active ) {
                 fullTopicScan();
             } else {
+                // Stop all running jobs before restarting
+                stopAllJobs();
                 this.restart();
             }
         }
+    }
+
+    /**
+     * Stop all running jobs in all queues
+     */
+    private void stopAllJobs() {
+        logger.debug("Stopping all running jobs...");
+        for (final JobQueueImpl queue : this.queues.values()) {
+            queue.stopAllJobs();
+        }
+        logger.debug("All running jobs stopped");
     }
 
     private void clearHaltedTopics(String logPrefix) {

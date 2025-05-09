@@ -41,7 +41,10 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.condition.Condition;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -98,6 +101,11 @@ public class JobManagerConfiguration {
                         "Any attempt to add more information would result into purging of the least recent messages." +
                         "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
         int progresslog_maxCount() default -1;
+
+        @AttributeDefinition(name = "Job Processing Condition",
+                description = "If enabled, job processing will only occur when the 'org.apache.sling.event.jobs.processing.enabled' condition is present. " +
+                        "If disabled, job processing will always be enabled.")
+        boolean job_processing_condition() default false;
     }
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger("org.apache.sling.event.impl.jobs");
@@ -199,6 +207,54 @@ public class JobManagerConfiguration {
     /** The topology capabilities. */
     private volatile TopologyCapabilities topologyCapabilities;
 
+    /** The condition that determines if job processing is enabled. */
+    @Reference(
+        target = "(osgi.condition.id=org.apache.sling.event.jobs.processing.enabled)",
+        cardinality = ReferenceCardinality.OPTIONAL,
+        policy = ReferencePolicy.DYNAMIC
+    )
+    private volatile Condition jobProcessingEnabledCondition;
+
+    private boolean jobProcessingCondition;
+
+    /**
+     * Handle binding of the job processing condition.
+     * @param condition The condition being bound
+     */
+    protected void bindJobProcessingEnabledCondition(final Condition condition) {
+        this.jobProcessingEnabledCondition = condition;
+        // If condition becomes true, trigger maintenance to start processing jobs
+        if (condition != null) {
+            notifyListeners();
+        }
+    }
+
+    /**
+     * Handle unbinding of the job processing condition.
+     * @param condition The condition being unbound
+     */
+    protected void unbindJobProcessingEnabledCondition(final Condition condition) {
+        if (this.jobProcessingEnabledCondition == condition) {
+            this.jobProcessingEnabledCondition = null;
+            // Signal jobs to stop before notifying listeners
+            stopProcessing();
+            notifyListeners();
+        }
+    }
+
+    /**
+     * Check if job processing is enabled.
+     * This only affects whether jobs are processed/executed - jobs can still be
+     * assigned, stored, and managed through the API even when processing is disabled.
+     * @return true if job processing is enabled, false otherwise
+     */
+    public boolean isJobProcessingEnabled() {
+        if (!jobProcessingCondition) {
+            return true;
+        }
+        return jobProcessingEnabledCondition != null;
+    }
+
     /**
      * Activate this component.
      * @param props Configuration properties
@@ -269,6 +325,7 @@ public class JobManagerConfiguration {
         // an immediate effect - it will only have an effect on next activation.
         // (as 'startup delay runnable' is already scheduled in activate)
         this.startupDelay = config.startup_delay();
+        this.jobProcessingCondition = config.job_processing_condition();
 
         if (config.progresslog_maxCount() < 0) {
             this.progressLogMaxCount = Integer.MAX_VALUE;
@@ -565,7 +622,7 @@ public class JobManagerConfiguration {
         synchronized ( this.listeners ) {
             final TopologyCapabilities caps = this.topologyCapabilities;
             for(final ConfigurationChangeListener l : this.listeners) {
-                l.configurationChanged(caps != null);
+                l.configurationChanged(caps != null && isJobProcessingEnabled());
             }
         }
     }
@@ -623,7 +680,7 @@ public class JobManagerConfiguration {
     public void addListener(final ConfigurationChangeListener service) {
         synchronized ( this.listeners ) {
             this.listeners.add(service);
-            service.configurationChanged(this.topologyCapabilities != null);
+            service.configurationChanged(this.topologyCapabilities != null && isJobProcessingEnabled());
         }
     }
 

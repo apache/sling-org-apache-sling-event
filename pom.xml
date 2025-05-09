@@ -376,6 +376,12 @@
             <version>2.6.7</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.condition</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
 
     </dependencies>
 </project>
