@@ -211,7 +211,8 @@ public class JobManagerConfiguration {
     @Reference(
         target = "(osgi.condition.id=org.apache.sling.event.jobs.processing.enabled)",
         cardinality = ReferenceCardinality.OPTIONAL,
-        policy = ReferencePolicy.DYNAMIC
+        policy = ReferencePolicy.DYNAMIC,
+        policyOption = ReferencePolicyOption.GREEDY
     )
     private volatile Condition jobProcessingEnabledCondition;
 
