@@ -56,11 +56,6 @@ public class JobManagerConfigurationTestFactory {
             public int progresslog_maxCount() {
                 return Integer.MAX_VALUE;
             }
-
-            @Override
-            public boolean job_processing_condition() {
-                return false;
-            }
         });
         return real;
     }

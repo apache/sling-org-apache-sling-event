@@ -101,11 +101,6 @@ public class JobManagerConfiguration {
                         "Any attempt to add more information would result into purging of the least recent messages." +
                         "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
         int progresslog_maxCount() default -1;
-
-        @AttributeDefinition(name = "Job Processing Condition",
-                description = "If enabled, job processing will only occur when the 'org.apache.sling.event.jobs.processing.enabled' condition is present. " +
-                        "If disabled, job processing will always be enabled.")
-        boolean job_processing_condition() default false;
     }
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger("org.apache.sling.event.impl.jobs");
@@ -216,8 +211,6 @@ public class JobManagerConfiguration {
     )
     private volatile Condition jobProcessingEnabledCondition;
 
-    private boolean jobProcessingCondition;
-
     /**
      * Handle binding of the job processing condition.
      * @param condition The condition being bound
@@ -250,9 +243,6 @@ public class JobManagerConfiguration {
      * @return true if job processing is enabled, false otherwise
      */
     public boolean isJobProcessingEnabled() {
-        if (!jobProcessingCondition) {
-            return true;
-        }
         return jobProcessingEnabledCondition != null;
     }
 
@@ -326,7 +316,6 @@ public class JobManagerConfiguration {
         // an immediate effect - it will only have an effect on next activation.
         // (as 'startup delay runnable' is already scheduled in activate)
         this.startupDelay = config.startup_delay();
-        this.jobProcessingCondition = config.job_processing_condition();
 
         if (config.progresslog_maxCount() < 0) {
             this.progressLogMaxCount = Integer.MAX_VALUE;
