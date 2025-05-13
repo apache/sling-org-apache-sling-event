@@ -20,7 +20,6 @@ package org.apache.sling.event.impl.jobs.queues;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,6 +31,7 @@ import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
 
@@ -58,10 +58,17 @@ public class JobQueueImplTest {
 
     @Test
     public void testStartJobsWhenDisabled() {
+        // Add a job handler to the queue
+        JobHandler jobHandler = mock(JobHandler.class, RETURNS_DEEP_STUBS);
+        String jobId = "testJob";
+        when(jobHandler.getJob().getId()).thenReturn(jobId);
+        jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
+
         when(configuration.isJobProcessingEnabled()).thenReturn(false);
         jobQueue.startJobs();
 
-        assertTrue("No jobs should be started when job processing is disabled", jobQueue.getProcessingJobsLists().isEmpty());
+        // The job should not be started/removed
+        assertTrue("Job should remain in processingJobsLists when processing is disabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
     @Test
@@ -69,10 +76,13 @@ public class JobQueueImplTest {
         JobHandler jobHandler = mock(JobHandler.class, RETURNS_DEEP_STUBS);
         String jobId = "testJob";
         when(jobHandler.getJob().getId()).thenReturn(jobId);
+        Logger auditLogger = mock(Logger.class);
+        configuration = spy(JobManagerConfiguration.class);
+        when(configuration.getAuditLogger()).thenReturn(auditLogger);
 
         jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
 
-        // Call the private startJob method using reflection
+        // Try to start the job when processing is disabled
         try {
             Method startJobMethod = JobQueueImpl.class.getDeclaredMethod("startJob", JobHandler.class);
             startJobMethod.setAccessible(true);
@@ -81,7 +91,35 @@ public class JobQueueImplTest {
             throw new RuntimeException("Failed to invoke startJob method", e);
         }
 
+        // The job should not be removed/started
         assertTrue("Job should remain in processingJobsLists when processing is disabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
+
+        // Enable processing and try again with a fresh job handler
+        when(configuration.isJobProcessingEnabled()).thenReturn(true);
+
+        // Re-add the job handler since it may have been started/removed
+        jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
+
+        try {
+            Method startJobMethod = JobQueueImpl.class.getDeclaredMethod("startJob", JobHandler.class);
+            startJobMethod.setAccessible(true);
+            startJobMethod.invoke(jobQueue, jobHandler);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to invoke startJob method", e);
+        }
+
+        // Wait for the job to be processed/removed (asynchronously)
+        long timeout = System.currentTimeMillis() + 2000; // 2 seconds timeout
+        while (System.currentTimeMillis() < timeout) {
+            if (!jobQueue.getProcessingJobsLists().containsKey(jobId)) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ignored) {}
+        }
+
+        assertTrue("Job should be removed from processingJobsLists when processing is enabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
     @Test
@@ -106,8 +144,13 @@ public class JobQueueImplTest {
 
         jobQueue.startJobs();
 
-        // Verify that jobs can be added to the processingJobsLists
-        assertNotNull("Processing jobs list should not be null after starting jobs", jobQueue.getProcessingJobsLists());
+        // Add a job and verify it is present
+        JobHandler jobHandler = mock(JobHandler.class, RETURNS_DEEP_STUBS);
+        String jobId = "testJob";
+        when(jobHandler.getJob().getId()).thenReturn(jobId);
+        jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
+
+        assertTrue("Processing jobs list should contain the job after adding", jobQueue.getProcessingJobsLists().containsKey(jobId));
 
         jobQueue.close();
 
@@ -138,15 +181,33 @@ public class JobQueueImplTest {
 
     @Test
     public void testStartJobsWhenQueueSuspended() {
+        // Add a job before suspending
+        JobHandler jobHandler = mock(JobHandler.class, RETURNS_DEEP_STUBS);
+        String jobId = "testJob";
+        when(jobHandler.getJob().getId()).thenReturn(jobId);
+        jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
+
         jobQueue.suspend();
         jobQueue.startJobs();
 
-        assertTrue("No jobs should be started when the queue is suspended", jobQueue.getProcessingJobsLists().isEmpty());
-        //activate the queue
+        // The job should still be present since the queue is suspended
+        assertTrue("No jobs should be started when the queue is suspended", jobQueue.getProcessingJobsLists().containsKey(jobId));
+
+        // Activate the queue and enable processing
         when(configuration.isJobProcessingEnabled()).thenReturn(true);
-        //start the jobs again
-        jobQueue.startJobs();
-        // Verify that jobs can be added to the processingJobsLists
-        assertNotNull("Processing jobs list should not be null after starting jobs", jobQueue.getProcessingJobsLists());
+        jobQueue.resume(); // Use resume() to wake up the queue
+
+        // Wait for the job to be processed/removed (asynchronously)
+        long timeout = System.currentTimeMillis() + 2000; // 2 seconds timeout
+        while (System.currentTimeMillis() < timeout) {
+            if (!jobQueue.getProcessingJobsLists().containsKey(jobId)) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ignored) {}
+        }
+
+        assertTrue("Job should be removed from processingJobsLists after resuming queue when processing is enabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 }

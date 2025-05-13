@@ -81,7 +81,6 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
 
         this.registerJobConsumer(uniqueTopic, job -> {
             processed.incrementAndGet();
-            // Wait a bit to allow toggling
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
@@ -90,23 +89,17 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
             return JobConsumer.JobResult.OK;
         });
 
-        // Add jobs
+        // Disable job processing before adding jobs
+        setJobProcessingEnabled(false);
+
+        // Add jobs while processing is disabled
         for (int i = 0; i < jobCount; i++) {
             jobManager.addJob(uniqueTopic, Collections.singletonMap("id", i));
         }
 
-        // Wait for some jobs to start processing
-        while (processed.get() < 3) {
-            Thread.sleep(100);
-        }
-
-        // Disable job processing
-        setJobProcessingEnabled(false);
-
-        // Wait to ensure jobs are paused
-        int processedAfterDisable = processed.get();
+        // Wait to ensure jobs are not processed
         Thread.sleep(1000);
-        assertEquals("No jobs should be processed while disabled", processedAfterDisable, processed.get());
+        assertEquals("No jobs should be processed while processing is disabled", 0, processed.get());
 
         // Re-enable job processing
         setJobProcessingEnabled(true);
@@ -136,10 +129,20 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
             return JobConsumer.JobResult.OK;
         });
 
-        // Add jobs
+        // Disable job processing before adding jobs
+        setJobProcessingEnabled(false);
+
+        // Add jobs while processing is disabled
         for (int i = 0; i < jobCount; i++) {
             jobManager.addJob(TOPIC, Collections.singletonMap("id", i));
         }
+
+        // Wait to ensure jobs are not processed
+        Thread.sleep(1000);
+        assertEquals("No jobs should be processed while processing is disabled", 0, processed.get());
+
+        // Re-enable job processing
+        setJobProcessingEnabled(true);
 
         // Simulate topology change by registering/unregistering a dummy service
         BundleContext ctx = bundleContext;
@@ -173,25 +176,35 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
             return JobConsumer.JobResult.OK;
         });
 
-        // Add jobs
+        // Disable job processing before adding jobs
+        setJobProcessingEnabled(false);
+
+        // Add jobs while processing is disabled
         for (int i = 0; i < jobCount; i++) {
             jobManager.addJob(uniqueTopic, Collections.singletonMap("id", i));
         }
 
+        // Wait to ensure jobs are not processed
+        Thread.sleep(1000);
+        assertEquals("No jobs should be processed while processing is disabled", 0, processed.get());
+
         // Rapidly toggle condition and topology
         BundleContext ctx = bundleContext;
         for (int i = 0; i < 3; i++) {
-            setJobProcessingEnabled(false);
+            setJobProcessingEnabled(true);
             ServiceRegistration<?> reg = ctx.registerService(Object.class, new Object(), null);
             Thread.sleep(300);
-            setJobProcessingEnabled(true);
+            setJobProcessingEnabled(false);
             reg.unregister();
             Thread.sleep(300);
         }
 
+        // Re-enable job processing to allow jobs to finish
+        setJobProcessingEnabled(true);
+
         // Wait for all jobs to finish
         long start = System.currentTimeMillis();
-        long maxWait = 10000; // 5 seconds
+        long maxWait = 10000; // 10 seconds
         while (processed.get() < jobCount && (System.currentTimeMillis() - start) < maxWait) {
             Thread.sleep(100);
         }
