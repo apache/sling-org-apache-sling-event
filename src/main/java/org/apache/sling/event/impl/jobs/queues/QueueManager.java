@@ -392,9 +392,24 @@ public class QueueManager
             if ( isActive ) {
                 fullTopicScan();
             } else {
+                // Only stop jobs if readiness condition is not met
+                if (!configuration.isJobProcessingEnabled()) {
+                    stopAllJobs();
+                }
                 this.restart();
             }
         }
+    }
+
+    /**
+     * Stop all running jobs in all queues
+     */
+    private void stopAllJobs() {
+        logger.debug("Stopping all running jobs...");
+        for (final JobQueueImpl queue : this.queues.values()) {
+            queue.stopAllJobs();
+        }
+        logger.debug("All running jobs stopped");
     }
 
     private void clearHaltedTopics(String logPrefix) {

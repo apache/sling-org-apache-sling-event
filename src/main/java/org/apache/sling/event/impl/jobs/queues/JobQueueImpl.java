@@ -476,6 +476,10 @@ public class JobQueueImpl
      * Periodic maintenance
      */
     public void maintain() {
+        if (!services.configuration.isJobProcessingEnabled()) {
+            logger.debug("Job processing is disabled, skipping maintenance for queue {}", queueName);
+            return;
+        }
         // check suspended
         final long since = this.suspendedSince.get();
         if ( since != -1 && since + MAX_SUSPEND_TIME < System.currentTimeMillis() ) {
@@ -742,6 +746,20 @@ public class JobQueueImpl
             handler.stop();
         }
         return handler != null;
+    }
+
+    /**
+     * Stop all currently running jobs in this queue
+     */
+    public void stopAllJobs() {
+        logger.debug("Stopping all running jobs in queue {}", queueName);
+        synchronized ( this.processingJobsLists ) {
+            for (final JobHandler handler : this.processingJobsLists.values()) {
+                handler.stop();
+            }
+            this.processingJobsLists.clear();
+        }
+        logger.debug("All running jobs stopped in queue {}", queueName);
     }
 
     private void reschedule(final JobHandler handler) {
