@@ -38,7 +38,7 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
@@ -218,6 +218,5 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
         Thread.sleep(300); // Wait for the system to react
     }
 
-    private static final Condition UNCONDITIONAL_CONDITION = new Condition() {
-    };
+    private static final Condition UNCONDITIONAL_CONDITION = new Condition() {};
 }
