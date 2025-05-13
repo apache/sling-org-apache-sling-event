@@ -396,18 +396,6 @@ public class QueueManager
         }
     }
 
-    /**
-     * Called when job processing state changes
-     * @param enabled Whether job processing is enabled
-     */
-    public void setJobProcessingEnabled(boolean enabled) {
-        logger.debug("Job processing state changed to {}", enabled);
-        this.isActive.set(enabled);
-        if (enabled) {
-            fullTopicScan();
-        }
-    }
-
     private void clearHaltedTopics(String logPrefix) {
         final String haltedTopicsToString;
         // Note: the synchronized below is just to avoid wrong logging about unhalting,
