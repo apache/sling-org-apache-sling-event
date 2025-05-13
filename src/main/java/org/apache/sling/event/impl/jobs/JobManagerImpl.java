@@ -95,7 +95,7 @@ import com.codahale.metrics.MetricRegistry;
     })
 public class JobManagerImpl
     implements JobManager, EventHandler, Runnable {
-
+    
     private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "event.scheduledJobs.count";
 
     /** Default logger. */
@@ -122,8 +122,8 @@ public class JobManagerImpl
 
     @Reference
     private StatisticsManager statisticsManager;
-
-
+    
+    
     @Reference(target = "(name=sling)", cardinality = ReferenceCardinality.OPTIONAL)
     private MetricRegistry metricRegistry;
 
