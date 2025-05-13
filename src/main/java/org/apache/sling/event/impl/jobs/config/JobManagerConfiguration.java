@@ -230,6 +230,7 @@ public class JobManagerConfiguration {
     protected void unbindJobProcessingEnabledCondition(final Condition condition) {
         if (this.jobProcessingEnabledCondition == condition) {
             this.jobProcessingEnabledCondition = null;
+            logger.info("Job processing readiness condition has been removed - jobs will not be processed until condition is restored");
             // Signal jobs to stop before notifying listeners
             stopProcessing();
             notifyListeners();
@@ -612,7 +613,7 @@ public class JobManagerConfiguration {
         synchronized ( this.listeners ) {
             final TopologyCapabilities caps = this.topologyCapabilities;
             for(final ConfigurationChangeListener l : this.listeners) {
-                l.configurationChanged(caps != null && isJobProcessingEnabled());
+                l.configurationChanged(caps != null);
             }
         }
     }
@@ -670,7 +671,7 @@ public class JobManagerConfiguration {
     public void addListener(final ConfigurationChangeListener service) {
         synchronized ( this.listeners ) {
             this.listeners.add(service);
-            service.configurationChanged(this.topologyCapabilities != null && isJobProcessingEnabled());
+            service.configurationChanged(this.topologyCapabilities != null);
         }
     }
 

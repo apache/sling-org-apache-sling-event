@@ -385,28 +385,27 @@ public class QueueManager
     public void configurationChanged(final boolean active) {
         // are we still active?
         if ( this.configuration != null ) {
-            logger.debug("Topology changed {}", active);
-            this.isActive.set(active);
+            logger.debug("Topology changed {}, job processing enabled: {}", active, configuration.isJobProcessingEnabled());
+            this.isActive.set(active && configuration.isJobProcessingEnabled());
             clearHaltedTopics("configurationChanged : unhalted topics due to configuration change");
             if ( active ) {
                 fullTopicScan();
             } else {
-                // Stop all running jobs before restarting
-                stopAllJobs();
                 this.restart();
             }
         }
     }
 
     /**
-     * Stop all running jobs in all queues
+     * Called when job processing state changes
+     * @param enabled Whether job processing is enabled
      */
-    private void stopAllJobs() {
-        logger.debug("Stopping all running jobs...");
-        for (final JobQueueImpl queue : this.queues.values()) {
-            queue.stopAllJobs();
+    public void setJobProcessingEnabled(boolean enabled) {
+        logger.debug("Job processing state changed to {}", enabled);
+        this.isActive.set(enabled);
+        if (enabled) {
+            fullTopicScan();
         }
-        logger.debug("All running jobs stopped");
     }
 
     private void clearHaltedTopics(String logPrefix) {
