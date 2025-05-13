@@ -385,10 +385,11 @@ public class QueueManager
     public void configurationChanged(final boolean active) {
         // are we still active?
         if ( this.configuration != null ) {
+            boolean isActive = active && configuration.isJobProcessingEnabled();
             logger.debug("Topology changed {}, job processing enabled: {}", active, configuration.isJobProcessingEnabled());
-            this.isActive.set(active && configuration.isJobProcessingEnabled());
+            this.isActive.set(isActive);
             clearHaltedTopics("configurationChanged : unhalted topics due to configuration change");
-            if ( active ) {
+            if ( isActive ) {
                 fullTopicScan();
             } else {
                 this.restart();

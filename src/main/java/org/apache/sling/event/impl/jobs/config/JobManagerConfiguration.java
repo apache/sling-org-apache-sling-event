@@ -216,9 +216,14 @@ public class JobManagerConfiguration {
      * @param condition The condition being bound
      */
     protected void bindJobProcessingEnabledCondition(final Condition condition) {
+        if (this.jobProcessingEnabledCondition != null) {
+            logger.warn("Job processing readiness condition already set - ignoring new condition");
+            return;
+        }
         this.jobProcessingEnabledCondition = condition;
         // If condition becomes true, trigger maintenance to start processing jobs
         if (condition != null) {
+            logger.info("Job processing readiness condition has been set - jobs will be processed");
             notifyListeners();
         }
     }
@@ -230,7 +235,7 @@ public class JobManagerConfiguration {
     protected void unbindJobProcessingEnabledCondition(final Condition condition) {
         if (this.jobProcessingEnabledCondition == condition) {
             this.jobProcessingEnabledCondition = null;
-            logger.info("Job processing readiness condition has been removed - jobs will not be processed until condition is restored");
+            logger.info("Job processing readiness condition has been removed - jobs will not be processed");
             // Signal jobs to stop before notifying listeners
             stopProcessing();
             notifyListeners();
