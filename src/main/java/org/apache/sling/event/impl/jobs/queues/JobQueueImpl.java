@@ -757,7 +757,6 @@ public class JobQueueImpl
             for (final JobHandler handler : this.processingJobsLists.values()) {
                 handler.stop();
             }
-            this.processingJobsLists.clear();
         }
         logger.debug("All running jobs stopped in queue {}", queueName);
     }
