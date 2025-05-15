@@ -203,18 +203,18 @@ public class JobManagerConfiguration {
     private volatile TopologyCapabilities topologyCapabilities;
 
     /** The condition that determines if job processing is enabled. */
-    @Reference(
-        target = "(osgi.condition.id=org.apache.sling.event.jobs.processing.enabled)",
-        cardinality = ReferenceCardinality.OPTIONAL,
-        policy = ReferencePolicy.DYNAMIC,
-        policyOption = ReferencePolicyOption.GREEDY
-    )
     private volatile Condition jobProcessingEnabledCondition;
 
     /**
      * Handle binding of the job processing condition.
      * @param condition The condition being bound
      */
+    @Reference(
+        target = "(osgi.condition.id=true)",
+        cardinality = ReferenceCardinality.OPTIONAL,
+        policy = ReferencePolicy.DYNAMIC,
+        policyOption = ReferencePolicyOption.GREEDY
+    )
     protected void bindJobProcessingEnabledCondition(final Condition condition) {
         if (this.jobProcessingEnabledCondition != null) {
             logger.warn("Job processing readiness condition already set - ignoring new condition");
