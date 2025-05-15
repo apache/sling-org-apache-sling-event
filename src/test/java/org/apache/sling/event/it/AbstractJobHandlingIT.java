@@ -57,6 +57,14 @@ public abstract class AbstractJobHandlingIT extends JobsTestSupport {
     public void setup() throws IOException {
         log.info("starting setup");
         registerTopologyListener();
+        
+        // Register the job processing condition
+        Hashtable<String, Object> propsConfig = new Hashtable<>();
+        propsConfig.put("osgi.condition.id", "org.apache.sling.event.jobs.processing.enabled");
+        ServiceRegistration<org.osgi.service.condition.Condition> conditionReg = 
+            this.bundleContext.registerService(org.osgi.service.condition.Condition.class, 
+                new org.osgi.service.condition.Condition() {}, propsConfig);
+        this.registrations.add(conditionReg);
     }
 
     protected AtomicReference<TopologyEvent> lastTopologyEvent = new AtomicReference<>();

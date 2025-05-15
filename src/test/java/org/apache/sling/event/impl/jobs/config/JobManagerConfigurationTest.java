@@ -21,6 +21,7 @@ package org.apache.sling.event.impl.jobs.config;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +39,7 @@ import org.apache.sling.event.impl.TestUtil;
 import org.apache.sling.event.impl.discovery.InitDelayingTopologyEventListener;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.osgi.service.condition.Condition;
 
 public class JobManagerConfigurationTest {
 
@@ -98,6 +100,10 @@ public class JobManagerConfigurationTest {
             }
         });
         TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
+
+        // Create and bind the condition
+        Condition condition = mock(Condition.class);
+        config.bindJobProcessingEnabledCondition(condition);
 
         config.addListener(ccl);
         ccl.await();

@@ -41,7 +41,10 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.condition.Condition;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -198,6 +201,56 @@ public class JobManagerConfiguration {
 
     /** The topology capabilities. */
     private volatile TopologyCapabilities topologyCapabilities;
+
+    /** The condition that determines if job processing is enabled. */
+    private volatile Condition jobProcessingEnabledCondition;
+
+    /**
+     * Handle binding of the job processing condition.
+     * @param condition The condition being bound
+     */
+    @Reference(
+        target = "(osgi.condition.id=true)",
+        cardinality = ReferenceCardinality.OPTIONAL,
+        policy = ReferencePolicy.DYNAMIC,
+        policyOption = ReferencePolicyOption.GREEDY
+    )
+    protected void bindJobProcessingEnabledCondition(final Condition condition) {
+        if (this.jobProcessingEnabledCondition != null) {
+            logger.warn("Job processing readiness condition already set - ignoring new condition");
+            return;
+        }
+        this.jobProcessingEnabledCondition = condition;
+        // If condition becomes true, trigger maintenance to start processing jobs
+        if (condition != null) {
+            logger.info("Job processing readiness condition has been set - jobs will be processed");
+            notifyListeners();
+        }
+    }
+
+    /**
+     * Handle unbinding of the job processing condition.
+     * @param condition The condition being unbound
+     */
+    protected void unbindJobProcessingEnabledCondition(final Condition condition) {
+        if (this.jobProcessingEnabledCondition == condition) {
+            this.jobProcessingEnabledCondition = null;
+            logger.info("Job processing readiness condition has been removed - jobs will not be processed");
+            // Signal jobs to stop before notifying listeners
+            stopProcessing();
+            notifyListeners();
+        }
+    }
+
+    /**
+     * Check if job processing is enabled.
+     * This only affects whether jobs are processed/executed - jobs can still be
+     * assigned, stored, and managed through the API even when processing is disabled.
+     * @return true if job processing is enabled, false otherwise
+     */
+    public boolean isJobProcessingEnabled() {
+        return jobProcessingEnabledCondition != null;
+    }
 
     /**
      * Activate this component.
