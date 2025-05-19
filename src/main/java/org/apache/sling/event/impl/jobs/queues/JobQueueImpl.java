@@ -169,7 +169,7 @@ public class JobQueueImpl
      * @param cache The job cache
      * @param outdatedQueue
      */
-    private JobQueueImpl(final String name,
+    protected JobQueueImpl(final String name,
                         final InternalQueueConfiguration config,
                         final QueueServices services,
                         final QueueJobCache cache,
@@ -252,6 +252,10 @@ public class JobQueueImpl
      * This method might be called concurrently, therefore we use a guard
      */
     public void startJobs() {
+        if (!services.configuration.isJobProcessingEnabled()) {
+            logger.debug("Job processing is disabled, skipping job starts for queue {}", queueName);
+            return;
+        }
         if ( this.startJobsGuard.compareAndSet(false, true) ) {
             // we start as many jobs in parallel as possible
             while ( this.running && !this.isOutdated.get() && !this.isSuspended() && this.available.tryAcquire() ) {
@@ -310,6 +314,10 @@ public class JobQueueImpl
     }
 
     private void startJob(final JobHandler handler) {
+        if (!services.configuration.isJobProcessingEnabled()) {
+            logger.debug("Job processing is disabled, stopping job {} in queue {}", handler.getJob().getId(), queueName);
+            return;
+        }
         try {
             this.closeMarker.set(false);
             try {
@@ -468,6 +476,10 @@ public class JobQueueImpl
      * Periodic maintenance
      */
     public void maintain() {
+        if (!services.configuration.isJobProcessingEnabled()) {
+            logger.debug("Job processing is disabled, skipping maintenance for queue {}", queueName);
+            return;
+        }
         // check suspended
         final long since = this.suspendedSince.get();
         if ( since != -1 && since + MAX_SUSPEND_TIME < System.currentTimeMillis() ) {
@@ -736,6 +748,19 @@ public class JobQueueImpl
         return handler != null;
     }
 
+    /**
+     * Stop all currently running jobs in this queue
+     */
+    public void stopAllJobs() {
+        logger.debug("Stopping all running jobs in queue {}", queueName);
+        synchronized ( this.processingJobsLists ) {
+            for (final JobHandler handler : this.processingJobsLists.values()) {
+                handler.stop();
+            }
+        }
+        logger.debug("All running jobs stopped in queue {}", queueName);
+    }
+
     private void reschedule(final JobHandler handler) {
         // we delay putting back the job until the retry delay is over
         final long delay = this.getRetryDelay(handler);
@@ -788,6 +813,14 @@ public class JobQueueImpl
 
     OutdatedJobQueueInfo getOutdatedJobQueueInfo() {
         return new OutdatedJobQueueInfo(available, maxParallel, drainage);
+    }
+
+    Map<String, JobHandler> getProcessingJobsLists() {
+        return processingJobsLists;
+    }
+
+    boolean isRunning() {
+        return running;
     }
 }
 

@@ -21,6 +21,8 @@ package org.apache.sling.event.impl.jobs.queues;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -149,6 +151,9 @@ public class TestTopicHalting {
 
         configuration = JobManagerConfigurationTestFactory.create(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH, 
                 factory, queueConfigurationManager);
+
+        configuration = spy(configuration);
+        when(configuration.isJobProcessingEnabled()).thenReturn(true);
         
         queueManager = QueueManager.newForTest(eventAdmin, jobConsumerManager, 
                 queuesMBean, threadPoolManager, threadPool, configuration, statisticsManager);

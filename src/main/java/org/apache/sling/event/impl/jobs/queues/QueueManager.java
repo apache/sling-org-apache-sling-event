@@ -82,7 +82,7 @@ import org.slf4j.LoggerFactory;
 public class QueueManager
     implements Runnable, EventHandler, ConfigurationChangeListener {
 
-    static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
+    public static QueueManager newForTest(EventAdmin eventAdmin, JobConsumerManager jobConsumerManager,
             QueuesMBean queuesMBean, ThreadPoolManager threadPoolManager, ThreadPool threadPool,
             JobManagerConfiguration configuration, StatisticsManager statisticsManager) {
         final QueueManager qm = new QueueManager();
@@ -385,15 +385,31 @@ public class QueueManager
     public void configurationChanged(final boolean active) {
         // are we still active?
         if ( this.configuration != null ) {
-            logger.debug("Topology changed {}", active);
-            this.isActive.set(active);
+            boolean isActive = active && configuration.isJobProcessingEnabled();
+            logger.debug("Topology changed {}, job processing enabled: {}", active, configuration.isJobProcessingEnabled());
+            this.isActive.set(isActive);
             clearHaltedTopics("configurationChanged : unhalted topics due to configuration change");
-            if ( active ) {
+            if ( isActive ) {
                 fullTopicScan();
             } else {
+                // Only stop jobs if readiness condition is not met
+                if (!configuration.isJobProcessingEnabled()) {
+                    stopAllJobs();
+                }
                 this.restart();
             }
         }
+    }
+
+    /**
+     * Stop all running jobs in all queues
+     */
+    private void stopAllJobs() {
+        logger.debug("Stopping all running jobs...");
+        for (final JobQueueImpl queue : this.queues.values()) {
+            queue.stopAllJobs();
+        }
+        logger.debug("All running jobs stopped");
     }
 
     private void clearHaltedTopics(String logPrefix) {
