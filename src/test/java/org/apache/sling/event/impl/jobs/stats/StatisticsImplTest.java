@@ -61,6 +61,11 @@ public class StatisticsImplTest {
 
     @Test public void reset() {
         final StatisticsImpl s = new StatisticsImpl(7000);
+        s.addActive(0);
+        s.incQueued();
+        assertEquals(1, s.getNumberOfQueuedJobs());
+        assertEquals(1, s.getNumberOfActiveJobs());
+
         final long now = System.currentTimeMillis();
         s.reset();
         assertTrue(s.getStartTime() >= now);
