@@ -61,11 +61,7 @@ public class FindUnfinishedJobsTask {
      */
     private void initialScan() {
         logger.debug("Scanning repository for unfinished jobs...");
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        if ( resolver == null ) {
-            return;
-        }
-        try {
+        try (final ResourceResolver resolver = configuration.createResourceResolver();) {
             final Resource baseResource = resolver.getResource(configuration.getLocalJobsPath());
 
             // sanity check - should never be null
@@ -79,8 +75,6 @@ public class FindUnfinishedJobsTask {
                     initTopic(topicResource);
                 }
             }
-        } finally {
-            resolver.close();
         }
     }
 
