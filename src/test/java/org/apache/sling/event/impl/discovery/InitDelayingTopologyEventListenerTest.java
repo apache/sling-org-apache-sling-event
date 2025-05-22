@@ -304,7 +304,7 @@ public class InitDelayingTopologyEventListenerTest {
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_CHANGING));
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_CHANGED));
         listener.handleTopologyEvent(createEvent(Type.PROPERTIES_CHANGED));
-        delegate.waitForEventCnt(1, 15000);
+        delegate.waitForEventCnt(1, 3000);
         assertEquals(delegate.getEvents().get(0).getType(), Type.TOPOLOGY_INIT);
 
         doTestAdditionalEventsAfterInit(delegate, listener);
