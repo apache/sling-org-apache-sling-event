@@ -285,6 +285,7 @@ public class InitDelayingTopologyEventListenerTest {
     }
 
     @Ignore
+    //due to flakyness
     @Test
     public void testChanged() throws Exception {
         final TestListener delegate = new TestListener();
@@ -299,6 +300,7 @@ public class InitDelayingTopologyEventListenerTest {
     }
 
     @Ignore
+    //due to flakyness
     @Test
     public void testProperties() throws Exception {
         final TestListener delegate = new TestListener();
