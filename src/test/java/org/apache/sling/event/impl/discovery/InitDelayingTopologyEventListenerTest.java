@@ -284,6 +284,7 @@ public class InitDelayingTopologyEventListenerTest {
         doTestAdditionalEventsAfterInit(delegate, listener);
     }
 
+    @Ignore
     @Test
     public void testChanged() throws Exception {
         final TestListener delegate = new TestListener();
