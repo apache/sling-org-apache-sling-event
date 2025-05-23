@@ -36,7 +36,7 @@ public class AllJobStatisticsMBeanTest {
     private long seed;
 
     public AllJobStatisticsMBeanTest() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
     }
 
     @Before
