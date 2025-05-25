@@ -1,0 +1,7 @@
+{
+    "name": "org.apache.sling.event",
+    "version": "1.0.0",
+    "description": "Apache Sling Event Module",
+    "timeout": 60,
+    "dependencies": []
+} 
