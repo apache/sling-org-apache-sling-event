@@ -1,7 +1,5 @@
 {
-    "name": "org.apache.sling.event",
-    "version": "1.0.0",
-    "description": "Apache Sling Event Module",
-    "buildTimeout": 60,
-    "dependencies": []
-} 
+    "jenkins": {
+        "buildTimeout": 60
+    }
+}
