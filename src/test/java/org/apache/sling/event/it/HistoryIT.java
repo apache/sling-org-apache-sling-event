@@ -108,7 +108,7 @@ public class HistoryIT extends AbstractJobHandlingIT {
         }
         this.sleep(200L);
         while (jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, (Map<String, Object>[])null).size() < 10 ) {
-            this.sleep(20L);
+            this.sleep(100L);
         }
         Collection<Job> col = jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, (Map<String, Object>[])null);
         assertEquals(10, col.size());
