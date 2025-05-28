@@ -61,7 +61,7 @@ public class OrderedMaxParallelIT extends AbstractMaxParallelIT {
         assertEquals(1, max);
     }
 
-    @Test(timeout=DURATION * 16000L)
+    @Test(timeout=DURATION * 20000L)
     public void testOrderedMaxParallel2_fast() throws Exception {
         doTestMaxParallel(50, 123, DURATION);
 

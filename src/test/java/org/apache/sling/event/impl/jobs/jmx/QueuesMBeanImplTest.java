@@ -50,7 +50,7 @@ public class QueuesMBeanImplTest {
     private ServiceRegistration serviceRegistration;
 
     public QueuesMBeanImplTest() {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
     }
 
     @Before

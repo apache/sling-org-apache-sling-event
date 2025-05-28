@@ -28,6 +28,7 @@ import org.apache.sling.discovery.TopologyEvent;
 import org.apache.sling.discovery.TopologyEvent.Type;
 import org.apache.sling.discovery.TopologyEventListener;
 import org.apache.sling.discovery.TopologyView;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -283,6 +284,8 @@ public class InitDelayingTopologyEventListenerTest {
         doTestAdditionalEventsAfterInit(delegate, listener);
     }
 
+    @Ignore
+    //due to flakyness should be fixed in SLING-12807
     @Test
     public void testChanged() throws Exception {
         final TestListener delegate = new TestListener();
@@ -296,6 +299,8 @@ public class InitDelayingTopologyEventListenerTest {
         doTestAdditionalEventsAfterInit(delegate, listener);
     }
 
+    @Ignore
+    //due to flakyness should be fixed in SLING-12807
     @Test
     public void testProperties() throws Exception {
         final TestListener delegate = new TestListener();

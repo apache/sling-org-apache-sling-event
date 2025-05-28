@@ -67,7 +67,7 @@ public class InventoryPluginTest extends JsonTestBase {
 
     @Before
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        MockitoAnnotations.openMocks(this);
 
         Mockito.when(jobManager.getStatistics()).thenReturn(Mockito.mock(Statistics.class));
         Queue mockQueue = Mockito.mock(Queue.class);
