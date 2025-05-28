@@ -285,7 +285,7 @@ public class InitDelayingTopologyEventListenerTest {
     }
 
     @Ignore
-    //due to flakyness
+    //due to flakyness should be fixed in SLING-12807
     @Test
     public void testChanged() throws Exception {
         final TestListener delegate = new TestListener();
@@ -300,7 +300,7 @@ public class InitDelayingTopologyEventListenerTest {
     }
 
     @Ignore
-    //due to flakyness
+    //due to flakyness should be fixed in SLING-12807
     @Test
     public void testProperties() throws Exception {
         final TestListener delegate = new TestListener();
