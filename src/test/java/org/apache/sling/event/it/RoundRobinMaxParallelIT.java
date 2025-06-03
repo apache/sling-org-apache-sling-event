@@ -70,5 +70,4 @@ public class RoundRobinMaxParallelIT extends AbstractMaxParallelIT {
 
         assertTrue(max <= MAX_PARALLEL);
     }
-
 }
