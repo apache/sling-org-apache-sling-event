@@ -20,7 +20,6 @@ package org.apache.sling.event.it;
 
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.QueueConfiguration;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -63,7 +62,6 @@ public class RoundRobinMaxParallelIT extends AbstractMaxParallelIT {
         assertTrue(max <= MAX_PARALLEL);
     }
 
-    @Ignore(value = "SLING-12819 : ignored for release")
     @Test(timeout=DURATION * 16000L)
     public void testRoundRobinMaxParallel_fast() throws Exception {
         doTestMaxParallel(200, 123, DURATION);
