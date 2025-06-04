@@ -30,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.discovery.ClusterView;
 import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.discovery.TopologyEvent;
@@ -37,11 +38,16 @@ import org.apache.sling.discovery.TopologyEventListener;
 import org.apache.sling.discovery.TopologyView;
 import org.apache.sling.event.impl.TestUtil;
 import org.apache.sling.event.impl.discovery.InitDelayingTopologyEventListener;
+import org.apache.sling.testing.mock.sling.junit.SlingContext;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.osgi.service.condition.Condition;
 
 public class JobManagerConfigurationTest {
+    
+    @Rule
+    public SlingContext context = new SlingContext();
 
     private TopologyView createView() {
         final TopologyView view = Mockito.mock(TopologyView.class);
@@ -87,10 +93,13 @@ public class JobManagerConfigurationTest {
     @Test public void testTopologyChange() throws Exception {
         // mock scheduler
         final ChangeListener ccl = new ChangeListener();
+        
+        ResourceResolverFactory rrf = context.getService(ResourceResolverFactory.class);
 
         // add change listener and verify
         ccl.init(1);
         final JobManagerConfiguration config = new JobManagerConfiguration();
+        TestUtil.setFieldValue(config, "resourceResolverFactory",rrf);
         ((AtomicBoolean)TestUtil.getFieldValue(config, "active")).set(true);
         InitDelayingTopologyEventListener startupDelayListener = new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
 
