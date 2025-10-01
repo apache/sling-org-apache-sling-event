@@ -8,18 +8,12 @@ Import-Package: \
     javax.servlet;resolution:=optional,\
     javax.annotation;version="[0.0,2)",\
     *
-Export-Package: \
-    org.apache.sling.event.jobs,\
-    org.apache.sling.event.jobs.consumer,\
-    org.apache.sling.event.jobs.jmx
 
 -conditionalpackage: \
     org.apache.jackrabbit.util,\
     org.apache.sling.commons.osgi,\
-    org.apache.sling.event.api
 
 -includeresource:\
-    org.apache.sling.event.api-[0-9.]*.jar=org.apache.sling.event.api-[0-9.]*.jar;lib:=true,\
     @quartz-[0-9.]*.jar!/org/quartz/CronExpression.class,\
     @quartz-[0-9.]*.jar!/org/quartz/ValueSet.class,\
     @org.apache.sling.commons.osgi-[0-9.]*.jar!/org/apache/sling/commons/osgi/PropertiesUtil.class,\
