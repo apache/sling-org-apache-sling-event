@@ -44,9 +44,7 @@ public class TimedJobsIT extends AbstractJobHandlingIT {
 
     @Configuration
     public Option[] configuration() {
-        return options(
-            baseConfiguration()
-        );
+        return options(baseConfiguration());
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
@@ -57,26 +55,25 @@ public class TimedJobsIT extends AbstractJobHandlingIT {
 
             @Override
             public JobResult process(final Job job) {
-                if ( job.getTopic().equals(TOPIC) ) {
+                if (job.getTopic().equals(TOPIC)) {
                     counter.incrementAndGet();
                 }
                 return JobResult.OK;
             }
-
         });
 
         final Date d = new Date();
         d.setTime(System.currentTimeMillis() + 3000); // run in 3 seconds
 
         // create scheduled job
-        final ScheduledJobInfo info = jobManager.createJob(TOPIC).schedule().at(d).add();
+        final ScheduledJobInfo info =
+                jobManager.createJob(TOPIC).schedule().at(d).add();
         assertNotNull(info);
 
-        while ( counter.get() == 0 ) {
+        while (counter.get() == 0) {
             this.sleep(1000);
         }
         assertEquals(0, jobManager.getScheduledJobs().size()); // job is not scheduled anymore
         info.unschedule();
     }
-
 }

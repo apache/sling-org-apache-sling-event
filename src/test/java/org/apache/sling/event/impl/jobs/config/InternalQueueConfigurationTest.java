@@ -18,16 +18,16 @@
  */
 package org.apache.sling.event.impl.jobs.config;
 
+import java.lang.annotation.Annotation;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
-import java.lang.annotation.Annotation;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 public class InternalQueueConfigurationTest {
 
@@ -43,16 +43,13 @@ public class InternalQueueConfigurationTest {
         return createConfig(topics, name, ConfigurationConstants.DEFAULT_MAX_PARALLEL);
     }
 
-    static InternalQueueConfiguration.Config createConfig(final String[] topics,
-            final String name,
-            final double maxParallel) {
+    static InternalQueueConfiguration.Config createConfig(
+            final String[] topics, final String name, final double maxParallel) {
         return createConfig(topics, name, maxParallel, 0);
     }
-    
-    static InternalQueueConfiguration.Config createConfig(final String[] topics,
-            final String name,
-            final double maxParallel,
-            final int ranking) {
+
+    static InternalQueueConfiguration.Config createConfig(
+            final String[] topics, final String name, final double maxParallel, final int ranking) {
         return new InternalQueueConfiguration.Config() {
 
             @Override
@@ -122,8 +119,10 @@ public class InternalQueueConfigurationTest {
         };
     }
 
-    @org.junit.Test public void testMaxParallel() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(-1));
+    @org.junit.Test
+    public void testMaxParallel() {
+        InternalQueueConfiguration c =
+                InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(-1));
         assertEquals(Runtime.getRuntime().availableProcessors(), c.getMaxParallel());
 
         // Edge cases 0.0 and 1.0 (treated as int numbers)
@@ -156,8 +155,10 @@ public class InternalQueueConfigurationTest {
         assertEquals(Runtime.getRuntime().availableProcessors(), c.getMaxParallel());
     }
 
-    @org.junit.Test public void testTopicMatchersDot() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a."}));
+    @org.junit.Test
+    public void testTopicMatchersDot() {
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a."}));
         assertTrue(c.isValid());
         assertNotNull(c.match("a/b"));
         assertNotNull(c.match("a/c"));
@@ -167,8 +168,10 @@ public class InternalQueueConfigurationTest {
         assertNull(c.match("t/x"));
     }
 
-    @org.junit.Test public void testTopicMatchersStar() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a*"}));
+    @org.junit.Test
+    public void testTopicMatchersStar() {
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a*"}));
         assertTrue(c.isValid());
         assertNotNull(c.match("a/b"));
         assertNotNull(c.match("a/c"));
@@ -178,8 +181,10 @@ public class InternalQueueConfigurationTest {
         assertNull(c.match("t/x"));
     }
 
-    @org.junit.Test public void testTopicMatchers() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a"}));
+    @org.junit.Test
+    public void testTopicMatchers() {
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a"}));
         assertTrue(c.isValid());
         assertNull(c.match("a/b"));
         assertNull(c.match("a/c"));
@@ -189,8 +194,10 @@ public class InternalQueueConfigurationTest {
         assertNull(c.match("t/x"));
     }
 
-    @org.junit.Test public void testTopicMatcherAndReplacement() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a."}, "test-queue-{0}"));
+    @org.junit.Test
+    public void testTopicMatcherAndReplacement() {
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a."}, "test-queue-{0}"));
         assertTrue(c.isValid());
         final String b = "a/b";
         assertNotNull(c.match(b));
@@ -200,8 +207,10 @@ public class InternalQueueConfigurationTest {
         assertEquals("test-queue-d", c.match(d));
     }
 
-    @org.junit.Test public void testTopicMatchersDotAndSlash() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a/."}));
+    @org.junit.Test
+    public void testTopicMatchersDotAndSlash() {
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a/."}));
         assertTrue(c.isValid());
         assertNotNull(c.match("a/b"));
         assertNotNull(c.match("a/c"));
@@ -211,12 +220,14 @@ public class InternalQueueConfigurationTest {
         assertNull(c.match("t/x"));
     }
 
-    @org.junit.Test public void testTopicMatchersStarAndSlash() {
+    @org.junit.Test
+    public void testTopicMatchersStarAndSlash() {
         final Map<String, Object> p = new HashMap<>();
         p.put(ConfigurationConstants.PROP_TOPICS, new String[] {"a/*"});
         p.put(ConfigurationConstants.PROP_NAME, "test");
 
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a/*"}));
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a/*"}));
         assertTrue(c.isValid());
         assertNotNull(c.match("a/b"));
         assertNotNull(c.match("a/c"));
@@ -226,8 +237,10 @@ public class InternalQueueConfigurationTest {
         assertNull(c.match("t/x"));
     }
 
-    @org.junit.Test public void testTopicMatcherAndReplacementAndSlash() {
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(new String[] {"a/."}, "test-queue-{0}"));
+    @org.junit.Test
+    public void testTopicMatcherAndReplacementAndSlash() {
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(new String[] {"a/."}, "test-queue-{0}"));
         assertTrue(c.isValid());
         final String b = "a/b";
         assertNotNull(c.match(b));
@@ -237,11 +250,13 @@ public class InternalQueueConfigurationTest {
         assertEquals("test-queue-d", c.match(d));
     }
 
-    @org.junit.Test public void testNoTopicMatchers() {
+    @org.junit.Test
+    public void testNoTopicMatchers() {
         final Map<String, Object> p = new HashMap<>();
         p.put(ConfigurationConstants.PROP_NAME, "test");
 
-        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), createConfig(null));
+        InternalQueueConfiguration c = InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(), createConfig(null));
         assertFalse(c.isValid());
     }
 }

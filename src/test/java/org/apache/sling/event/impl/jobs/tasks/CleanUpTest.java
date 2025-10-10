@@ -18,8 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs.tasks;
 
-import static org.junit.Assert.assertEquals;
-
 import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.time.Duration;
@@ -56,8 +54,8 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CleanUpTest {
@@ -118,17 +116,19 @@ public class CleanUpTest {
 
     private static final String JCR_PATH = JobManagerConfiguration.DEFAULT_REPOSITORY_PATH + "/cancelled";
     private static final String ASSIGNED_JOBS_JCR_PATH = JobManagerConfiguration.DEFAULT_REPOSITORY_PATH + "/assigned";
-    private static final String UNASSIGNED_JOBS_JCR_PATH = JobManagerConfiguration.DEFAULT_REPOSITORY_PATH + "/unassigned";
+    private static final String UNASSIGNED_JOBS_JCR_PATH =
+            JobManagerConfiguration.DEFAULT_REPOSITORY_PATH + "/unassigned";
     private static final String JCR_TOPIC = "test";
     private static final String JCR_JOB_NAME = "test-job";
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy/MM/dd/HH/mm");
-//    private static final int MAX_AGE_IN_DAYS = 60;
+    //    private static final int MAX_AGE_IN_DAYS = 60;
 
     @Rule
     public final SlingContext ctx = new SlingContext();
 
     @Mock
     private JobManagerConfiguration configuration;
+
     @Mock
     private JobSchedulerImpl jobScheduler;
 
@@ -147,26 +147,23 @@ public class CleanUpTest {
         setUpTask();
         getCalendarInstance();
         createResource(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH);
-
     }
+
     public static DefaultInstanceDescription createInstanceDescription(
             String instanceId, boolean isLocal, ClusterView clusterView) {
         if (!(clusterView instanceof DefaultClusterView)) {
-            throw new IllegalArgumentException(
-                    "Must pass a clusterView of type "
-                            + DefaultClusterView.class);
+            throw new IllegalArgumentException("Must pass a clusterView of type " + DefaultClusterView.class);
         }
         DefaultInstanceDescription i = new DefaultInstanceDescription(
                 (DefaultClusterView) clusterView, false, isLocal, instanceId, new HashMap<String, String>());
         return i;
     }
 
-    public static DefaultTopologyView createTopologyView(String clusterViewId,
-            String slingId) {
+    public static DefaultTopologyView createTopologyView(String clusterViewId, String slingId) {
         DefaultTopologyView t = new DefaultTopologyView();
         DefaultClusterView c = new DefaultClusterView(clusterViewId);
-        DefaultInstanceDescription i = new DefaultInstanceDescription(
-                c, true, true, slingId, new HashMap<String, String>());
+        DefaultInstanceDescription i =
+                new DefaultInstanceDescription(c, true, true, slingId, new HashMap<String, String>());
         Collection<InstanceDescription> instances = new LinkedList<InstanceDescription>();
         instances.add(i);
         t.addInstances(instances);
@@ -174,7 +171,8 @@ public class CleanUpTest {
     }
 
     private TopologyView createView(boolean current) {
-        return createTopologyView(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        return createTopologyView(
+                UUID.randomUUID().toString(), UUID.randomUUID().toString());
     }
 
     private void setupConfiguration() {
@@ -196,23 +194,25 @@ public class CleanUpTest {
         task = new CleanUpTask(configuration, jobScheduler);
     }
 
-//    private Resource createJobResourceForDate(Calendar cal, String status) {
-//        String path = JCR_PATH + '/' + JCR_TOPIC + '/' + DATE_FORMATTER.format(cal.getTime()) + '/' + JCR_JOB_NAME;
-//        return ctx.create().resource(path, JobImpl.PROPERTY_FINISHED_STATE, status);
-//    }
+    //    private Resource createJobResourceForDate(Calendar cal, String status) {
+    //        String path = JCR_PATH + '/' + JCR_TOPIC + '/' + DATE_FORMATTER.format(cal.getTime()) + '/' +
+    // JCR_JOB_NAME;
+    //        return ctx.create().resource(path, JobImpl.PROPERTY_FINISHED_STATE, status);
+    //    }
 
     private Resource createJobResourceForDate(String rootPath, Calendar cal) {
         String path = rootPath + '/' + JCR_TOPIC + '/' + DATE_FORMATTER.format(cal.getTime()) + '/' + JCR_JOB_NAME;
         return ctx.create().resource(path, "sling:resourceType", ResourceHelper.RESOURCE_TYPE_JOB);
     }
 
-//    private void deleteJobResourceForDate(String rootPath, Calendar cal) throws PersistenceException {
-//        String path = rootPath + '/' + JCR_TOPIC + '/' + DATE_FORMATTER.format(cal.getTime()) + '/' + JCR_JOB_NAME;
-//        ResourceResolver resolver = ctx.resourceResolver();
-//        Resource r = resolver.getResource(path);
-//        resolver.delete(r);
-//        resolver.commit();
-//    }
+    //    private void deleteJobResourceForDate(String rootPath, Calendar cal) throws PersistenceException {
+    //        String path = rootPath + '/' + JCR_TOPIC + '/' + DATE_FORMATTER.format(cal.getTime()) + '/' +
+    // JCR_JOB_NAME;
+    //        ResourceResolver resolver = ctx.resourceResolver();
+    //        Resource r = resolver.getResource(path);
+    //        resolver.delete(r);
+    //        resolver.commit();
+    //    }
 
     private void deleteResource(Resource r) throws PersistenceException {
         ResourceResolver resolver = ctx.resourceResolver();
@@ -232,28 +232,33 @@ public class CleanUpTest {
     // new calendar based on current date
     private Calendar getCalendarInstance() {
         Calendar cal = Calendar.getInstance();
-        return getCalendarInstance(cal.get(Calendar.YEAR),cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH),
-                cal.get(Calendar.HOUR),cal.get(Calendar.MINUTE));
+        return getCalendarInstance(
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH),
+                cal.get(Calendar.HOUR),
+                cal.get(Calendar.MINUTE));
     }
 
     // new calendar based on provided data
     private Calendar getCalendarInstance(int year, int month, int day, int hour, int minute) {
         Calendar calendar = Calendar.getInstance();
-        calendar.set(year,month,day,hour,minute);
+        calendar.set(year, month, day, hour, minute);
         this.clock = new DynamicClock(Clock.fixed(calendar.toInstant(), ZoneId.systemDefault()), null);
         task.setClock(clock);
         return calendar;
     }
 
     private void simulate(int num, Duration duration) {
-        for(int i=0; i<num; i++) {
+        for (int i = 0; i < num; i++) {
             clock.incrementOffset(duration);
             task.run();
         }
     }
+
     private int countFolders(String path) {
         final ResourceResolver resolver = this.configuration.createResourceResolver();
-        if ( resolver == null ) {
+        if (resolver == null) {
             return -1;
         }
         try {
@@ -263,6 +268,7 @@ public class CleanUpTest {
             resolver.close();
         }
     }
+
     private int countChildren(Resource parent) {
         if (parent == null) {
             return 0;
@@ -270,7 +276,7 @@ public class CleanUpTest {
         int count = 0;
         final Iterator<Resource> it = parent.listChildren();
         if (it != null) {
-            while( it.hasNext() ) {
+            while (it.hasNext()) {
                 final Resource child = it.next();
                 final int childCount = countChildren(child);
                 count += childCount;
@@ -286,7 +292,7 @@ public class CleanUpTest {
         createResource(UNASSIGNED_JOBS_JCR_PATH);
         assertEquals(3, countFolders(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH));
         // 2 days worth of cleanup
-        for( int i = 0; i < 48; i++) {
+        for (int i = 0; i < 48; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
         assertEquals(3, countFolders(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH));
@@ -297,12 +303,12 @@ public class CleanUpTest {
         assertEquals(1, countFolders(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH));
         createResource(ASSIGNED_JOBS_JCR_PATH);
         assertEquals(2, countFolders(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH));
-        for( int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             createResource(ASSIGNED_JOBS_JCR_PATH + "/" + UUID.randomUUID().toString());
         }
         assertEquals(102, countFolders(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH));
         // 2 days worth of cleanup
-        for( int i = 0; i < 480; i++) {
+        for (int i = 0; i < 480; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
         assertEquals(2, countFolders(JobManagerConfiguration.DEFAULT_REPOSITORY_PATH));
@@ -313,7 +319,7 @@ public class CleanUpTest {
         final String mySlingId = UUID.randomUUID().toString();
         Calendar calendar = getCalendarInstance();
         Resource job = createJobResourceForDate(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId, calendar);
-        calendar.add(Calendar.DAY_OF_YEAR,-1);
+        calendar.add(Calendar.DAY_OF_YEAR, -1);
         createEmptyJobResourceForDate(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId, calendar);
         assertEquals(11, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
 
@@ -321,18 +327,19 @@ public class CleanUpTest {
         // so let's simulate an hour
         simulate(60, Duration.ofMinutes(1));
 
-        // after the first run it will just have marked the folder for deletion, but not deleted, so counter is still the same
+        // after the first run it will just have marked the folder for deletion, but not deleted, so counter is still
+        // the same
         assertEquals(11, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
 
         // simulate 72 hours
-        for( int i = 0; i < 72; i++) {
+        for (int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
         // nothing should be deleted
         assertEquals(11, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
 
         deleteResource(job);
-        for( int i = 0; i < 72; i++) {
+        for (int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
         assertEquals(0, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
@@ -343,7 +350,7 @@ public class CleanUpTest {
         final String mySlingId = localSlingId;
         Calendar calendar = getCalendarInstance();
         Resource jobResource = createJobResourceForDate(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId, calendar);
-        calendar.add(Calendar.DAY_OF_YEAR,-1);
+        calendar.add(Calendar.DAY_OF_YEAR, -1);
         createEmptyJobResourceForDate(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId, calendar);
         assertEquals(11, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
 
@@ -351,11 +358,12 @@ public class CleanUpTest {
         // so let's simulate an hour
         simulate(60, Duration.ofMinutes(1));
 
-        // after the first run it will just have marked the folder for deletion, but not deleted, so counter is still the same
+        // after the first run it will just have marked the folder for deletion, but not deleted, so counter is still
+        // the same
         assertEquals(8, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
 
         // simulate 24 hours - still nothing
-        for( int i = 0; i < 24; i++) {
+        for (int i = 0; i < 24; i++) {
             simulate(60, Duration.ofMinutes(1));
             assertEquals("i = " + i, 8, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
         }
@@ -363,7 +371,7 @@ public class CleanUpTest {
         // lets delete the job
         deleteResource(jobResource);
 
-        for( int i = 0; i < 25; i++) {
+        for (int i = 0; i < 25; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
         assertEquals(0, countFolders(ASSIGNED_JOBS_JCR_PATH + "/" + mySlingId));
@@ -385,7 +393,7 @@ public class CleanUpTest {
         assertEquals(8, countFolders(UNASSIGNED_JOBS_JCR_PATH));
 
         // simulate 23 hours
-        for( int i = 0; i < 23; i++) {
+        for (int i = 0; i < 23; i++) {
             simulate(60, Duration.ofMinutes(1));
             assertEquals("i = " + i, 8, countFolders(UNASSIGNED_JOBS_JCR_PATH));
         }
@@ -406,9 +414,9 @@ public class CleanUpTest {
     }
 
     private void doTestUnassignedSimple(boolean deleteJob, int expectedFolders) throws PersistenceException {
-        Calendar calendar = getCalendarInstance(2022,4,17,17,30); // 2022 May 17, 17:30
+        Calendar calendar = getCalendarInstance(2022, 4, 17, 17, 30); // 2022 May 17, 17:30
         Resource job = createJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
-        calendar.add(Calendar.DAY_OF_YEAR,-1);
+        calendar.add(Calendar.DAY_OF_YEAR, -1);
         createEmptyJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
         assertEquals(11, countFolders(UNASSIGNED_JOBS_JCR_PATH));
 
@@ -416,14 +424,14 @@ public class CleanUpTest {
         // so let's simulate an hour
         simulate(60, Duration.ofMinutes(1));
 
-        // after the first run it will just have marked the folder for deletion, but not deleted, 
+        // after the first run it will just have marked the folder for deletion, but not deleted,
         // so counter is still the same
         assertEquals(8, countFolders(UNASSIGNED_JOBS_JCR_PATH));
 
         if (deleteJob) deleteResource(job);
 
         // additional 72 hours
-        for( int i = 0; i < 72; i++) {
+        for (int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
 
@@ -432,15 +440,15 @@ public class CleanUpTest {
 
     @Test
     public void testUnassignedDec31() throws PersistenceException {
-        Calendar calendar = getCalendarInstance(2021,11,31,17,30); // 2021 Dec 31, 17:30
+        Calendar calendar = getCalendarInstance(2021, 11, 31, 17, 30); // 2021 Dec 31, 17:30
         Resource job = createJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
-        calendar.add(Calendar.DAY_OF_YEAR,-1);
+        calendar.add(Calendar.DAY_OF_YEAR, -1);
         createEmptyJobResourceForDate(UNASSIGNED_JOBS_JCR_PATH, calendar);
         assertEquals(11, countFolders(UNASSIGNED_JOBS_JCR_PATH));
         deleteResource(job);
 
         // 72 hours later => now it's 2022
-        for( int i = 0; i < 72; i++) {
+        for (int i = 0; i < 72; i++) {
             simulate(60, Duration.ofMinutes(1));
         }
         assertEquals(2, countFolders(UNASSIGNED_JOBS_JCR_PATH)); // unassigned/test

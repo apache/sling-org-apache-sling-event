@@ -75,28 +75,29 @@ public class TopologyCapabilities {
 
         private final String localClusterId;
 
-
         public InstanceDescriptionComparator(final String clusterId) {
             this.localClusterId = clusterId;
         }
 
         @Override
         public int compare(final InstanceDescription o1, final InstanceDescription o2) {
-            if ( o1.getSlingId().equals(o2.getSlingId()) ) {
+            if (o1.getSlingId().equals(o2.getSlingId())) {
                 return 0;
             }
-            final boolean o1IsLocalCluster = localClusterId.equals(o1.getClusterView().getId());
-            final boolean o2IsLocalCluster = localClusterId.equals(o2.getClusterView().getId());
-            if ( o1IsLocalCluster && !o2IsLocalCluster ) {
+            final boolean o1IsLocalCluster =
+                    localClusterId.equals(o1.getClusterView().getId());
+            final boolean o2IsLocalCluster =
+                    localClusterId.equals(o2.getClusterView().getId());
+            if (o1IsLocalCluster && !o2IsLocalCluster) {
                 return -1;
             }
-            if ( !o1IsLocalCluster && o2IsLocalCluster ) {
+            if (!o1IsLocalCluster && o2IsLocalCluster) {
                 return 1;
             }
-            if ( o1IsLocalCluster ) {
-                if ( o1.isLeader() && !o2.isLeader() ) {
+            if (o1IsLocalCluster) {
+                if (o1.isLeader() && !o2.isLeader()) {
                     return -1;
-                } else if ( o2.isLeader() && !o1.isLeader() ) {
+                } else if (o2.isLeader() && !o1.isLeader()) {
                     return 1;
                 }
             }
@@ -107,9 +108,9 @@ public class TopologyCapabilities {
     public static Map<String, String> getAllInstancesMap(final TopologyView view) {
         final Map<String, String> allInstances = new TreeMap<String, String>();
 
-        for(final InstanceDescription desc : view.getInstances() ) {
+        for (final InstanceDescription desc : view.getInstances()) {
             final String topics = desc.getProperty(PROPERTY_TOPICS);
-            if ( topics != null && topics.length() > 0 ) {
+            if (topics != null && topics.length() > 0) {
                 allInstances.put(desc.getSlingId(), topics);
             } else {
                 allInstances.put(desc.getSlingId(), "");
@@ -123,20 +124,20 @@ public class TopologyCapabilities {
      * @param view The new view
      * @param config The current job manager configuration.
      */
-    public TopologyCapabilities(final TopologyView view,
-            final JobManagerConfiguration config) {
+    public TopologyCapabilities(final TopologyView view, final JobManagerConfiguration config) {
         this.jobManagerConfiguration = config;
-        this.instanceComparator = new InstanceDescriptionComparator(view.getLocalInstance().getClusterView().getId());
+        this.instanceComparator = new InstanceDescriptionComparator(
+                view.getLocalInstance().getClusterView().getId());
         this.isLeader = view.getLocalInstance().isLeader();
         this.allInstances = getAllInstancesMap(view);
         final Map<String, List<InstanceDescription>> newCaps = new HashMap<String, List<InstanceDescription>>();
-        for(final InstanceDescription desc : view.getInstances() ) {
+        for (final InstanceDescription desc : view.getInstances()) {
             final String topics = desc.getProperty(PROPERTY_TOPICS);
-            if ( topics != null && topics.length() > 0 ) {
+            if (topics != null && topics.length() > 0) {
                 this.logger.debug("Detected capabilities of {} : {}", desc.getSlingId(), topics);
-                for(final String topic : topics.split(",") ) {
+                for (final String topic : topics.split(",")) {
                     List<InstanceDescription> list = newCaps.get(topic);
-                    if ( list == null ) {
+                    if (list == null) {
                         list = new ArrayList<InstanceDescription>();
                         newCaps.put(topic, list);
                     }
@@ -194,16 +195,16 @@ public class TopologyCapabilities {
      * Add instances to the list if not already included
      */
     private void addAll(final List<InstanceDescription> potentialTargets, final List<InstanceDescription> newTargets) {
-        if ( newTargets != null ) {
-            for(final InstanceDescription desc : newTargets) {
+        if (newTargets != null) {
+            for (final InstanceDescription desc : newTargets) {
                 boolean found = false;
-                for(final InstanceDescription existingDesc : potentialTargets) {
-                    if ( desc.getSlingId().equals(existingDesc.getSlingId()) ) {
+                for (final InstanceDescription existingDesc : potentialTargets) {
+                    if (desc.getSlingId().equals(existingDesc.getSlingId())) {
                         found = true;
                         break;
                     }
                 }
-                if ( !found ) {
+                if (!found) {
                     potentialTargets.add(desc);
                 }
             }
@@ -223,7 +224,7 @@ public class TopologyCapabilities {
 
         // second: category targets - handling the topic category
         int pos = jobTopic.lastIndexOf('/');
-        if ( pos > 0 ) {
+        if (pos > 0) {
             final String category = jobTopic.substring(0, pos + 1).concat("*");
             addAll(potentialTargets, this.instanceCapabilities.get(category));
 
@@ -233,7 +234,7 @@ public class TopologyCapabilities {
                 addAll(potentialTargets, this.instanceCapabilities.get(subCategory));
 
                 pos = jobTopic.lastIndexOf('/', pos - 1);
-            } while ( pos > 0 );
+            } while (pos > 0);
         }
         Collections.sort(potentialTargets, this.instanceComparator);
 
@@ -243,52 +244,55 @@ public class TopologyCapabilities {
     /**
      * Detect the target instance.
      */
-    public String detectTarget(final String jobTopic, final Map<String, Object> jobProperties,
-            final QueueInfo queueInfo) {
+    public String detectTarget(
+            final String jobTopic, final Map<String, Object> jobProperties, final QueueInfo queueInfo) {
         final List<InstanceDescription> potentialTargets = this.getPotentialTargets(jobTopic);
         logger.debug("Potential targets for {} : {}", jobTopic, potentialTargets);
         String createdOn = null;
-        if ( jobProperties != null ) {
+        if (jobProperties != null) {
             createdOn = (String) jobProperties.get(org.apache.sling.event.jobs.Job.PROPERTY_JOB_CREATED_INSTANCE);
         }
-        if ( createdOn == null ) {
+        if (createdOn == null) {
             createdOn = Environment.APPLICATION_ID;
         }
         final InstanceDescription createdOnInstance = this.instanceMap.get(createdOn);
 
-        if ( potentialTargets != null && potentialTargets.size() > 0 ) {
-            if ( createdOnInstance != null ) {
+        if (potentialTargets != null && potentialTargets.size() > 0) {
+            if (createdOnInstance != null) {
                 // create a list with local targets first.
                 final List<InstanceDescription> localTargets = new ArrayList<InstanceDescription>();
-                for(final InstanceDescription desc : potentialTargets) {
-                    if ( desc.getClusterView().getId().equals(createdOnInstance.getClusterView().getId()) ) {
-                        if ( !this.jobManagerConfiguration.disableDistribution() || desc.isLeader() ) {
+                for (final InstanceDescription desc : potentialTargets) {
+                    if (desc.getClusterView()
+                            .getId()
+                            .equals(createdOnInstance.getClusterView().getId())) {
+                        if (!this.jobManagerConfiguration.disableDistribution() || desc.isLeader()) {
                             localTargets.add(desc);
                         }
                     }
                 }
-                if ( localTargets.size() > 0 ) {
+                if (localTargets.size() > 0) {
                     potentialTargets.clear();
                     potentialTargets.addAll(localTargets);
                     logger.debug("Potential targets filtered for {} : {}", jobTopic, potentialTargets);
                 }
             }
             // check prefer run on creation instance
-            if ( queueInfo.queueConfiguration.isPreferRunOnCreationInstance() ) {
+            if (queueInfo.queueConfiguration.isPreferRunOnCreationInstance()) {
                 InstanceDescription creationDesc = null;
-                for(final InstanceDescription desc : potentialTargets) {
-                    if ( desc.getSlingId().equals(createdOn) ) {
+                for (final InstanceDescription desc : potentialTargets) {
+                    if (desc.getSlingId().equals(createdOn)) {
                         creationDesc = desc;
                         break;
                     }
                 }
-                if ( creationDesc != null ) {
+                if (creationDesc != null) {
                     potentialTargets.clear();
                     potentialTargets.add(creationDesc);
-                    logger.debug("Potential targets reduced to creation instance for {} : {}", jobTopic, potentialTargets);
+                    logger.debug(
+                            "Potential targets reduced to creation instance for {} : {}", jobTopic, potentialTargets);
                 }
             }
-            if ( queueInfo.queueConfiguration.getType() == QueueConfiguration.Type.ORDERED ) {
+            if (queueInfo.queueConfiguration.getType() == QueueConfiguration.Type.ORDERED) {
                 // for ordered queues we always pick the first as we have to pick the same target on each cluster view
                 // on all instances (TODO - we could try to do some round robin of the whole queue)
                 final String result = potentialTargets.get(0).getSlingId();
@@ -299,10 +303,10 @@ public class TopologyCapabilities {
             // TODO - this is a simple round robin which is not based on the actual load
             //        of the instances
             Integer index = this.roundRobinMap.get(jobTopic);
-            if ( index == null ) {
+            if (index == null) {
                 index = 0;
             }
-            if ( index >= potentialTargets.size() ) {
+            if (index >= potentialTargets.size()) {
                 index = 0;
             }
             this.roundRobinMap.put(jobTopic, index + 1);

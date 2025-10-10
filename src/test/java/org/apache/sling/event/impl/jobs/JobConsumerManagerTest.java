@@ -18,10 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.lang.annotation.Annotation;
 
 import org.apache.sling.event.jobs.consumer.JobConsumer;
@@ -31,6 +27,10 @@ import org.mockito.Mockito;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class JobConsumerManagerTest {
 
@@ -61,7 +61,7 @@ public class JobConsumerManagerTest {
 
     private JobConsumerManager.DeprecatedConfig getDeprecatedConfig() {
         return new JobConsumerManager.DeprecatedConfig() {
-                
+
             @Override
             public Class<? extends Annotation> annotationType() {
                 return JobConsumerManager.DeprecatedConfig.class;
@@ -79,7 +79,8 @@ public class JobConsumerManagerTest {
         };
     }
 
-    @Test public void testSimpleMappingConsumer() {
+    @Test
+    public void testSimpleMappingConsumer() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
@@ -98,7 +99,8 @@ public class JobConsumerManagerTest {
         assertNull(jcs.getExecutor("a/b/a"));
     }
 
-    @Test public void testCategoryMappingConsumer() {
+    @Test
+    public void testCategoryMappingConsumer() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
@@ -117,7 +119,8 @@ public class JobConsumerManagerTest {
         assertNull(jcs.getExecutor("a/b/a"));
     }
 
-    @Test public void testSubCategoryMappingConsumer() {
+    @Test
+    public void testSubCategoryMappingConsumer() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
@@ -136,7 +139,8 @@ public class JobConsumerManagerTest {
         assertNotNull(jcs.getExecutor("a/b/a"));
     }
 
-    @Test public void testSimpleMappingExecutor() {
+    @Test
+    public void testSimpleMappingExecutor() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
@@ -155,7 +159,8 @@ public class JobConsumerManagerTest {
         assertNull(jcs.getExecutor("a/b/a"));
     }
 
-    @Test public void testCategoryMappingExecutor() {
+    @Test
+    public void testCategoryMappingExecutor() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
@@ -174,7 +179,8 @@ public class JobConsumerManagerTest {
         assertNull(jcs.getExecutor("a/b/a"));
     }
 
-    @Test public void testSubCategoryMappingExecutor() {
+    @Test
+    public void testSubCategoryMappingExecutor() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
@@ -193,7 +199,8 @@ public class JobConsumerManagerTest {
         assertNotNull(jcs.getExecutor("a/b/a"));
     }
 
-    @Test public void testRanking() {
+    @Test
+    public void testRanking() {
         final BundleContext bc = Mockito.mock(BundleContext.class);
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());

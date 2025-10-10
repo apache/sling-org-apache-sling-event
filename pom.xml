@@ -37,8 +37,8 @@
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/sling-org-apache-sling-event.git</developerConnection>
-        <url>https://github.com/apache/sling-org-apache-sling-event.git</url>
         <tag>org.apache.sling.event-4.3.12</tag>
+        <url>https://github.com/apache/sling-org-apache-sling-event.git</url>
     </scm>
 
     <properties>
@@ -49,96 +49,6 @@
         <project.build.outputTimestamp>2025-06-04T08:33:29Z</project.build.outputTimestamp>
         <sling.java.version>8</sling.java.version>
     </properties>
-
-
-    <build>
-        <plugins>
-            <!-- plain unit tests -->
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>reserve-network-port</id>
-                        <goals>
-                            <goal>reserve-network-port</goal>
-                        </goals>
-                        <phase>pre-integration-test</phase>
-                        <configuration>
-                            <portNames>
-                                <portName>http.port</portName>
-                            </portNames>
-                            <minPortNumber>${min.port}</minPortNumber>
-                            <maxPortNumber>${max.port}</maxPortNumber>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- integration tests run with pax-exam -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>integration-test</goal>
-                            <goal>verify</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    <systemPropertyVariables combine.children="append">
-                        <bundle.filename>${basedir}/target/${project.build.finalName}.jar</bundle.filename>
-                    </systemPropertyVariables>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.servicemix.tooling</groupId>
-                <artifactId>depends-maven-plugin</artifactId>
-            </plugin>
-            <plugin><!-- workaround for https://issues.apache.org/jira/browse/SM-5021 -->
-                <groupId>com.google.code.maven-replacer-plugin</groupId>
-                <artifactId>replacer</artifactId>
-                <version>1.5.3</version>
-                <executions>
-                    <execution>
-                        <id>fix-depends-RB</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>replace</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <file>${project.build.directory}/classes/META-INF/maven/dependencies.properties</file>
-                    <replacements>
-                        <replacement>
-                            <token># Generated at: .+</token>
-                            <value>#</value>
-                        </replacement>
-                    </replacements>
-                    <regex>true</regex>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-    <profiles>
-        <profile>
-            <id>port-java8</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-                <jdk>1.8</jdk>
-            </activation>
-            <properties>
-                <min.port>38000</min.port>
-                <max.port>38999</max.port>
-            </properties>
-        </profile>
-    </profiles>
     <dependencies>
         <dependency>
             <groupId>org.osgi</groupId>
@@ -225,9 +135,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <version>3.2.4</version>
-            <groupId>io.dropwizard.metrics</groupId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -269,8 +179,8 @@
         </dependency>
         <!-- transitive dependency of sling-mock, otherwise ancient version from commons.testing takes precedence-->
         <dependency>
-            <artifactId>org.apache.sling.jcr.api</artifactId>
             <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.jcr.api</artifactId>
             <version>2.4.0</version>
             <scope>test</scope>
         </dependency>
@@ -408,4 +318,94 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- plain unit tests -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>reserve-network-port</id>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <portNames>
+                                <portName>http.port</portName>
+                            </portNames>
+                            <minPortNumber>${min.port}</minPortNumber>
+                            <maxPortNumber>${max.port}</maxPortNumber>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- integration tests run with pax-exam -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <systemPropertyVariables combine.children="append">
+                        <bundle.filename>${basedir}/target/${project.build.finalName}.jar</bundle.filename>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <!-- workaround for https://issues.apache.org/jira/browse/SM-5021 -->
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <configuration>
+                    <file>${project.build.directory}/classes/META-INF/maven/dependencies.properties</file>
+                    <replacements>
+                        <replacement>
+                            <token># Generated at: .+</token>
+                            <value>#</value>
+                        </replacement>
+                    </replacements>
+                    <regex>true</regex>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>fix-depends-RB</id>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>port-java8</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <min.port>38000</min.port>
+                <max.port>38999</max.port>
+            </properties>
+        </profile>
+    </profiles>
 </project>

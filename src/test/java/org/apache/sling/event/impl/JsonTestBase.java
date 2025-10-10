@@ -18,15 +18,15 @@
  */
 package org.apache.sling.event.impl;
 
+import javax.json.Json;
+
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
 
 import org.apache.felix.inventory.Format;
 import org.apache.felix.inventory.InventoryPrinter;
 import org.mockito.Mockito;
-
-import javax.json.Json;
-import java.io.PrintWriter;
-import java.io.StringReader;
-import java.io.StringWriter;
 
 public abstract class JsonTestBase extends Mockito {
 

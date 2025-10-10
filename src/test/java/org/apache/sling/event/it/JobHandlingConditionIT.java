@@ -18,6 +18,11 @@
  */
 package org.apache.sling.event.it;
 
+import java.util.Collections;
+import java.util.Dictionary;
+import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
 import org.apache.sling.event.jobs.QueueConfiguration;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
@@ -32,11 +37,6 @@ import org.ops4j.pax.exam.spi.reactors.PerMethod;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.condition.Condition;
-
-import java.util.Collections;
-import java.util.Dictionary;
-import java.util.Hashtable;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.ops4j.pax.exam.CoreOptions.options;
@@ -58,11 +58,10 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
                 factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
                         .put(ConfigurationConstants.PROP_NAME, "test")
                         .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.UNORDERED.name())
-                        .put(ConfigurationConstants.PROP_TOPICS, new String[]{TOPIC, TOPIC + "2"})
+                        .put(ConfigurationConstants.PROP_TOPICS, new String[] {TOPIC, TOPIC + "2"})
                         .put(ConfigurationConstants.PROP_RETRIES, 2)
                         .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                        .asOption()
-        );
+                        .asOption());
     }
 
     @Before
@@ -218,9 +217,8 @@ public class JobHandlingConditionIT extends AbstractJobHandlingIT {
             if (jobProcessingConditionReg == null) {
                 Dictionary<String, Object> props = new Hashtable<>();
                 props.put("osgi.condition.id", conditionId);
-                jobProcessingConditionReg = bundleContext.registerService(
-                        Condition.class, UNCONDITIONAL_CONDITION, props
-                );
+                jobProcessingConditionReg =
+                        bundleContext.registerService(Condition.class, UNCONDITIONAL_CONDITION, props);
             }
         } else {
             if (jobProcessingConditionReg != null) {

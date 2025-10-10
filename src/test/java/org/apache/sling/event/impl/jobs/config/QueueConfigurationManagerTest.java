@@ -18,23 +18,26 @@
  */
 package org.apache.sling.event.impl.jobs.config;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.Collections;
 
 import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager.QueueInfo;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class QueueConfigurationManagerTest {
 
     @Test
     public void testMultipleMatchingConfigsWithSameRankingAndSameTopic() {
         QueueConfigurationManager configMgr = new QueueConfigurationManager();
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"topic1"}, "queue1", 2, 0)));
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"topic1"}, "queue2", 2, 0)));
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"topic1"}, "queue3", 2, -3)));
         QueueInfo queueInfo = configMgr.getQueueInfo("topic1");
         assertEquals("queue1", queueInfo.queueName); // first queue wins
@@ -43,9 +46,11 @@ public class QueueConfigurationManagerTest {
     @Test
     public void testMultipleMatchingConfigsWithSameRankingAndDifferentTopic() {
         QueueConfigurationManager configMgr = new QueueConfigurationManager();
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"*"}, "queue1", 2, 0)));
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"topic1/test"}, "queue2", 2, 0)));
         QueueInfo queueInfo = configMgr.getQueueInfo("topic1/test");
         assertEquals("queue1", queueInfo.queueName); // first queue wins (although topic in config is more generic)
@@ -54,9 +59,11 @@ public class QueueConfigurationManagerTest {
     @Test
     public void testMultipleMatchingConfigsWithDifferentRanking() {
         QueueConfigurationManager configMgr = new QueueConfigurationManager();
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"topic1/test"}, "queue1", 2, 1)));
-        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(Collections.<String, Object>emptyMap(), 
+        configMgr.bindConfig(InternalQueueConfiguration.fromConfiguration(
+                Collections.<String, Object>emptyMap(),
                 InternalQueueConfigurationTest.createConfig(new String[] {"topic1/*"}, "queue2", 2, 2)));
         QueueInfo queueInfo = configMgr.getQueueInfo("topic1/test");
         assertEquals("queue2", queueInfo.queueName); // highest ranking wins

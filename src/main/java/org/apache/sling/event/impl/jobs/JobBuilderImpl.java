@@ -41,7 +41,6 @@ public class JobBuilderImpl implements JobBuilder {
         this.topic = topic;
     }
 
-
     @Override
     public JobBuilder properties(final Map<String, Object> props) {
         this.properties = props;

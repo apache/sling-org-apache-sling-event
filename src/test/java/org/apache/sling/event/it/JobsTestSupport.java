@@ -18,7 +18,6 @@
  */
 package org.apache.sling.event.it;
 
-
 import javax.inject.Inject;
 
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
@@ -54,42 +53,50 @@ public abstract class JobsTestSupport extends TestSupport {
 
     public ModifiableCompositeOption baseConfiguration() {
         return composite(
-            super.baseConfiguration(),
-            slingQuickstart(),
-            // Sling Event
-            testBundle("bundle.filename"),
-            slingEvent(),
-            mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.event.api").versionAsInProject(),
-            // testing configurations
-            newConfiguration("org.apache.sling.event.impl.jobs.jcr.PersistenceHandler")
-                .put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, backgroundLoadDelay())
-                .put("startup.delay", 1L)
-                .asOption(),
-            newConfiguration("org.apache.sling.commons.scheduler.impl.QuartzScheduler")
-                .put("allowedPoolNames", new String[]{"oak"})
-                .asOption(),
-            // this test code uses loginAdministrative!
-            newConfiguration("org.apache.sling.jcr.base.internal.LoginAdminWhitelist")
-                .put("whitelist.bundles.regexp", "PAXEXAM-PROBE-.*")
-                .asOption(),
-            // otherwise we get ignored events
-            newConfiguration("org.apache.felix.eventadmin.impl.EventAdmin")
-                .put("org.apache.felix.eventadmin.IgnoreTimeout", "*")
-                .asOption(),
-            // testing
-            mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.testing.tools").versionAsInProject(),
-            mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.commons.json").versionAsInProject(),
-            junitBundles()
-        ).remove(
-            mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.event").version(versionResolver)
-        );
+                        super.baseConfiguration(),
+                        slingQuickstart(),
+                        // Sling Event
+                        testBundle("bundle.filename"),
+                        slingEvent(),
+                        mavenBundle()
+                                .groupId("org.apache.sling")
+                                .artifactId("org.apache.sling.event.api")
+                                .versionAsInProject(),
+                        // testing configurations
+                        newConfiguration("org.apache.sling.event.impl.jobs.jcr.PersistenceHandler")
+                                .put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, backgroundLoadDelay())
+                                .put("startup.delay", 1L)
+                                .asOption(),
+                        newConfiguration("org.apache.sling.commons.scheduler.impl.QuartzScheduler")
+                                .put("allowedPoolNames", new String[] {"oak"})
+                                .asOption(),
+                        // this test code uses loginAdministrative!
+                        newConfiguration("org.apache.sling.jcr.base.internal.LoginAdminWhitelist")
+                                .put("whitelist.bundles.regexp", "PAXEXAM-PROBE-.*")
+                                .asOption(),
+                        // otherwise we get ignored events
+                        newConfiguration("org.apache.felix.eventadmin.impl.EventAdmin")
+                                .put("org.apache.felix.eventadmin.IgnoreTimeout", "*")
+                                .asOption(),
+                        // testing
+                        mavenBundle()
+                                .groupId("org.apache.sling")
+                                .artifactId("org.apache.sling.testing.tools")
+                                .versionAsInProject(),
+                        mavenBundle()
+                                .groupId("org.apache.sling")
+                                .artifactId("org.apache.sling.commons.json")
+                                .versionAsInProject(),
+                        junitBundles())
+                .remove(mavenBundle()
+                        .groupId("org.apache.sling")
+                        .artifactId("org.apache.sling.event")
+                        .version(versionResolver));
     }
 
     protected Option slingQuickstart() {
         final String workingDirectory = workingDirectory();
         final int httpPort = findFreePort();
-        return composite(
-            slingQuickstartOakTar(workingDirectory, httpPort)
-        );
+        return composite(slingQuickstartOakTar(workingDirectory, httpPort));
     }
 }

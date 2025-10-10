@@ -58,33 +58,36 @@ import org.slf4j.LoggerFactory;
 /**
  * This component manages/keeps track of all job consumer services.
  */
-@Component(service = JobConsumerManager.class,
-    property = {
-          Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-    })
+@Component(
+        service = JobConsumerManager.class,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 @Designate(ocd = JobConsumerManager.Config.class)
 public class JobConsumerManager {
 
-    @ObjectClassDefinition(name = "Apache Sling Job Consumer Manager",
-           description="The consumer manager controls the job consumer (= processors). "
-                     + "It can be used to temporarily disable job processing on the current instance. Other instances "
-                     + "in a cluster are not affected.")
+    @ObjectClassDefinition(
+            name = "Apache Sling Job Consumer Manager",
+            description = "The consumer manager controls the job consumer (= processors). "
+                    + "It can be used to temporarily disable job processing on the current instance. Other instances "
+                    + "in a cluster are not affected.")
     public @interface Config {
 
-        @AttributeDefinition(name = "Distribute config",
-          description="If this is disabled, the configuration is not persisted on save in the cluster and is "
-                    + "only used on the current instance. This option should always be disabled!")
+        @AttributeDefinition(
+                name = "Distribute config",
+                description = "If this is disabled, the configuration is not persisted on save in the cluster and is "
+                        + "only used on the current instance. This option should always be disabled!")
         boolean org_apache_sling_installer_configuration_persist() default false;
 
-        @AttributeDefinition(name = "Topic Allow List",
-              description="This is a list of topics which currently should be "
+        @AttributeDefinition(
+                name = "Topic Allow List",
+                description = "This is a list of topics which currently should be "
                         + "processed by this instance. Leaving it empty, all job consumers are disabled. Putting a '*' as "
                         + "one entry, enables all job consumers. Adding separate topics enables job consumers for exactly "
                         + "this topic.")
         String[] job_consumermanager_allowlist();
 
-        @AttributeDefinition(name = "Topic Deny List",
-              description="This is a list of topics which currently shouldn't be "
+        @AttributeDefinition(
+                name = "Topic Deny List",
+                description = "This is a list of topics which currently shouldn't be "
                         + "processed by this instance. Leaving it empty, all job consumers are enabled. Putting a '*' as "
                         + "one entry, disables all job consumers. Adding separate topics disables job consumers for exactly "
                         + "this topic.")
@@ -93,6 +96,7 @@ public class JobConsumerManager {
 
     public @interface DeprecatedConfig {
         String[] job_consumermanager_whitelist();
+
         String[] job_consumermanager_blacklist();
     }
 
@@ -121,7 +125,7 @@ public class JobConsumerManager {
         serviceProps.put(PropertyProvider.PROPERTY_PROPERTIES, TopologyCapabilities.PROPERTY_TOPICS);
         // we add a changing property to the service registration
         // to make sure a modification event is really sent
-        synchronized ( this ) {
+        synchronized (this) {
             serviceProps.put("changeCount", this.changeCount++);
         }
         return serviceProps;
@@ -138,32 +142,36 @@ public class JobConsumerManager {
     }
 
     private String[] getAllowListConfig(final Config config, final DeprecatedConfig deprecatedConfig) {
-        if (isDefined(config.job_consumermanager_allowlist()) && isDefined(deprecatedConfig.job_consumermanager_whitelist()) ) {
+        if (isDefined(config.job_consumermanager_allowlist())
+                && isDefined(deprecatedConfig.job_consumermanager_whitelist())) {
             logger.error("Both properties, job.consumermanager.allowlist and job.consumermanager.whitelist"
-                + ", were defined. Using job.consumermanager.allowlist for configuring job consumers."
-                + "Please remove the other property from your configuration.");
+                    + ", were defined. Using job.consumermanager.allowlist for configuring job consumers."
+                    + "Please remove the other property from your configuration.");
             return config.job_consumermanager_allowlist();
         } else if (isDefined(config.job_consumermanager_allowlist())) {
             return config.job_consumermanager_allowlist();
         } else if (isDefined(deprecatedConfig.job_consumermanager_whitelist())) {
-            logger.warn("The property job.consumermanager.allowlist is not set. Using the provided property " +
-                "job.consumermanager.whitelist instead. Please update your configuration to use job.consumermanager.allowlist.");
+            logger.warn(
+                    "The property job.consumermanager.allowlist is not set. Using the provided property "
+                            + "job.consumermanager.whitelist instead. Please update your configuration to use job.consumermanager.allowlist.");
             return deprecatedConfig.job_consumermanager_whitelist();
         }
         return new String[] {"*"}; // default
     }
 
     private String[] getDenyListConfig(final Config config, final DeprecatedConfig deprecatedConfig) {
-        if (isDefined(config.job_consumermanager_denylist()) && isDefined(deprecatedConfig.job_consumermanager_blacklist()) ) {
+        if (isDefined(config.job_consumermanager_denylist())
+                && isDefined(deprecatedConfig.job_consumermanager_blacklist())) {
             logger.error("Both properties, job.consumermanager.denylist and job.consumermanager.blacklist"
-                + ", were defined. Using job.consumermanager.denylist for configuring job consumers."
-                + "Please remove the other property from your configuration.");
+                    + ", were defined. Using job.consumermanager.denylist for configuring job consumers."
+                    + "Please remove the other property from your configuration.");
             return config.job_consumermanager_denylist();
         } else if (isDefined(config.job_consumermanager_denylist())) {
             return config.job_consumermanager_denylist();
         } else if (isDefined(deprecatedConfig.job_consumermanager_blacklist())) {
-            logger.warn("The property job.consumermanager.denylist is not set. Using the provided property " +
-                "job.consumermanager.blacklist instead. Please update your configuration to use job.consumermanager.denylist.");
+            logger.warn(
+                    "The property job.consumermanager.denylist is not set. Using the provided property "
+                            + "job.consumermanager.blacklist instead. Please update your configuration to use job.consumermanager.denylist.");
             return deprecatedConfig.job_consumermanager_blacklist();
         }
         return null; // default
@@ -176,31 +184,33 @@ public class JobConsumerManager {
         this.denyListMatchers = TopicMatcherHelper.buildMatchers(getDenyListConfig(config, deprecatedConfig));
 
         final boolean enable = this.allowListMatchers != null && this.denyListMatchers != TopicMatcherHelper.MATCH_ALL;
-        if ( wasEnabled != enable ) {
-            synchronized ( this.topicToConsumerMap ) {
+        if (wasEnabled != enable) {
+            synchronized (this.topicToConsumerMap) {
                 this.calculateTopics(enable);
             }
-            if ( enable ) {
+            if (enable) {
                 logger.debug("Registering property provider with: {}", this.topics);
-                this.propagationService = bc.registerService(PropertyProvider.class,
+                this.propagationService = bc.registerService(
+                        PropertyProvider.class,
                         new PropertyProvider() {
 
                             @Override
                             public String getProperty(final String name) {
-                                if ( TopologyCapabilities.PROPERTY_TOPICS.equals(name) ) {
+                                if (TopologyCapabilities.PROPERTY_TOPICS.equals(name)) {
                                     return topics;
                                 }
                                 return null;
                             }
-                        }, this.getRegistrationProperties());
+                        },
+                        this.getRegistrationProperties());
             } else {
                 logger.debug("Unregistering property provider with");
                 this.propagationService.unregister();
                 this.propagationService = null;
             }
-        } else if ( enable ) {
+        } else if (enable) {
             // update properties
-            synchronized ( this.topicToConsumerMap ) {
+            synchronized (this.topicToConsumerMap) {
                 this.calculateTopics(true);
             }
             logger.debug("Updating property provider with: {}", this.topics);
@@ -210,12 +220,12 @@ public class JobConsumerManager {
 
     @Deactivate
     protected void deactivate() {
-        if ( this.propagationService != null ) {
+        if (this.propagationService != null) {
             this.propagationService.unregister();
             this.propagationService = null;
         }
         this.bundleContext = null;
-        synchronized ( this.topicToConsumerMap ) {
+        synchronized (this.topicToConsumerMap) {
             this.topicToConsumerMap.clear();
             this.listenerMap.clear();
         }
@@ -227,16 +237,16 @@ public class JobConsumerManager {
      * @return A consumer or <code>null</code>
      */
     public JobExecutor getExecutor(final String topic) {
-        synchronized ( this.topicToConsumerMap ) {
+        synchronized (this.topicToConsumerMap) {
             final List<ConsumerInfo> consumers = this.topicToConsumerMap.get(topic);
-            if ( consumers != null ) {
+            if (consumers != null) {
                 return consumers.get(0).getExecutor(this.bundleContext);
             }
             int pos = topic.lastIndexOf('/');
-            if ( pos > 0 ) {
+            if (pos > 0) {
                 final String category = topic.substring(0, pos + 1).concat("*");
                 final List<ConsumerInfo> categoryConsumers = this.topicToConsumerMap.get(category);
-                if ( categoryConsumers != null ) {
+                if (categoryConsumers != null) {
                     return categoryConsumers.get(0).getExecutor(this.bundleContext);
                 }
 
@@ -244,24 +254,24 @@ public class JobConsumerManager {
                 do {
                     final String subCategory = topic.substring(0, pos + 1).concat("**");
                     final List<ConsumerInfo> subCategoryConsumers = this.topicToConsumerMap.get(subCategory);
-                    if ( subCategoryConsumers != null ) {
+                    if (subCategoryConsumers != null) {
                         return subCategoryConsumers.get(0).getExecutor(this.bundleContext);
                     }
                     pos = topic.lastIndexOf('/', pos - 1);
-                } while ( pos > 0 );
+                } while (pos > 0);
             }
         }
         return null;
     }
 
     public void registerListener(final String key, final JobExecutor consumer, final JobExecutionContext handler) {
-        synchronized ( this.topicToConsumerMap ) {
+        synchronized (this.topicToConsumerMap) {
             this.listenerMap.put(key, new Object[] {consumer, handler});
         }
     }
 
     public void unregisterListener(final String key) {
-        synchronized ( this.topicToConsumerMap ) {
+        synchronized (this.topicToConsumerMap) {
             this.listenerMap.remove(key);
         }
     }
@@ -277,9 +287,10 @@ public class JobConsumerManager {
      * Bind a new consumer
      * @param serviceReference The service reference to the consumer.
      */
-    @Reference(service=JobConsumer.class,
-            cardinality=ReferenceCardinality.MULTIPLE,
-            policy=ReferencePolicy.DYNAMIC)
+    @Reference(
+            service = JobConsumer.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC)
     protected void bindJobConsumer(final ServiceReference<JobConsumer> serviceReference) {
         this.bindService(serviceReference, true);
     }
@@ -296,9 +307,10 @@ public class JobConsumerManager {
      * Bind a new executor
      * @param serviceReference The service reference to the executor.
      */
-    @Reference(service=JobExecutor.class,
-            cardinality=ReferenceCardinality.MULTIPLE,
-            policy=ReferencePolicy.DYNAMIC)
+    @Reference(
+            service = JobExecutor.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC)
     protected void bindJobExecutor(final ServiceReference<JobExecutor> serviceReference) {
         this.bindService(serviceReference, false);
     }
@@ -318,16 +330,16 @@ public class JobConsumerManager {
      */
     private void bindService(final ServiceReference<?> serviceReference, final boolean isConsumer) {
         final String[] topics = PropertiesUtil.toStringArray(serviceReference.getProperty(JobConsumer.PROPERTY_TOPICS));
-        if ( topics != null && topics.length > 0 ) {
+        if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
-            synchronized ( this.topicToConsumerMap ) {
-                for(final String t : topics) {
-                    if ( t != null ) {
+            synchronized (this.topicToConsumerMap) {
+                for (final String t : topics) {
+                    if (t != null) {
                         final String topic = t.trim();
-                        if ( topic.length() > 0 ) {
+                        if (topic.length() > 0) {
                             List<ConsumerInfo> consumers = this.topicToConsumerMap.get(topic);
-                            if ( consumers == null ) {
+                            if (consumers == null) {
                                 consumers = new ArrayList<>();
                                 this.topicToConsumerMap.put(topic, consumers);
                                 changed = true;
@@ -337,11 +349,11 @@ public class JobConsumerManager {
                         }
                     }
                 }
-                if ( changed ) {
+                if (changed) {
                     this.calculateTopics(this.propagationService != null);
                 }
             }
-            if ( changed && this.propagationService != null ) {
+            if (changed && this.propagationService != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
                 this.propagationService.setProperties(this.getRegistrationProperties());
             }
@@ -355,30 +367,32 @@ public class JobConsumerManager {
      */
     private void unbindService(final ServiceReference<?> serviceReference, final boolean isConsumer) {
         final String[] topics = PropertiesUtil.toStringArray(serviceReference.getProperty(JobConsumer.PROPERTY_TOPICS));
-        if ( topics != null && topics.length > 0 ) {
+        if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
-            synchronized ( this.topicToConsumerMap ) {
-                for(final String t : topics) {
-                    if ( t != null ) {
+            synchronized (this.topicToConsumerMap) {
+                for (final String t : topics) {
+                    if (t != null) {
                         final String topic = t.trim();
-                        if ( topic.length() > 0 ) {
+                        if (topic.length() > 0) {
                             final List<ConsumerInfo> consumers = this.topicToConsumerMap.get(topic);
-                            if ( consumers != null ) { // sanity check
-                                for(final ConsumerInfo oldConsumer : consumers) {
-                                    if ( oldConsumer.equals(info) && oldConsumer.executor != null ) {
+                            if (consumers != null) { // sanity check
+                                for (final ConsumerInfo oldConsumer : consumers) {
+                                    if (oldConsumer.equals(info) && oldConsumer.executor != null) {
                                         // notify listener
-                                        for(final Object[] listenerObjects : this.listenerMap.values()) {
-                                            if ( listenerObjects[0] == oldConsumer.executor ) {
-                                                final JobExecutionContext context = (JobExecutionContext)listenerObjects[1];
-                                                context.asyncProcessingFinished(context.result().failed());
+                                        for (final Object[] listenerObjects : this.listenerMap.values()) {
+                                            if (listenerObjects[0] == oldConsumer.executor) {
+                                                final JobExecutionContext context =
+                                                        (JobExecutionContext) listenerObjects[1];
+                                                context.asyncProcessingFinished(
+                                                        context.result().failed());
                                                 break;
                                             }
                                         }
                                     }
                                 }
                                 consumers.remove(info);
-                                if ( consumers.size() == 0 ) {
+                                if (consumers.size() == 0) {
                                     this.topicToConsumerMap.remove(topic);
                                     changed = true;
                                 }
@@ -386,11 +400,11 @@ public class JobConsumerManager {
                         }
                     }
                 }
-                if ( changed ) {
+                if (changed) {
                     this.calculateTopics(this.propagationService != null);
                 }
             }
-            if ( changed && this.propagationService != null ) {
+            if (changed && this.propagationService != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
                 this.propagationService.setProperties(this.getRegistrationProperties());
             }
@@ -398,8 +412,8 @@ public class JobConsumerManager {
     }
 
     private boolean match(final String topic, final TopicMatcher[] matchers) {
-        for(final TopicMatcher m : matchers) {
-            if ( m.match(topic) != null ) {
+        for (final TopicMatcher m : matchers) {
+            if (m.match(topic) != null) {
                 return true;
             }
         }
@@ -407,15 +421,15 @@ public class JobConsumerManager {
     }
 
     private void calculateTopics(final boolean enabled) {
-        if ( enabled ) {
+        if (enabled) {
             // create a sorted list - this ensures that the property value
             // is always the same for the same topics.
             final List<String> topicList = new ArrayList<>();
-            for(final String topic : this.topicToConsumerMap.keySet() ) {
+            for (final String topic : this.topicToConsumerMap.keySet()) {
                 // check allow list
-                if ( this.match(topic, this.allowListMatchers) ) {
+                if (this.match(topic, this.allowListMatchers)) {
                     // and deny list
-                    if ( this.denyListMatchers == null || !this.match(topic, this.denyListMatchers) ) {
+                    if (this.denyListMatchers == null || !this.match(topic, this.denyListMatchers)) {
                         topicList.add(topic);
                     }
                 }
@@ -424,8 +438,8 @@ public class JobConsumerManager {
 
             final StringBuilder sb = new StringBuilder();
             boolean first = true;
-            for(final String topic : topicList ) {
-                if ( first ) {
+            for (final String topic : topicList) {
+                if (first) {
                     first = false;
                 } else {
                     sb.append(',');
@@ -441,7 +455,7 @@ public class JobConsumerManager {
     /**
      * Internal class caching some consumer infos like service id and ranking.
      */
-    private final static class ConsumerInfo implements Comparable<ConsumerInfo> {
+    private static final class ConsumerInfo implements Comparable<ConsumerInfo> {
 
         public final ServiceReference<?> serviceReference;
         private final boolean isConsumer;
@@ -453,19 +467,19 @@ public class JobConsumerManager {
             this.serviceReference = serviceReference;
             this.isConsumer = isConsumer;
             final Object sr = serviceReference.getProperty(Constants.SERVICE_RANKING);
-            if ( sr == null || !(sr instanceof Integer)) {
+            if (sr == null || !(sr instanceof Integer)) {
                 this.ranking = 0;
             } else {
-                this.ranking = (Integer)sr;
+                this.ranking = (Integer) sr;
             }
-            this.serviceId = (Long)serviceReference.getProperty(Constants.SERVICE_ID);
+            this.serviceId = (Long) serviceReference.getProperty(Constants.SERVICE_ID);
         }
 
         @Override
         public int compareTo(final ConsumerInfo o) {
-            if ( this.ranking < o.ranking ) {
+            if (this.ranking < o.ranking) {
                 return 1;
-            } else if (this.ranking > o.ranking ) {
+            } else if (this.ranking > o.ranking) {
                 return -1;
             }
             // If ranks are equal, then sort by service id in descending order.
@@ -474,8 +488,8 @@ public class JobConsumerManager {
 
         @Override
         public boolean equals(final Object obj) {
-            if ( obj instanceof ConsumerInfo ) {
-                return ((ConsumerInfo)obj).serviceId == this.serviceId;
+            if (obj instanceof ConsumerInfo) {
+                return ((ConsumerInfo) obj).serviceId == this.serviceId;
             }
             return false;
         }
@@ -486,8 +500,8 @@ public class JobConsumerManager {
         }
 
         public JobExecutor getExecutor(final BundleContext bundleContext) {
-            if ( executor == null ) {
-                if ( this.isConsumer ) {
+            if (executor == null) {
+                if (this.isConsumer) {
                     executor = new JobConsumerWrapper((JobConsumer) bundleContext.getService(this.serviceReference));
                 } else {
                     executor = (JobExecutor) bundleContext.getService(this.serviceReference);
@@ -497,7 +511,7 @@ public class JobConsumerManager {
         }
     }
 
-    private final static class JobConsumerWrapper implements JobExecutor {
+    private static final class JobConsumerWrapper implements JobExecutor {
 
         private final JobConsumer consumer;
 
@@ -507,45 +521,44 @@ public class JobConsumerManager {
 
         @Override
         public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-            final JobConsumer.AsyncHandler asyncHandler =
-                    new JobConsumer.AsyncHandler() {
+            final JobConsumer.AsyncHandler asyncHandler = new JobConsumer.AsyncHandler() {
 
-                        final Object asyncLock = new Object();
-                        final AtomicBoolean asyncDone = new AtomicBoolean(false);
+                final Object asyncLock = new Object();
+                final AtomicBoolean asyncDone = new AtomicBoolean(false);
 
-                        private void check(final JobExecutionResult result) {
-                            synchronized ( asyncLock ) {
-                                if ( !asyncDone.get() ) {
-                                    asyncDone.set(true);
-                                    context.asyncProcessingFinished(result);
-                                } else {
-                                    throw new IllegalStateException("Job is already marked as processed");
-                                }
-                            }
+                private void check(final JobExecutionResult result) {
+                    synchronized (asyncLock) {
+                        if (!asyncDone.get()) {
+                            asyncDone.set(true);
+                            context.asyncProcessingFinished(result);
+                        } else {
+                            throw new IllegalStateException("Job is already marked as processed");
                         }
+                    }
+                }
 
-                        @Override
-                        public void ok() {
-                            this.check(context.result().succeeded());
-                        }
+                @Override
+                public void ok() {
+                    this.check(context.result().succeeded());
+                }
 
-                        @Override
-                        public void failed() {
-                            this.check(context.result().failed());
-                        }
+                @Override
+                public void failed() {
+                    this.check(context.result().failed());
+                }
 
-                        @Override
-                        public void cancel() {
-                            this.check(context.result().cancelled());
-                        }
-                    };
-            ((JobImpl)job).setProperty(JobConsumer.PROPERTY_JOB_ASYNC_HANDLER, asyncHandler);
+                @Override
+                public void cancel() {
+                    this.check(context.result().cancelled());
+                }
+            };
+            ((JobImpl) job).setProperty(JobConsumer.PROPERTY_JOB_ASYNC_HANDLER, asyncHandler);
             final JobConsumer.JobResult result = this.consumer.process(job);
-            if ( result == JobResult.ASYNC ) {
+            if (result == JobResult.ASYNC) {
                 return null;
-            } else if ( result == JobResult.FAILED) {
+            } else if (result == JobResult.FAILED) {
                 return context.result().failed();
-            } else if ( result == JobResult.OK) {
+            } else if (result == JobResult.OK) {
                 return context.result().succeeded();
             }
             return context.result().cancelled();

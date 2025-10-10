@@ -18,19 +18,8 @@
  */
 package org.apache.sling.event.impl.jobs.queues;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import org.apache.sling.commons.threads.ThreadPool;
 import org.apache.sling.event.impl.jobs.JobConsumerManager;
@@ -43,8 +32,18 @@ import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.slf4j.Logger;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JobQueueImplTest {
 
@@ -52,8 +51,10 @@ public class JobQueueImplTest {
     private QueueServices services;
     private JobManagerConfiguration configuration;
     private QueueJobCache cache;
+
     @InjectMocks
     private ThreadPool threadPool;
+
     private String testQueue = "testQueue";
 
     @Before
@@ -82,7 +83,9 @@ public class JobQueueImplTest {
         jobQueue.startJobs();
 
         // The job should not be started/removed
-        assertTrue("Job should remain in processingJobsLists when processing is disabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
+        assertTrue(
+                "Job should remain in processingJobsLists when processing is disabled",
+                jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
     @Test
@@ -103,19 +106,17 @@ public class JobQueueImplTest {
         jobQueue.startJobs();
 
         // Assert: No job should be in processingJobsLists
-        assertTrue("No jobs should be processed when processing is disabled",
+        assertTrue(
+                "No jobs should be processed when processing is disabled",
                 jobQueue.getProcessingJobsLists().isEmpty());
 
         // Enable processing
         when(configuration.isJobProcessingEnabled()).thenReturn(true);
 
         // Mock the cache to return the job handler once, then null
-        when(cache.getNextJob(
-                any(JobConsumerManager.class),
-                any(StatisticsManager.class),
-                eq(jobQueue),
-                anyBoolean()
-        )).thenReturn(jobHandler).thenReturn(null);
+        when(cache.getNextJob(any(JobConsumerManager.class), any(StatisticsManager.class), eq(jobQueue), anyBoolean()))
+                .thenReturn(jobHandler)
+                .thenReturn(null);
 
         Field threadPoolField = JobQueueImpl.class.getDeclaredField("threadPool");
         threadPoolField.setAccessible(true);
@@ -135,7 +136,8 @@ public class JobQueueImplTest {
         }
 
         // Assert: Job should now be removed
-        assertFalse("Job should be removed from processingJobsLists when processing is enabled",
+        assertFalse(
+                "Job should be removed from processingJobsLists when processing is enabled",
                 jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
@@ -152,7 +154,9 @@ public class JobQueueImplTest {
         jobQueue.startJobs();
 
         // Verify that no jobs were started by checking the internal state
-        assertTrue("No jobs should be started after queue shutdown", jobQueue.getProcessingJobsLists().isEmpty());
+        assertTrue(
+                "No jobs should be started after queue shutdown",
+                jobQueue.getProcessingJobsLists().isEmpty());
     }
 
     @Test
@@ -167,12 +171,16 @@ public class JobQueueImplTest {
         when(jobHandler.getJob().getId()).thenReturn(jobId);
         jobQueue.getProcessingJobsLists().put(jobId, jobHandler);
 
-        assertTrue("Processing jobs list should contain the job after adding", jobQueue.getProcessingJobsLists().containsKey(jobId));
+        assertTrue(
+                "Processing jobs list should contain the job after adding",
+                jobQueue.getProcessingJobsLists().containsKey(jobId));
 
         jobQueue.close();
 
         // Verify that the processingJobsLists is cleared after shutdown
-        assertTrue("Processing jobs list should be empty after shutdown", jobQueue.getProcessingJobsLists().isEmpty());
+        assertTrue(
+                "Processing jobs list should be empty after shutdown",
+                jobQueue.getProcessingJobsLists().isEmpty());
     }
 
     @Test
@@ -193,7 +201,9 @@ public class JobQueueImplTest {
             throw new RuntimeException("Failed to invoke startJob method", e);
         }
 
-        assertTrue("Job should remain in processingJobsLists even when processing is disabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
+        assertTrue(
+                "Job should remain in processingJobsLists even when processing is disabled",
+                jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
     @Test
@@ -208,7 +218,9 @@ public class JobQueueImplTest {
         jobQueue.startJobs();
 
         // The job should still be present since the queue is suspended
-        assertTrue("No jobs should be started when the queue is suspended", jobQueue.getProcessingJobsLists().containsKey(jobId));
+        assertTrue(
+                "No jobs should be started when the queue is suspended",
+                jobQueue.getProcessingJobsLists().containsKey(jobId));
 
         // Activate the queue and enable processing
         when(configuration.isJobProcessingEnabled()).thenReturn(true);
@@ -222,10 +234,13 @@ public class JobQueueImplTest {
             }
             try {
                 Thread.sleep(50);
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+            }
         }
 
-        assertTrue("Job should be removed from processingJobsLists after resuming queue when processing is enabled", jobQueue.getProcessingJobsLists().containsKey(jobId));
+        assertTrue(
+                "Job should be removed from processingJobsLists after resuming queue when processing is enabled",
+                jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 
     @Test
@@ -253,11 +268,15 @@ public class JobQueueImplTest {
         verify(jobHandler2).stop();
 
         // Verify jobs remain in processing list
-        assertTrue("Job1 should remain in processing list after stopAllJobs",
+        assertTrue(
+                "Job1 should remain in processing list after stopAllJobs",
                 jobQueue.getProcessingJobsLists().containsKey(jobId1));
-        assertTrue("Job2 should remain in processing list after stopAllJobs",
+        assertTrue(
+                "Job2 should remain in processing list after stopAllJobs",
                 jobQueue.getProcessingJobsLists().containsKey(jobId2));
-        assertEquals("Processing list should still contain 2 jobs", 2,
+        assertEquals(
+                "Processing list should still contain 2 jobs",
+                2,
                 jobQueue.getProcessingJobsLists().size());
     }
 
@@ -272,18 +291,15 @@ public class JobQueueImplTest {
         // Enable job processing
         when(configuration.isJobProcessingEnabled()).thenReturn(true);
 
-            // Mock the cache to return the job handler once, then null
-            when(cache.getNextJob(
-                    any(),
-                    any(),
-                    any(),
-                    anyBoolean()
-            )).thenReturn(jobHandler).thenReturn(null);
+        // Mock the cache to return the job handler once, then null
+        when(cache.getNextJob(any(), any(), any(), anyBoolean()))
+                .thenReturn(jobHandler)
+                .thenReturn(null);
 
-            Field threadPoolField = JobQueueImpl.class.getDeclaredField("threadPool");
-            threadPoolField.setAccessible(true);
-            threadPoolField.set(jobQueue, threadPool);
-            doNothing().when(threadPool).execute(any());
+        Field threadPoolField = JobQueueImpl.class.getDeclaredField("threadPool");
+        threadPoolField.setAccessible(true);
+        threadPoolField.set(jobQueue, threadPool);
+        doNothing().when(threadPool).execute(any());
         // Act: Start jobs
         jobQueue.startJobs();
 
@@ -297,7 +313,8 @@ public class JobQueueImplTest {
         }
 
         // Assert: Job should be removed after processing
-        assertFalse("Job should be removed from processingJobsLists after successful processing",
+        assertFalse(
+                "Job should be removed from processingJobsLists after successful processing",
                 jobQueue.getProcessingJobsLists().containsKey(jobId));
     }
 }

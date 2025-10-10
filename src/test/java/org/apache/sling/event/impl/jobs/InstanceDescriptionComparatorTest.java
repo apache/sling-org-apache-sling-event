@@ -18,8 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,10 +27,12 @@ import org.apache.sling.discovery.ClusterView;
 import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
 
+import static org.junit.Assert.assertEquals;
+
 public class InstanceDescriptionComparatorTest {
 
-
-    @org.junit.Test public void testSingleClusterThreeInstances() {
+    @org.junit.Test
+    public void testSingleClusterThreeInstances() {
         final Instance cl1in1 = new Instance("1", "A", false, true);
         final Instance cl1in2 = new Instance("1", "B", true, false);
         final Instance cl1in3 = new Instance("1", "C", false, false);
@@ -48,7 +48,8 @@ public class InstanceDescriptionComparatorTest {
         assertEquals("Instance2: ", cl1in3.getSlingId(), desc.get(2).getSlingId());
     }
 
-    @org.junit.Test public void testTwoClustersThreeInstances() {
+    @org.junit.Test
+    public void testTwoClustersThreeInstances() {
         final Instance cl1in1 = new Instance("1", "A", false, true);
         final Instance cl1in2 = new Instance("1", "B", true, false);
         final Instance cl1in3 = new Instance("1", "C", false, false);
@@ -81,7 +82,8 @@ public class InstanceDescriptionComparatorTest {
         assertEquals("Instance5: ", cl1in3.getSlingId(), desc.get(5).getSlingId());
     }
 
-    @org.junit.Test public void testThreeClustersThreeInstances() {
+    @org.junit.Test
+    public void testThreeClustersThreeInstances() {
         final Instance cl1in1 = new Instance("1", "A", false, true);
         final Instance cl1in2 = new Instance("1", "B", true, false);
         final Instance cl1in3 = new Instance("1", "C", false, false);
@@ -143,7 +145,8 @@ public class InstanceDescriptionComparatorTest {
         private final boolean isLeader;
         private final boolean isLocal;
 
-        public Instance(final String clusterId, final String instanceId, final boolean isLeader, final boolean isLocal) {
+        public Instance(
+                final String clusterId, final String instanceId, final boolean isLeader, final boolean isLocal) {
             this.clusterId = clusterId;
             this.instanceId = instanceId;
             this.isLeader = isLeader;

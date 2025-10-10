@@ -64,8 +64,7 @@ public class InitDelayingTopologyEventListenerTest {
                     if (remaining > 0) {
                         events.wait(remaining);
                     } else {
-                        fail("did not receive " + cnt + " events within " + timeout + " ms, "
-                            + "but " + events.size());
+                        fail("did not receive " + cnt + " events within " + timeout + " ms, " + "but " + events.size());
                     }
                 }
             }
@@ -84,8 +83,7 @@ public class InitDelayingTopologyEventListenerTest {
                         return;
                     }
                 }
-                fail("did not receive " + cnt + " events within " + timeout + " ms, "
-                    + "but " + events.size());
+                fail("did not receive " + cnt + " events within " + timeout + " ms, " + "but " + events.size());
             }
         }
     }
@@ -223,8 +221,8 @@ public class InitDelayingTopologyEventListenerTest {
         doTestAdditionalEventsAfterInit(delegate, listener);
     }
 
-    private void doTestAdditionalEventsAfterInit(final TestListener delegate, InitDelayingTopologyEventListener listener)
-        throws InterruptedException {
+    private void doTestAdditionalEventsAfterInit(
+            final TestListener delegate, InitDelayingTopologyEventListener listener) throws InterruptedException {
         // 2nd one too
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_CHANGING));
         delegate.waitForEventCnt(2, 5000);
@@ -249,7 +247,6 @@ public class InitDelayingTopologyEventListenerTest {
         listener.handleTopologyEvent(createEvent(Type.TOPOLOGY_CHANGED));
         delegate.waitForEventCnt(6, 5000);
         assertEquals(delegate.getEvents().get(5).getType(), Type.TOPOLOGY_CHANGED);
-
     }
 
     @Test
@@ -285,7 +282,7 @@ public class InitDelayingTopologyEventListenerTest {
     }
 
     @Ignore
-    //due to flakyness should be fixed in SLING-12807
+    // due to flakyness should be fixed in SLING-12807
     @Test
     public void testChanged() throws Exception {
         final TestListener delegate = new TestListener();
@@ -300,7 +297,7 @@ public class InitDelayingTopologyEventListenerTest {
     }
 
     @Ignore
-    //due to flakyness should be fixed in SLING-12807
+    // due to flakyness should be fixed in SLING-12807
     @Test
     public void testProperties() throws Exception {
         final TestListener delegate = new TestListener();
@@ -314,5 +311,4 @@ public class InitDelayingTopologyEventListenerTest {
 
         doTestAdditionalEventsAfterInit(delegate, listener);
     }
-
 }

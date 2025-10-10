@@ -18,15 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -46,6 +37,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class JobManagerImplTest {
 
@@ -88,7 +88,6 @@ public class JobManagerImplTest {
         this.outContent = new ByteArrayOutputStream();
         this.originalErr = System.err;
         System.setErr(new PrintStream(outContent));
-
     }
 
     // SLING-8413
@@ -101,46 +100,60 @@ public class JobManagerImplTest {
                 baseQuery);
 
         String baseQuery2 = JobManagerImpl.buildBaseQuery(QUERY_ROOT, "random'Topic", QUERY_TYPE, false);
-        assertEquals("/jcr:root/var/eventing/foobar/element(*,slingevent:Job)[@event.job.topic = "
-                + "'random''Topic' and not(@slingevent:finishedState) and @event.job.started.time", baseQuery2);
-
+        assertEquals(
+                "/jcr:root/var/eventing/foobar/element(*,slingevent:Job)[@event.job.topic = "
+                        + "'random''Topic' and not(@slingevent:finishedState) and @event.job.started.time",
+                baseQuery2);
     }
 
     @Test
-    public void wontLogAtWarn() throws IllegalAccessException, IOException, NoSuchMethodException, SecurityException,
-            IllegalArgumentException, InvocationTargetException {
+    public void wontLogAtWarn()
+            throws IllegalAccessException, IOException, NoSuchMethodException, SecurityException,
+                    IllegalArgumentException, InvocationTargetException {
         JobManagerImpl jobManager = getJobManager(LEVEL_WARN);
 
         jobManager.addJob("not/assigned", null, null);
-        assertFalse(TestUtil.containsLine(this.outContent, line -> line
-                .contains("Persisting job Sling Job [topic=not/assigned] into queue null with no assigned target")));
+        assertFalse(TestUtil.containsLine(
+                this.outContent,
+                line -> line.contains(
+                        "Persisting job Sling Job [topic=not/assigned] into queue null with no assigned target")));
 
         jobManager.addJob("is/assigned", null, null);
-        assertFalse(TestUtil.containsLine(this.outContent, line -> line
-                .contains("Persisting job Sling Job [topic=is/assigned] into queue null with no assigned target")));
+        assertFalse(TestUtil.containsLine(
+                this.outContent,
+                line -> line.contains(
+                        "Persisting job Sling Job [topic=is/assigned] into queue null with no assigned target")));
     }
 
     @Test
-    public void logsInfoForUnassigned() throws IllegalAccessException, IOException, NoSuchMethodException,
-            SecurityException, IllegalArgumentException, InvocationTargetException {
+    public void logsInfoForUnassigned()
+            throws IllegalAccessException, IOException, NoSuchMethodException, SecurityException,
+                    IllegalArgumentException, InvocationTargetException {
         JobManagerImpl jobManager = getJobManager(LEVEL_INFO);
         jobManager.addJob("not/assigned", null, null);
-        assertTrue(TestUtil.containsLine(this.outContent, line -> line
-                .contains("Persisting job Sling Job [topic=not/assigned] into queue null with no assigned target")));
+        assertTrue(TestUtil.containsLine(
+                this.outContent,
+                line -> line.contains(
+                        "Persisting job Sling Job [topic=not/assigned] into queue null with no assigned target")));
 
         jobManager.addJob("is/assigned", null, null);
-        assertTrue(TestUtil.containsLine(this.outContent, line -> !line
-                .contains("Persisting job Sling Job [topic=is/assigned] into queue null with no assigned target")));
+        assertTrue(TestUtil.containsLine(
+                this.outContent,
+                line -> !line.contains(
+                        "Persisting job Sling Job [topic=is/assigned] into queue null with no assigned target")));
     }
 
     @Test
-    public void logsDebugForAssigned() throws IllegalAccessException, IOException, NoSuchMethodException,
-            SecurityException, IllegalArgumentException, InvocationTargetException {
+    public void logsDebugForAssigned()
+            throws IllegalAccessException, IOException, NoSuchMethodException, SecurityException,
+                    IllegalArgumentException, InvocationTargetException {
         JobManagerImpl jobManager = getJobManager(LEVEL_DEBUG);
 
         jobManager.addJob("is/assigned", null, null);
-        assertTrue(TestUtil.containsLine(this.outContent, line -> line
-                .contains("Persisting job Sling Job [topic=is/assigned] into queue null, target=assigned")));
+        assertTrue(TestUtil.containsLine(
+                this.outContent,
+                line -> line.contains(
+                        "Persisting job Sling Job [topic=is/assigned] into queue null, target=assigned")));
     }
 
     @After
@@ -148,8 +161,9 @@ public class JobManagerImplTest {
         System.setErr(originalErr);
     }
 
-    private JobManagerImpl getJobManager(int level) throws IllegalAccessException, NoSuchMethodException,
-            SecurityException, IllegalArgumentException, InvocationTargetException {
+    private JobManagerImpl getJobManager(int level)
+            throws IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException,
+                    InvocationTargetException {
 
         JobManagerImpl jobManager = new JobManagerImpl();
 
@@ -159,5 +173,4 @@ public class JobManagerImplTest {
         FieldUtils.writeDeclaredField(jobManager, "configuration", configuration, true);
         return jobManager;
     }
-
 }

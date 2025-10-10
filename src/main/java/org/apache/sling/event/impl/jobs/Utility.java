@@ -53,12 +53,12 @@ public abstract class Utility {
      */
     public static String checkJobTopic(final Object jobTopic) {
         String message = null;
-        if ( jobTopic != null ) {
-            if ( jobTopic instanceof String ) {
+        if (jobTopic != null) {
+            if (jobTopic instanceof String) {
                 try {
-                    new Event((String)jobTopic, (Dictionary<String, Object>)null);
+                    new Event((String) jobTopic, (Dictionary<String, Object>) null);
                 } catch (final IllegalArgumentException iae) {
-                	message = String.format("Discarding job - job has an illegal job topic '%s'",jobTopic);
+                    message = String.format("Discarding job - job has an illegal job topic '%s'", jobTopic);
                 }
 
             } else {
@@ -77,10 +77,10 @@ public abstract class Utility {
      */
     public static String checkJob(final Object jobTopic, final Map<String, Object> properties) {
         final String msg = checkJobTopic(jobTopic);
-        if ( msg == null ) {
-            if ( properties != null ) {
-                for(final Object val : properties.values()) {
-                    if ( val != null && !(val instanceof Serializable) ) {
+        if (msg == null) {
+            if (properties != null) {
+                for (final Object val : properties.values()) {
+                    if (val != null && !(val instanceof Serializable)) {
                         return "Discarding job - properties must be serializable: " + jobTopic + " : " + properties;
                     }
                 }
@@ -96,7 +96,7 @@ public abstract class Utility {
      */
     public static Event toEvent(final Job job) {
         final Map<String, Object> eventProps = new HashMap<>();
-        eventProps.putAll(((JobImpl)job).getProperties());
+        eventProps.putAll(((JobImpl) job).getProperties());
         eventProps.put(ResourceHelper.PROPERTY_JOB_ID, job.getId());
         eventProps.remove(JobConsumer.PROPERTY_JOB_ASYNC_HANDLER);
         return new Event(job.getTopic(), eventProps);
@@ -105,17 +105,16 @@ public abstract class Utility {
     /**
      * Append properties to the string builder
      */
-    private static void appendProperties(final StringBuilder sb,
-            final Map<String, Object> properties) {
-        if ( properties != null ) {
+    private static void appendProperties(final StringBuilder sb, final Map<String, Object> properties) {
+        if (properties != null) {
             sb.append(", properties=");
             boolean first = true;
-            for(final String propName : properties.keySet()) {
-                if ( propName.equals(ResourceHelper.PROPERTY_JOB_ID)
-                    || propName.equals(ResourceHelper.PROPERTY_JOB_TOPIC) ) {
-                   continue;
+            for (final String propName : properties.keySet()) {
+                if (propName.equals(ResourceHelper.PROPERTY_JOB_ID)
+                        || propName.equals(ResourceHelper.PROPERTY_JOB_TOPIC)) {
+                    continue;
                 }
-                if ( first ) {
+                if (first) {
                     first = false;
                 } else {
                     sb.append(",");
@@ -126,10 +125,10 @@ public abstract class Utility {
                 // the toString() method of Calendar is very verbose
                 // therefore we do a toString for these objects based
                 // on a date
-                if ( value instanceof Calendar ) {
+                if (value instanceof Calendar) {
                     sb.append(value.getClass().getName());
                     sb.append('(');
-                    sb.append(((Calendar)value).getTime());
+                    sb.append(((Calendar) value).getTime());
                     sb.append(')');
                 } else {
                     sb.append(value);
@@ -142,8 +141,7 @@ public abstract class Utility {
      * Improved toString method for a job.
      * This method prints out the job topic and all of the properties.
      */
-    public static String toString(final String jobTopic,
-            final Map<String, Object> properties) {
+    public static String toString(final String jobTopic, final Map<String, Object> properties) {
         final StringBuilder sb = new StringBuilder("Sling Job ");
         sb.append("[topic=");
         sb.append(jobTopic);
@@ -158,13 +156,13 @@ public abstract class Utility {
      * This method prints out the job topic and all of the properties.
      */
     public static String toString(final Job job) {
-        if ( job != null ) {
+        if (job != null) {
             final StringBuilder sb = new StringBuilder("Sling Job ");
             sb.append("[topic=");
             sb.append(job.getTopic());
             sb.append(", id=");
             sb.append(job.getId());
-            appendProperties(sb, ((JobImpl)job).getProperties());
+            appendProperties(sb, ((JobImpl) job).getProperties());
             sb.append("]");
             return sb.toString();
         }
@@ -176,67 +174,72 @@ public abstract class Utility {
      */
     public static JobImpl readJob(final Logger logger, final Resource resource) {
         JobImpl job = null;
-        if ( resource != null ) {
+        if (resource != null) {
             try {
                 final ValueMap vm = ResourceHelper.getValueMap(resource);
 
                 // check job topic and job id
                 final String errorMessage = Utility.checkJobTopic(vm.get(ResourceHelper.PROPERTY_JOB_TOPIC));
                 final String jobId = vm.get(ResourceHelper.PROPERTY_JOB_ID, String.class);
-                if ( errorMessage == null && jobId != null ) {
+                if (errorMessage == null && jobId != null) {
                     final String topic = vm.get(ResourceHelper.PROPERTY_JOB_TOPIC, String.class);
                     final Map<String, Object> jobProperties = ResourceHelper.cloneValueMap(vm);
 
                     jobProperties.put(JobImpl.PROPERTY_RESOURCE_PATH, resource.getPath());
                     // convert to integers (JCR supports only long...)
                     jobProperties.put(Job.PROPERTY_JOB_RETRIES, vm.get(Job.PROPERTY_JOB_RETRIES, Integer.class));
-                    jobProperties.put(Job.PROPERTY_JOB_RETRY_COUNT, vm.get(Job.PROPERTY_JOB_RETRY_COUNT, Integer.class));
-                    if ( vm.get(Job.PROPERTY_JOB_PROGRESS_STEPS) != null ) {
-                        jobProperties.put(Job.PROPERTY_JOB_PROGRESS_STEPS, vm.get(Job.PROPERTY_JOB_PROGRESS_STEPS, Integer.class));
+                    jobProperties.put(
+                            Job.PROPERTY_JOB_RETRY_COUNT, vm.get(Job.PROPERTY_JOB_RETRY_COUNT, Integer.class));
+                    if (vm.get(Job.PROPERTY_JOB_PROGRESS_STEPS) != null) {
+                        jobProperties.put(
+                                Job.PROPERTY_JOB_PROGRESS_STEPS,
+                                vm.get(Job.PROPERTY_JOB_PROGRESS_STEPS, Integer.class));
                     }
-                    if ( vm.get(Job.PROPERTY_JOB_PROGRESS_STEP) != null ) {
-                        jobProperties.put(Job.PROPERTY_JOB_PROGRESS_STEP, vm.get(Job.PROPERTY_JOB_PROGRESS_STEP, Integer.class));
+                    if (vm.get(Job.PROPERTY_JOB_PROGRESS_STEP) != null) {
+                        jobProperties.put(
+                                Job.PROPERTY_JOB_PROGRESS_STEP, vm.get(Job.PROPERTY_JOB_PROGRESS_STEP, Integer.class));
                     }
                     @SuppressWarnings("unchecked")
-                    final List<Exception> readErrorList = (List<Exception>) jobProperties.get(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
-                    if ( readErrorList != null ) {
-                        for(final Exception e : readErrorList) {
+                    final List<Exception> readErrorList =
+                            (List<Exception>) jobProperties.get(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
+                    if (readErrorList != null) {
+                        for (final Exception e : readErrorList) {
                             final int c = readErrorWarnCount.getAndIncrement();
                             final String prefix;
-                            if ( c == READ_ERROR_SILENCE_LIMIT ) {
-                                logger.warn("Too many 'Unable to read job from ' messages - silencing 99% of them from now on.");
+                            if (c == READ_ERROR_SILENCE_LIMIT) {
+                                logger.warn(
+                                        "Too many 'Unable to read job from ' messages - silencing 99% of them from now on.");
                                 continue;
-                            } else if ( c > READ_ERROR_SILENCE_LIMIT && c % 100 != 0 ) {
+                            } else if (c > READ_ERROR_SILENCE_LIMIT && c % 100 != 0) {
                                 // SLING-9906 : then silence the log altogether
                                 continue;
-                            } else if ( c > READ_ERROR_SILENCE_LIMIT ) {
+                            } else if (c > READ_ERROR_SILENCE_LIMIT) {
                                 prefix = "[unsilenced] ";
                             } else {
                                 prefix = "";
                             }
-                            if ( e.getCause() != null && e.getCause() instanceof ClassNotFoundException ) {
+                            if (e.getCause() != null && e.getCause() instanceof ClassNotFoundException) {
                                 // SLING-9906 : suppress exception in ClassNotFoundException case
                                 // as this can happen many times in case of a not deployed class.
-                                logger.warn(prefix + "Unable to read job from " + resource.getPath() + ", exception: " + e + ", cause: " + e.getCause());
+                                logger.warn(prefix + "Unable to read job from " + resource.getPath() + ", exception: "
+                                        + e + ", cause: " + e.getCause());
                             } else {
                                 logger.warn(prefix + "Unable to read job from " + resource.getPath(), e);
                             }
                         }
                     }
-                    job = new JobImpl(topic,
-                            jobId,
-                            jobProperties);
+                    job = new JobImpl(topic, jobId, jobProperties);
                 } else {
-                    if ( errorMessage != null ) {
+                    if (errorMessage != null) {
                         logger.warn("{} : {}", errorMessage, resource.getPath());
-                    } else if ( jobId == null ) {
+                    } else if (jobId == null) {
                         logger.warn("Discarding job - no job id found : {}", resource.getPath());
                     }
                     // remove the job as the topic is invalid anyway
                     try {
                         resource.getResourceResolver().delete(resource);
                         resource.getResourceResolver().commit();
-                    } catch ( final PersistenceException ignore) {
+                    } catch (final PersistenceException ignore) {
                         logger.debug("Unable to remove job resource.", ignore);
                     }
                 }
@@ -246,7 +249,6 @@ public abstract class Utility {
             } catch (final RuntimeException re) {
                 logger.debug("Unable to read resource.", re);
             }
-
         }
         return job;
     }
@@ -258,16 +260,16 @@ public abstract class Utility {
             Integer value1 = null;
             try {
                 value1 = Integer.valueOf(o1.getName());
-            } catch ( final NumberFormatException nfe) {
+            } catch (final NumberFormatException nfe) {
                 // ignore
             }
             Integer value2 = null;
             try {
                 value2 = Integer.valueOf(o2.getName());
-            } catch ( final NumberFormatException nfe) {
+            } catch (final NumberFormatException nfe) {
                 // ignore
             }
-            if ( value1 != null && value2 != null ) {
+            if (value1 != null && value2 != null) {
                 return value1.compareTo(value2);
             }
             return o1.getName().compareTo(o2.getName());
@@ -283,10 +285,10 @@ public abstract class Utility {
     public static List<Resource> getSortedChildren(final Logger logger, final String type, final Resource rsrc) {
         final List<Resource> children = new ArrayList<>();
         final Iterator<Resource> monthIter = rsrc.listChildren();
-        while ( monthIter.hasNext() ) {
+        while (monthIter.hasNext()) {
             final Resource monthResource = monthIter.next();
             children.add(monthResource);
-            logger.debug("Found {} : {}",  type, monthResource.getName());
+            logger.debug("Found {} : {}", type, monthResource.getName());
         }
         Collections.sort(children, RESOURCE_COMPARATOR);
         return children;

@@ -18,8 +18,6 @@
  */
 package org.apache.sling.event.it;
 
-import static org.ops4j.pax.exam.CoreOptions.options;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +40,8 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerMethod;
 
+import static org.ops4j.pax.exam.CoreOptions.options;
+
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerMethod.class)
 public class JobManagerSearchIT extends AbstractJobHandlingIT {
@@ -52,9 +52,7 @@ public class JobManagerSearchIT extends AbstractJobHandlingIT {
 
     @Configuration
     public Option[] configuration() {
-        return options(
-            baseConfiguration()
-        );
+        return options(baseConfiguration());
     }
 
     @Override
@@ -63,13 +61,18 @@ public class JobManagerSearchIT extends AbstractJobHandlingIT {
         super.setup();
         JobManager jobManager = this.getJobManager();
 
-        registeredJobIds.add(jobManager.addJob(TOPIC, Collections.<String, Object>emptyMap()).getId());
-        registeredJobIds.add(jobManager.addJob(TOPIC, Collections.<String, Object>singletonMap("filter", "a")).getId());
+        registeredJobIds.add(
+                jobManager.addJob(TOPIC, Collections.<String, Object>emptyMap()).getId());
+        registeredJobIds.add(jobManager
+                .addJob(TOPIC, Collections.<String, Object>singletonMap("filter", "a"))
+                .getId());
         Map<String, Object> properties = new HashMap<String, Object>(2);
         properties.put("filter", "a");
         properties.put("property", "b");
         registeredJobIds.add(jobManager.addJob(TOPIC, properties).getId());
-        registeredJobIds.add(jobManager.addJob(TOPIC, Collections.<String, Object>singletonMap("filter", "c")).getId());
+        registeredJobIds.add(jobManager
+                .addJob(TOPIC, Collections.<String, Object>singletonMap("filter", "c"))
+                .getId());
 
         this.sleep(2000L);
     }
@@ -102,6 +105,7 @@ public class JobManagerSearchIT extends AbstractJobHandlingIT {
         Collection<Job> res = this.getJobManager().findJobs(JobManager.QueryType.ALL, TOPIC, 0, template);
         checkResult(res, registeredJobIds.get(1), registeredJobIds.get(2));
     }
+
     @Test
     public void testJobSearchTemplateEqualsLarger() {
         Map<String, Object> template = Collections.<String, Object>singletonMap("<=property", "b");

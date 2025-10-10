@@ -18,10 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -32,9 +28,14 @@ import java.util.Map;
 import org.apache.sling.event.jobs.Job;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 public class JobsImplTest {
 
-    @Test public void testSorting() {
+    @Test
+    public void testSorting() {
         final Calendar now = Calendar.getInstance();
         final Map<String, Object> properties = new HashMap<>();
         properties.put(Job.PROPERTY_JOB_CREATED, now);
@@ -59,7 +60,6 @@ public class JobsImplTest {
         assertEquals(job3, list.get(2));
         assertEquals(job4, list.get(3));
         assertEquals(job5, list.get(4));
-
     }
 
     @Test
