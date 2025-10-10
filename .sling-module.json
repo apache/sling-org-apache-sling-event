@@ -1,5 +1,6 @@
 {
     "jenkins": {
-        "buildTimeout": 60
+        "buildTimeout": 60,
+        "jdks": [17, 21]
     }
 }
