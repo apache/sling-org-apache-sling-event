@@ -56,24 +56,23 @@ public class HistoryIT extends AbstractJobHandlingIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            // create test queue - we use an ordered queue to have a stable processing order
-            // keep the jobs in the history
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "test")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
-                .put(ConfigurationConstants.PROP_TOPICS, new String[]{TOPIC})
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2L)
-                .put(ConfigurationConstants.PROP_KEEP_JOBS, true)
-                .asOption()
-        );
+                baseConfiguration(),
+                // create test queue - we use an ordered queue to have a stable processing order
+                // keep the jobs in the history
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "test")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, new String[] {TOPIC})
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2L)
+                        .put(ConfigurationConstants.PROP_KEEP_JOBS, true)
+                        .asOption());
     }
 
     private Job addJob(final long counter) {
         final Map<String, Object> props = new HashMap<String, Object>();
         props.put(PROP_COUNTER, counter);
-        return jobManager.addJob(TOPIC, props );
+        return jobManager.addJob(TOPIC, props);
     }
 
     @Before
@@ -87,56 +86,102 @@ public class HistoryIT extends AbstractJobHandlingIT {
      */
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
     public void testHistory() throws Exception {
-        this.registerJobExecutor(TOPIC,
-                new JobExecutor() {
+        this.registerJobExecutor(TOPIC, new JobExecutor() {
 
-                    @Override
-                    public JobExecutionResult process(final Job job, final JobExecutionContext context) {
-                        sleep(5L);
-                        final long count = job.getProperty(PROP_COUNTER, Long.class);
-                        if ( count == 2 || count == 5 || count == 7 ) {
-                            return context.result().message(Job.JobState.ERROR.name()).cancelled();
-                        }
-                        return context.result().message(Job.JobState.SUCCEEDED.name()).succeeded();
-                    }
-
-                });
+            @Override
+            public JobExecutionResult process(final Job job, final JobExecutionContext context) {
+                sleep(5L);
+                final long count = job.getProperty(PROP_COUNTER, Long.class);
+                if (count == 2 || count == 5 || count == 7) {
+                    return context.result().message(Job.JobState.ERROR.name()).cancelled();
+                }
+                return context.result().message(Job.JobState.SUCCEEDED.name()).succeeded();
+            }
+        });
 
         OffsetDateTime start = OffsetDateTime.now();
-        for(int i = 0; i< 10; i++) {
+        for (int i = 0; i < 10; i++) {
             this.addJob(i);
         }
         this.sleep(200L);
-        while (jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, (Map<String, Object>[])null).size() < 10 ) {
+        while (jobManager
+                        .findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size()
+                < 10) {
             this.sleep(100L);
         }
-        Collection<Job> col = jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, (Map<String, Object>[])null);
+        Collection<Job> col =
+                jobManager.findJobs(JobManager.QueryType.HISTORY, TOPIC, -1, (Map<String, Object>[]) null);
         assertEquals(10, col.size());
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.ACTIVE, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.QUEUED, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.ALL, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(3, jobManager.findJobs(JobManager.QueryType.CANCELLED, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.DROPPED, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(3, jobManager.findJobs(JobManager.QueryType.ERROR, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.GIVEN_UP, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(0, jobManager.findJobs(JobManager.QueryType.STOPPED, TOPIC, -1, (Map<String, Object>[])null).size());
-        assertEquals(7, jobManager.findJobs(JobManager.QueryType.SUCCEEDED, TOPIC, -1, (Map<String, Object>[])null).size());
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.ACTIVE, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.QUEUED, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.ALL, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                3,
+                jobManager
+                        .findJobs(JobManager.QueryType.CANCELLED, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.DROPPED, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                3,
+                jobManager
+                        .findJobs(JobManager.QueryType.ERROR, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.GIVEN_UP, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                0,
+                jobManager
+                        .findJobs(JobManager.QueryType.STOPPED, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
+        assertEquals(
+                7,
+                jobManager
+                        .findJobs(JobManager.QueryType.SUCCEEDED, TOPIC, -1, (Map<String, Object>[]) null)
+                        .size());
 
         Map<String, Object> template = new HashMap<>();
         template.put(">=" + JobImpl.PROPERTY_JOB_STARTED_TIME, start.toString());
         template.put("<" + JobImpl.PROPERTY_FINISHED_DATE, OffsetDateTime.now().toString());
-        assertEquals(7, jobManager.findJobs(JobManager.QueryType.SUCCEEDED, TOPIC, -1, template).size());
+        assertEquals(
+                7,
+                jobManager
+                        .findJobs(JobManager.QueryType.SUCCEEDED, TOPIC, -1, template)
+                        .size());
 
         // find all topics
-        assertEquals(7, jobManager.findJobs(JobManager.QueryType.SUCCEEDED, null, -1, (Map<String, Object>[])null).size());
+        assertEquals(
+                7,
+                jobManager
+                        .findJobs(JobManager.QueryType.SUCCEEDED, null, -1, (Map<String, Object>[]) null)
+                        .size());
 
         // verify order, message and state
         long last = 9;
-        for(final Job j : col) {
+        for (final Job j : col) {
             assertNotNull(j.getFinishedDate());
             final long count = j.getProperty(PROP_COUNTER, Long.class);
             assertEquals(last, count);
-            if ( count == 2 || count == 5 || count == 7 ) {
+            if (count == 2 || count == 5 || count == 7) {
                 assertEquals(Job.JobState.ERROR, j.getJobState());
             } else {
                 assertEquals(Job.JobState.SUCCEEDED, j.getJobState());

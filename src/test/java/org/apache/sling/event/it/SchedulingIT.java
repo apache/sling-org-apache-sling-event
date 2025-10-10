@@ -50,9 +50,7 @@ public class SchedulingIT extends AbstractJobHandlingIT {
 
     @Configuration
     public Option[] configuration() {
-        return options(
-            baseConfiguration()
-        );
+        return options(baseConfiguration());
     }
 
     @Test(timeout = DEFAULT_TEST_TIMEOUT)
@@ -63,23 +61,26 @@ public class SchedulingIT extends AbstractJobHandlingIT {
 
             @Override
             public JobResult process(final Job job) {
-                if ( job.getTopic().equals(TOPIC) ) {
+                if (job.getTopic().equals(TOPIC)) {
                     counter.incrementAndGet();
                 }
                 return JobResult.OK;
             }
-
         });
 
         // we schedule three jobs
-        final ScheduledJobInfo info1 = jobManager.createJob(TOPIC).schedule().hourly(5).add();
+        final ScheduledJobInfo info1 =
+                jobManager.createJob(TOPIC).schedule().hourly(5).add();
         assertNotNull(info1);
-        final ScheduledJobInfo info2 = jobManager.createJob(TOPIC).schedule().daily(10, 5).add();
+        final ScheduledJobInfo info2 =
+                jobManager.createJob(TOPIC).schedule().daily(10, 5).add();
         assertNotNull(info2);
-        final ScheduledJobInfo info3 = jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
+        final ScheduledJobInfo info3 =
+                jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
         assertNotNull(info3);
         // This is a duplicate and won't be scheduled, as it is identical to the 3rd job
-        final ScheduledJobInfo info4 = jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
+        final ScheduledJobInfo info4 =
+                jobManager.createJob(TOPIC).schedule().weekly(3, 19, 12).add();
         assertNotNull(info4);
 
         assertEquals(3, jobManager.getScheduledJobs().size()); // scheduled jobs
@@ -101,27 +102,36 @@ public class SchedulingIT extends AbstractJobHandlingIT {
 
             @Override
             public JobResult process(final Job job) {
-                if ( job.getTopic().equals(ownTopic) ) {
+                if (job.getTopic().equals(ownTopic)) {
                     counter.incrementAndGet();
                 }
                 return JobResult.OK;
             }
-
         });
-        for(int i=0; i<NUM_ITERATIONS; i++) {
+        for (int i = 0; i < NUM_ITERATIONS; i++) {
             logger.info("schedulingLoadTest: loop-" + i);
-            jobManager.createJob(ownTopic)
-                .properties(Collections.singletonMap("prop", i))
-                .schedule().at(new Date(System.currentTimeMillis() + 2500)).add();
+            jobManager
+                    .createJob(ownTopic)
+                    .properties(Collections.singletonMap("prop", i))
+                    .schedule()
+                    .at(new Date(System.currentTimeMillis() + 2500))
+                    .add();
             Thread.sleep(1);
         }
-        logger.info("schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules", counter.get(), jobManager.getScheduledJobs().size());
+        logger.info(
+                "schedulingLoadTest: done, letting jobs be triggered, currently at {} jobs, {} schedules",
+                counter.get(),
+                jobManager.getScheduledJobs().size());
         final long timeout = System.currentTimeMillis() + 60000;
-        while(System.currentTimeMillis() < timeout) {
-            if ((counter.get() == NUM_ITERATIONS) && (jobManager.getScheduledJobs().size() == 0)) {
+        while (System.currentTimeMillis() < timeout) {
+            if ((counter.get() == NUM_ITERATIONS)
+                    && (jobManager.getScheduledJobs().size() == 0)) {
                 break;
             }
-            logger.info("schedulingLoadTest: currently at {} jobs, {} schedules", counter.get(), jobManager.getScheduledJobs().size());
+            logger.info(
+                    "schedulingLoadTest: currently at {} jobs, {} schedules",
+                    counter.get(),
+                    jobManager.getScheduledJobs().size());
             Thread.sleep(100);
         }
         assertEquals(NUM_ITERATIONS, counter.get());

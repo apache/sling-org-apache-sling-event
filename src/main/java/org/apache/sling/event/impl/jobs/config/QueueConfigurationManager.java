@@ -29,14 +29,12 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 
-
 /**
  * The queue manager manages queue configurations.
  */
-@Component(service = QueueConfigurationManager.class,
-property = {
-        Constants.SERVICE_VENDOR + "=The Apache Software Foundation"
-})
+@Component(
+        service = QueueConfigurationManager.class,
+        property = {Constants.SERVICE_VENDOR + "=The Apache Software Foundation"})
 public class QueueConfigurationManager {
 
     /** Empty configuration array. */
@@ -56,11 +54,13 @@ public class QueueConfigurationManager {
      * Add a new queue configuration.
      * @param config A new queue configuration.
      */
-    @Reference(service=InternalQueueConfiguration.class, policy=ReferencePolicy.DYNAMIC,
-            cardinality=ReferenceCardinality.MULTIPLE,
-            updated="updateConfig")
+    @Reference(
+            service = InternalQueueConfiguration.class,
+            policy = ReferencePolicy.DYNAMIC,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            updated = "updateConfig")
     protected void bindConfig(final InternalQueueConfiguration config) {
-        synchronized ( configurations ) {
+        synchronized (configurations) {
             configurations.add(config);
             this.createConfigurationCache();
         }
@@ -71,7 +71,7 @@ public class QueueConfigurationManager {
      * @param config The queue configuration.
      */
     protected void unbindConfig(final InternalQueueConfiguration config) {
-        synchronized ( configurations ) {
+        synchronized (configurations) {
             configurations.remove(config);
             this.createConfigurationCache();
         }
@@ -84,7 +84,7 @@ public class QueueConfigurationManager {
     protected void updateConfig(final InternalQueueConfiguration config) {
         // InternalQueueConfiguration does not implement modified atm,
         // but we handle this case anyway
-        synchronized ( configurations ) {
+        synchronized (configurations) {
             this.createConfigurationCache();
         }
     }
@@ -93,7 +93,7 @@ public class QueueConfigurationManager {
      * Create the configurations cache used by clients.
      */
     private void createConfigurationCache() {
-        if ( this.configurations.isEmpty() ) {
+        if (this.configurations.isEmpty()) {
             this.orderedConfigs = EMPTY_CONFIGS;
         } else {
             Collections.sort(configurations);
@@ -134,11 +134,11 @@ public class QueueConfigurationManager {
 
         @Override
         public boolean equals(final Object obj) {
-            if ( obj == this ) {
+            if (obj == this) {
                 return true;
             }
-            if ( obj instanceof QueueInfo ) {
-                return ((QueueInfo)obj).queueName.equals(this.queueName);
+            if (obj instanceof QueueInfo) {
+                return ((QueueInfo) obj).queueName.equals(this.queueName);
             }
             return false;
         }
@@ -150,10 +150,10 @@ public class QueueConfigurationManager {
      */
     public QueueInfo getQueueInfo(final String topic) {
         final InternalQueueConfiguration[] configurations = this.getConfigurations();
-        for(final InternalQueueConfiguration config : configurations) {
-            if ( config.isValid() ) {
+        for (final InternalQueueConfiguration config : configurations) {
+            if (config.isValid()) {
                 final String qn = config.match(topic);
-                if ( qn != null ) {
+                if (qn != null) {
                     final QueueInfo result = new QueueInfo();
                     result.queueConfiguration = config;
                     result.queueName = ResourceHelper.filterName(qn);

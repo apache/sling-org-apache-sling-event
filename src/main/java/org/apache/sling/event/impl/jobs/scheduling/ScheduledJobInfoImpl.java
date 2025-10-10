@@ -62,8 +62,7 @@ public class ScheduledJobInfoImpl implements ScheduledJobInfo, Serializable {
      * @param jobScheduler The job scheduler
      * @param scheduleName The unique name
      */
-    public ScheduledJobInfoImpl(final JobSchedulerImpl jobScheduler,
-            final String scheduleName) {
+    public ScheduledJobInfoImpl(final JobSchedulerImpl jobScheduler, final String scheduleName) {
         this.jobScheduler = jobScheduler;
         this.scheduleName = scheduleName;
     }
@@ -73,11 +72,11 @@ public class ScheduledJobInfoImpl implements ScheduledJobInfo, Serializable {
      * @param jobTopic      The job topic
      * @param jobProperties The job properties
      */
-    public void update(final String jobTopic,
-            final Map<String, Object> jobProperties) {
+    public void update(final String jobTopic, final Map<String, Object> jobProperties) {
         final boolean isSuspended = jobProperties.remove(ResourceHelper.PROPERTY_SCHEDULE_SUSPENDED) != null;
         @SuppressWarnings("unchecked")
-        final List<ScheduleInfo> scheduleInfos = (List<ScheduleInfo>) jobProperties.remove(ResourceHelper.PROPERTY_SCHEDULE_INFO);
+        final List<ScheduleInfo> scheduleInfos =
+                (List<ScheduleInfo>) jobProperties.remove(ResourceHelper.PROPERTY_SCHEDULE_INFO);
 
         this.jobTopic = jobTopic;
         this.jobProperties = jobProperties;
@@ -91,7 +90,7 @@ public class ScheduledJobInfoImpl implements ScheduledJobInfo, Serializable {
      * @param scheduleInfos The new schedule
      */
     public void update(final List<ScheduleInfo> scheduleInfos) {
-        this.scheduleInfos =  Collections.unmodifiableList(scheduleInfos);
+        this.scheduleInfos = Collections.unmodifiableList(scheduleInfos);
     }
 
     /**
@@ -115,9 +114,9 @@ public class ScheduledJobInfoImpl implements ScheduledJobInfo, Serializable {
     @Override
     public Date getNextScheduledExecution() {
         Date result = null;
-        for(final ScheduleInfo info : this.scheduleInfos) {
-            final Date newResult = ((ScheduleInfoImpl)info).getNextScheduledExecution();
-            if ( result == null || result.getTime() > newResult.getTime() ) {
+        for (final ScheduleInfo info : this.scheduleInfos) {
+            final Date newResult = ((ScheduleInfoImpl) info).getNextScheduledExecution();
+            if (result == null || result.getTime() > newResult.getTime()) {
                 result = newResult;
             }
         }
@@ -161,7 +160,7 @@ public class ScheduledJobInfoImpl implements ScheduledJobInfo, Serializable {
      */
     @Override
     public void suspend() {
-        if ( this.isSuspended.compareAndSet(false, true) ) {
+        if (this.isSuspended.compareAndSet(false, true)) {
             this.jobScheduler.setSuspended(this, true);
         }
     }
@@ -171,7 +170,7 @@ public class ScheduledJobInfoImpl implements ScheduledJobInfo, Serializable {
      */
     @Override
     public void resume() {
-        if ( this.isSuspended.compareAndSet(true, false) ) {
+        if (this.isSuspended.compareAndSet(true, false)) {
             this.jobScheduler.setSuspended(this, false);
         }
     }

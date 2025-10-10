@@ -23,11 +23,11 @@ public abstract class TopicMatcherHelper {
     public static final TopicMatcher[] MATCH_ALL = new TopicMatcher[] {
         new TopicMatcher() {
 
-           @Override
-           public String match(String topic) {
-               return topic;
-           }
-       }
+            @Override
+            public String match(String topic) {
+                return topic;
+            }
+        }
     };
 
     /**
@@ -37,33 +37,32 @@ public abstract class TopicMatcherHelper {
      */
     public static TopicMatcher[] buildMatchers(final String[] topicsParam) {
         final TopicMatcher[] matchers;
-        if ( topicsParam == null
+        if (topicsParam == null
                 || topicsParam.length == 0
                 || (topicsParam.length == 1 && (topicsParam[0] == null || topicsParam[0].length() == 0))) {
-               matchers = null;
-       } else {
-           final TopicMatcher[] newMatchers = new TopicMatcher[topicsParam.length];
-           for(int i=0; i < topicsParam.length; i++) {
-               String value = topicsParam[i];
-               if ( value != null ) {
-                   value = value.trim();
-               }
-               if ( value != null && value.length() > 0 ) {
-                   if ( value.equals("*") ) {
-                       return MATCH_ALL;
-                   }
-                   if ( value.endsWith(".") ) {
-                       newMatchers[i] = new PackageTopicMatcher(value);
-                   } else if ( value.endsWith("*") ) {
-                       newMatchers[i] = new SubPackagesTopicMatcher(value);
-                   } else {
-                       newMatchers[i] = new ExactTopicMatcher(value);
-                   }
-               }
-           }
-           matchers = newMatchers;
+            matchers = null;
+        } else {
+            final TopicMatcher[] newMatchers = new TopicMatcher[topicsParam.length];
+            for (int i = 0; i < topicsParam.length; i++) {
+                String value = topicsParam[i];
+                if (value != null) {
+                    value = value.trim();
+                }
+                if (value != null && value.length() > 0) {
+                    if (value.equals("*")) {
+                        return MATCH_ALL;
+                    }
+                    if (value.endsWith(".")) {
+                        newMatchers[i] = new PackageTopicMatcher(value);
+                    } else if (value.endsWith("*")) {
+                        newMatchers[i] = new SubPackagesTopicMatcher(value);
+                    } else {
+                        newMatchers[i] = new ExactTopicMatcher(value);
+                    }
+                }
+            }
+            matchers = newMatchers;
         }
         return matchers;
     }
-
 }

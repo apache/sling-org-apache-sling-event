@@ -28,20 +28,21 @@ import java.util.function.Predicate;
 
 public class TestUtil {
 
-    private static Object getSetField(final Object obj, final String fieldName, final boolean isGet, final Object value) {
+    private static Object getSetField(
+            final Object obj, final String fieldName, final boolean isGet, final Object value) {
         Class<?> clazz = obj.getClass();
-        while ( clazz != null ) {
+        while (clazz != null) {
             try {
                 final Field field = clazz.getDeclaredField(fieldName);
                 field.setAccessible(true);
 
-                if ( isGet ) {
+                if (isGet) {
                     return field.get(obj);
                 } else {
                     field.set(obj, value);
                     return null;
                 }
-            } catch ( final Exception ignore ) {
+            } catch (final Exception ignore) {
                 // ignore
             }
             clazz = clazz.getSuperclass();
@@ -58,7 +59,8 @@ public class TestUtil {
     }
 
     public static boolean containsLine(ByteArrayOutputStream os, Predicate<String> matcher) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(os.toByteArray())))) {
+        try (BufferedReader reader =
+                new BufferedReader(new InputStreamReader(new ByteArrayInputStream(os.toByteArray())))) {
             while (reader.ready()) {
                 String line = reader.readLine();
                 if (matcher.test(line)) {

@@ -18,8 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs.config;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.Collections;
 
 import org.apache.sling.discovery.ClusterView;
@@ -28,6 +26,8 @@ import org.apache.sling.discovery.TopologyView;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.junit.Assert.assertEquals;
 
 public class TopologyCapabilitiesTest {
 
@@ -43,7 +43,8 @@ public class TopologyCapabilitiesTest {
         final InstanceDescription local = Mockito.mock(InstanceDescription.class);
         Mockito.when(local.isLeader()).thenReturn(true);
         Mockito.when(local.getSlingId()).thenReturn("local");
-        Mockito.when(local.getProperty(TopologyCapabilities.PROPERTY_TOPICS)).thenReturn("foo,bar/*,a/**,d/1/2,d/1/*,d/**");
+        Mockito.when(local.getProperty(TopologyCapabilities.PROPERTY_TOPICS))
+                .thenReturn("foo,bar/*,a/**,d/1/2,d/1/*,d/**");
         Mockito.when(local.getClusterView()).thenReturn(cv);
 
         // topology view
@@ -56,7 +57,8 @@ public class TopologyCapabilitiesTest {
         caps = new TopologyCapabilities(tv, config);
     }
 
-    @Test public void testMatching() {
+    @Test
+    public void testMatching() {
         assertEquals(1, caps.getPotentialTargets("foo").size());
         assertEquals(0, caps.getPotentialTargets("foo/a").size());
         assertEquals(0, caps.getPotentialTargets("bar").size());

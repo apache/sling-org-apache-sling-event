@@ -77,8 +77,7 @@ public class ScheduledJobHandler implements Runnable {
     /**
      * @param configuration Current job manager configuration
      */
-    public ScheduledJobHandler(final JobManagerConfiguration configuration,
-            final JobSchedulerImpl jobScheduler) {
+    public ScheduledJobHandler(final JobManagerConfiguration configuration, final JobSchedulerImpl jobScheduler) {
         this.configuration = configuration;
         this.jobScheduler = jobScheduler;
         final Thread t = new Thread(this, "Apache Sling Scheduled Job Handler Thread");
@@ -117,7 +116,7 @@ public class ScheduledJobHandler implements Runnable {
         // put a NOP runnable to wake up the queue
         this.addTask(new Runnable() {
             @Override
-            public  void run() {
+            public void run() {
                 // do nothing
             }
         });
@@ -125,7 +124,7 @@ public class ScheduledJobHandler implements Runnable {
 
     @Override
     public void run() {
-        while ( this.isRunning.get() ) {
+        while (this.isRunning.get()) {
             Runnable r = null;
             try {
                 r = this.queue.take();
@@ -134,7 +133,7 @@ public class ScheduledJobHandler implements Runnable {
                 Thread.currentThread().interrupt();
                 this.isRunning.set(false);
             }
-            if ( this.isRunning.get() && r != null) {
+            if (this.isRunning.get() && r != null) {
                 r.run();
             }
         }
@@ -142,23 +141,23 @@ public class ScheduledJobHandler implements Runnable {
 
     private void scan() {
         final ResourceResolver resolver = configuration.createResourceResolver();
-        if ( resolver != null ) {
+        if (resolver != null) {
             try {
                 logger.debug("Scanning for scheduled jobs...");
                 final String path = this.configuration.getScheduledJobsPath(false);
                 final Resource startResource = resolver.getResource(path);
-                if ( startResource != null ) {
+                if (startResource != null) {
                     final Map<String, Holder> newScheduledJobs = new HashMap<String, Holder>();
-                    synchronized ( this.scheduledJobs ) {
-                        for(final Resource rsrc : startResource.getChildren()) {
-                            if ( !isRunning.get() ) {
+                    synchronized (this.scheduledJobs) {
+                        for (final Resource rsrc : startResource.getChildren()) {
+                            if (!isRunning.get()) {
                                 break;
                             }
                             handleAddOrUpdate(newScheduledJobs, rsrc);
                         }
-                        if ( isRunning.get() ) {
-                            for(final Holder h : this.scheduledJobs.values()) {
-                                if ( h.info != null ) {
+                        if (isRunning.get()) {
+                            for (final Holder h : this.scheduledJobs.values()) {
+                                if (h.info != null) {
                                     this.jobScheduler.unscheduleJob(h.info);
                                 }
                             }
@@ -184,9 +183,10 @@ public class ScheduledJobHandler implements Runnable {
             final Map<String, Object> properties = ResourceHelper.cloneValueMap(vm);
 
             @SuppressWarnings("unchecked")
-            final List<Exception> readErrorList = (List<Exception>) properties.remove(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
-            if ( readErrorList != null ) {
-                for(final Exception e : readErrorList) {
+            final List<Exception> readErrorList =
+                    (List<Exception>) properties.remove(ResourceHelper.PROPERTY_MARKER_READ_ERROR_LIST);
+            if (readErrorList != null) {
+                for (final Exception e : readErrorList) {
                     logger.warn("Unable to read scheduled job from " + eventResource.getPath(), e);
                 }
             } else {
@@ -209,13 +209,14 @@ public class ScheduledJobHandler implements Runnable {
             final String scheduleName,
             final boolean suspend,
             final List<ScheduleInfoImpl> scheduleInfos)
-    throws PersistenceException {
-        final Map<String, Object> properties = this.writeScheduledJob(jobTopic, jobProperties, scheduleName, suspend, scheduleInfos);
+            throws PersistenceException {
+        final Map<String, Object> properties =
+                this.writeScheduledJob(jobTopic, jobProperties, scheduleName, suspend, scheduleInfos);
 
         final String key = ResourceHelper.filterName(scheduleName);
-        synchronized ( this.scheduledJobs ) {
+        synchronized (this.scheduledJobs) {
             final Holder h = this.scheduledJobs.remove(key);
-            if ( h != null && h.info != null ) {
+            if (h != null && h.info != null) {
                 this.jobScheduler.unscheduleJob(h.info);
             }
             final Holder holder = new Holder();
@@ -229,21 +230,22 @@ public class ScheduledJobHandler implements Runnable {
         }
     }
 
-    private Map<String, Object> writeScheduledJob(final String jobTopic,
+    private Map<String, Object> writeScheduledJob(
+            final String jobTopic,
             final Map<String, Object> jobProperties,
             final String scheduleName,
             final boolean suspend,
             final List<ScheduleInfoImpl> scheduleInfos)
-    throws PersistenceException {
+            throws PersistenceException {
         final ResourceResolver resolver = this.configuration.createResourceResolver();
         try {
             // create properties
             final Map<String, Object> properties = new HashMap<String, Object>();
 
-            if ( jobProperties != null ) {
-                for(final Map.Entry<String, Object> entry : jobProperties.entrySet() ) {
+            if (jobProperties != null) {
+                for (final Map.Entry<String, Object> entry : jobProperties.entrySet()) {
                     final String propName = entry.getKey();
-                    if ( !ResourceHelper.ignoreProperty(propName) ) {
+                    if (!ResourceHelper.ignoreProperty(propName)) {
                         properties.put(propName, entry.getValue());
                     }
                 }
@@ -257,12 +259,12 @@ public class ScheduledJobHandler implements Runnable {
             properties.put(ResourceHelper.PROPERTY_SCHEDULE_NAME, scheduleName);
             final String[] infoArray = new String[scheduleInfos.size()];
             int index = 0;
-            for(final ScheduleInfoImpl info : scheduleInfos) {
+            for (final ScheduleInfoImpl info : scheduleInfos) {
                 infoArray[index] = info.getSerializedString();
                 index++;
             }
             properties.put(ResourceHelper.PROPERTY_SCHEDULE_INFO, infoArray);
-            if ( suspend ) {
+            if (suspend) {
                 properties.put(ResourceHelper.PROPERTY_SCHEDULE_SUSPENDED, Boolean.TRUE);
             }
 
@@ -273,15 +275,13 @@ public class ScheduledJobHandler implements Runnable {
 
             // update existing resource
             final Resource existingInfo = resolver.getResource(path);
-            if ( existingInfo != null ) {
+            if (existingInfo != null) {
                 resolver.delete(existingInfo);
                 logger.debug("Updating scheduled job {} at {}", properties, path);
             } else {
                 logger.debug("Storing new scheduled job {} at {}", properties, path);
             }
-            ResourceHelper.createAndCommitResource(resolver,
-                    path,
-                    properties);
+            ResourceHelper.createAndCommitResource(resolver, path, properties);
             // put back real schedule infos
             properties.put(ResourceHelper.PROPERTY_SCHEDULE_INFO, scheduleInfos);
 
@@ -292,8 +292,7 @@ public class ScheduledJobHandler implements Runnable {
     }
 
     private ScheduledJobInfoImpl addOrUpdateScheduledJob(
-            final Map<String, Object> properties,
-            final ScheduledJobInfoImpl oldInfo) {
+            final Map<String, Object> properties, final ScheduledJobInfoImpl oldInfo) {
         properties.remove(ResourceResolver.PROPERTY_RESOURCE_TYPE);
         properties.remove(Job.PROPERTY_JOB_CREATED);
         properties.remove(Job.PROPERTY_JOB_CREATED_INSTANCE);
@@ -303,7 +302,7 @@ public class ScheduledJobHandler implements Runnable {
         final String schedulerName = (String) properties.remove(ResourceHelper.PROPERTY_SCHEDULE_NAME);
 
         final ScheduledJobInfoImpl info;
-        if ( oldInfo == null ) {
+        if (oldInfo == null) {
             info = new ScheduledJobInfoImpl(jobScheduler, schedulerName);
         } else {
             info = oldInfo;
@@ -323,25 +322,25 @@ public class ScheduledJobHandler implements Runnable {
             @Override
             public void run() {
                 final Map<String, Holder> updateJobs = new HashMap<String, ScheduledJobHandler.Holder>();
-                synchronized ( scheduledJobs ) {
-                    for(final Map.Entry<String, Holder> entry : scheduledJobs.entrySet()) {
-                        if ( entry.getValue().info == null && entry.getValue().read < lastBundleActivity.get() ) {
+                synchronized (scheduledJobs) {
+                    for (final Map.Entry<String, Holder> entry : scheduledJobs.entrySet()) {
+                        if (entry.getValue().info == null && entry.getValue().read < lastBundleActivity.get()) {
                             updateJobs.put(entry.getKey(), entry.getValue());
                         }
                     }
                 }
-                if ( !updateJobs.isEmpty() && isRunning.get() ) {
+                if (!updateJobs.isEmpty() && isRunning.get()) {
                     ResourceResolver resolver = configuration.createResourceResolver();
-                    if ( resolver != null ) {
+                    if (resolver != null) {
                         try {
-                            for(final Map.Entry<String, Holder> entry : updateJobs.entrySet()) {
+                            for (final Map.Entry<String, Holder> entry : updateJobs.entrySet()) {
                                 final String path = configuration.getScheduledJobsPath(true) + entry.getKey();
                                 final Resource rsrc = resolver.getResource(path);
-                                if ( !isRunning.get() ) {
+                                if (!isRunning.get()) {
                                     break;
                                 }
-                                if ( rsrc != null ) {
-                                    synchronized ( scheduledJobs ) {
+                                if (rsrc != null) {
+                                    synchronized (scheduledJobs) {
                                         handleAddOrUpdate(scheduledJobs, rsrc);
                                     }
                                 }
@@ -363,12 +362,12 @@ public class ScheduledJobHandler implements Runnable {
         this.addTask(new Runnable() {
             @Override
             public void run() {
-                if ( isRunning.get() ) {
+                if (isRunning.get()) {
                     final String scheduleKey = ResourceHelper.filterName(ResourceUtil.getName(path));
-                    if ( scheduleKey != null ) {
-                        synchronized ( scheduledJobs ) {
+                    if (scheduleKey != null) {
+                        synchronized (scheduledJobs) {
                             final Holder h = scheduledJobs.remove(scheduleKey);
-                            if ( h != null && h.info != null ) {
+                            if (h != null && h.info != null) {
                                 jobScheduler.unscheduleJob(h.info);
                             }
                         }
@@ -386,13 +385,13 @@ public class ScheduledJobHandler implements Runnable {
         this.addTask(new Runnable() {
             @Override
             public void run() {
-                if ( isRunning.get() ) {
+                if (isRunning.get()) {
                     final ResourceResolver resolver = configuration.createResourceResolver();
-                    if ( resolver != null ) {
+                    if (resolver != null) {
                         try {
                             final Resource rsrc = resolver.getResource(path);
-                            if ( rsrc != null ) {
-                                synchronized ( scheduledJobs ) {
+                            if (rsrc != null) {
+                                synchronized (scheduledJobs) {
                                     handleAddOrUpdate(scheduledJobs, rsrc);
                                 }
                             }
@@ -414,42 +413,42 @@ public class ScheduledJobHandler implements Runnable {
         final String id = ResourceHelper.filterName(rsrc.getName());
         final Holder scheduled = this.scheduledJobs.remove(id);
         boolean read = false;
-        if ( scheduled != null ) {
+        if (scheduled != null) {
             // check if loading failed and we can retry
-            if ( scheduled.info == null || scheduled.read < this.lastBundleActivity.get() ) {
+            if (scheduled.info == null || scheduled.read < this.lastBundleActivity.get()) {
                 read = true;
             }
             // check if this is an update
-            if ( scheduled.info != null ) {
+            if (scheduled.info != null) {
                 final ValueMap vm = ResourceUtil.getValueMap(rsrc);
                 final Calendar changed = (Calendar) vm.get(Job.PROPERTY_JOB_CREATED);
-                if ( changed != null && scheduled.created.compareTo(changed) < 0 ) {
+                if (changed != null && scheduled.created.compareTo(changed) < 0) {
                     read = true;
                 }
             }
-            if ( !read ) {
+            if (!read) {
                 // nothing changes
                 newScheduledJobs.put(id, scheduled);
             }
         } else {
             read = true;
         }
-        if ( read ) {
+        if (read) {
             // read
             final Holder holder = new Holder();
             holder.read = System.currentTimeMillis();
 
             final Map<String, Object> properties = this.readScheduledJob(rsrc);
-            if ( properties != null ) {
+            if (properties != null) {
                 holder.created = (Calendar) properties.get(Job.PROPERTY_JOB_CREATED);
                 holder.info = this.addOrUpdateScheduledJob(properties, scheduled != null ? scheduled.info : null);
             }
             newScheduledJobs.put(id, holder);
 
-            if ( holder.info == null && scheduled != null && scheduled.info != null ) {
+            if (holder.info == null && scheduled != null && scheduled.info != null) {
                 this.jobScheduler.unscheduleJob(scheduled.info);
             }
-            if ( holder.info != null ) {
+            if (holder.info != null) {
                 this.jobScheduler.scheduleJob(holder.info);
             }
         }
@@ -469,7 +468,7 @@ public class ScheduledJobHandler implements Runnable {
             final String path = sb.toString();
 
             final Resource eventResource = resolver.getResource(path);
-            if ( eventResource != null ) {
+            if (eventResource != null) {
                 resolver.delete(eventResource);
                 resolver.commit();
             }
@@ -480,9 +479,9 @@ public class ScheduledJobHandler implements Runnable {
             resolver.close();
         }
 
-        synchronized ( this.scheduledJobs ) {
+        synchronized (this.scheduledJobs) {
             final Holder h = scheduledJobs.remove(scheduleKey);
-            if ( h != null && h.info != null ) {
+            if (h != null && h.info != null) {
                 jobScheduler.unscheduleJob(h.info);
             }
         }
@@ -500,13 +499,13 @@ public class ScheduledJobHandler implements Runnable {
 
             final Resource rsrc = resolver.getResource(path);
             // This is an update, if we can't find the resource we ignore it
-            if ( rsrc != null ) {
+            if (rsrc != null) {
                 final Calendar now = Calendar.getInstance();
 
                 // update holder first
-                synchronized ( scheduledJobs ) {
+                synchronized (scheduledJobs) {
                     final Holder h = scheduledJobs.get(scheduleKey);
-                    if ( h != null ) {
+                    if (h != null) {
                         h.created = now;
                     }
                 }
@@ -515,15 +514,15 @@ public class ScheduledJobHandler implements Runnable {
                 mvm.put(Job.PROPERTY_JOB_CREATED, now);
                 final String[] infoArray = new String[scheduleInfo.size()];
                 int index = 0;
-                for(final ScheduleInfo si : scheduleInfo) {
-                    infoArray[index] = ((ScheduleInfoImpl)si).getSerializedString();
+                for (final ScheduleInfo si : scheduleInfo) {
+                    infoArray[index] = ((ScheduleInfoImpl) si).getSerializedString();
                     index++;
                 }
                 mvm.put(ResourceHelper.PROPERTY_SCHEDULE_INFO, infoArray);
 
                 try {
                     resolver.commit();
-                } catch ( final PersistenceException pe) {
+                } catch (final PersistenceException pe) {
                     logger.warn("Unable to update scheduled job " + scheduleName, pe);
                 }
             }
@@ -537,7 +536,7 @@ public class ScheduledJobHandler implements Runnable {
      * @param e The exception
      */
     private void ignoreException(final Exception e) {
-        if ( this.logger.isDebugEnabled() ) {
+        if (this.logger.isDebugEnabled()) {
             this.logger.debug("Ignored exception " + e.getMessage(), e);
         }
     }

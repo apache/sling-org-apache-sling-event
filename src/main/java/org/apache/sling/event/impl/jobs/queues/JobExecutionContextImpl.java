@@ -53,8 +53,7 @@ public class JobExecutionContextImpl implements JobExecutionContext {
 
     private final JobHandler handler;
 
-    public JobExecutionContextImpl(final JobHandler handler,
-            final ASyncHandler asyncHandler) {
+    public JobExecutionContextImpl(final JobHandler handler, final ASyncHandler asyncHandler) {
         this.handler = handler;
         this.asyncHandler = asyncHandler;
     }
@@ -64,36 +63,35 @@ public class JobExecutionContextImpl implements JobExecutionContext {
     }
 
     @Override
-    public void initProgress(final int steps,
-            final long eta) {
-        if ( initProgressIsCalled.compareAndSet(false, true) ) {
+    public void initProgress(final int steps, final long eta) {
+        if (initProgressIsCalled.compareAndSet(false, true)) {
             handler.persistJobProperties(handler.getJob().startProgress(steps, eta));
         }
     }
 
     @Override
     public void incrementProgressCount(final int steps) {
-        if ( initProgressIsCalled.get() ) {
+        if (initProgressIsCalled.get()) {
             handler.persistJobProperties(handler.getJob().setProgress(steps));
         }
     }
 
     @Override
     public void updateProgress(final long eta) {
-        if ( initProgressIsCalled.get() ) {
+        if (initProgressIsCalled.get()) {
             handler.persistJobProperties(handler.getJob().update(eta));
         }
     }
 
     @Override
     public void setProperty(@NotNull final String name, final Object value) {
-        if ( name == null ) {
+        if (name == null) {
             throw new IllegalArgumentException("Name must not be null");
         }
-        if ( value == null ) {
+        if (value == null) {
             throw new IllegalArgumentException("Value must not be null");
         }
-        if ( name.startsWith("slingevent:") || name.startsWith(":slingevent:")) {
+        if (name.startsWith("slingevent:") || name.startsWith(":slingevent:")) {
             throw new IllegalArgumentException("Property name must not start with slingevent: or :slingevent: " + name);
         }
 
@@ -114,15 +112,15 @@ public class JobExecutionContextImpl implements JobExecutionContext {
 
     @Override
     public void asyncProcessingFinished(final JobExecutionResult result) {
-        synchronized ( this ) {
-            if ( isAsync.compareAndSet(true, false) ) {
+        synchronized (this) {
+            if (isAsync.compareAndSet(true, false)) {
                 Job.JobState state = null;
-                if ( result.succeeded() ) {
+                if (result.succeeded()) {
                     state = Job.JobState.SUCCEEDED;
-                } else if ( result.failed() ) {
+                } else if (result.failed()) {
                     state = Job.JobState.QUEUED;
-                } else if ( result.cancelled() ) {
-                    if ( handler.isStopped() ) {
+                } else if (result.cancelled()) {
+                    if (handler.isStopped()) {
                         state = Job.JobState.STOPPED;
                     } else {
                         state = Job.JobState.ERROR;
@@ -130,7 +128,8 @@ public class JobExecutionContextImpl implements JobExecutionContext {
                 }
                 asyncHandler.finished(state);
             } else {
-                throw new IllegalStateException("Job is not processed async or is already finished: " + handler.getJob().getId());
+                throw new IllegalStateException("Job is not processed async or is already finished: "
+                        + handler.getJob().getId());
             }
         }
     }

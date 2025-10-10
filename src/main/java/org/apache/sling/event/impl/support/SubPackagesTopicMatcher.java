@@ -18,7 +18,6 @@
  */
 package org.apache.sling.event.impl.support;
 
-
 /**
  * Sub package matcher - the topic must be in the same package or a sub package.
  */
@@ -29,7 +28,7 @@ public class SubPackagesTopicMatcher implements TopicMatcher {
     public SubPackagesTopicMatcher(final String name) {
         // remove last char and maybe a trailing slash
         int lastPos = name.length() - 1;
-        if ( lastPos > 0 && name.charAt(lastPos - 1) == '/' ) {
+        if (lastPos > 0 && name.charAt(lastPos - 1) == '/') {
             this.packageName = name.substring(0, lastPos);
         } else {
             this.packageName = name.substring(0, lastPos) + '/';
@@ -42,7 +41,9 @@ public class SubPackagesTopicMatcher implements TopicMatcher {
     @Override
     public String match(final String topic) {
         final int pos = topic.lastIndexOf('/');
-        return pos > -1 && topic.substring(0, pos + 1).startsWith(this.packageName) ? topic.substring(this.packageName.length()) : null;
+        return pos > -1 && topic.substring(0, pos + 1).startsWith(this.packageName)
+                ? topic.substring(this.packageName.length())
+                : null;
     }
 
     @Override

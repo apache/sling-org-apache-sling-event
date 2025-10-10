@@ -41,27 +41,26 @@ public class OrderedMaxParallelIT extends AbstractMaxParallelIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            // create ordered test queue
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "ordered-max-parallel")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
-                .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .put(ConfigurationConstants.PROP_MAX_PARALLEL, 1)
-                .asOption()
-        );
+                baseConfiguration(),
+                // create ordered test queue
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "ordered-max-parallel")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.ORDERED.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .put(ConfigurationConstants.PROP_MAX_PARALLEL, 1)
+                        .asOption());
     }
 
-    @Test(timeout=DURATION * 16000L)
+    @Test(timeout = DURATION * 16000L)
     public void testOrderedMaxParallel_slow() throws Exception {
         doTestMaxParallel(12, 1717, DURATION);
 
         assertEquals(1, max);
     }
 
-    @Test(timeout=DURATION * 20000L)
+    @Test(timeout = DURATION * 20000L)
     public void testOrderedMaxParallel2_fast() throws Exception {
         doTestMaxParallel(50, 123, DURATION);
 

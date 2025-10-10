@@ -18,16 +18,16 @@
  */
 package org.apache.sling.event.impl.jobs.stats;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.sling.event.jobs.Statistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Helper class that holds gauges for relevant queue statistics.
@@ -129,7 +129,7 @@ class GaugeSupport {
      */
     void shutdown() {
         if (metricRegistry != null) {
-           for (String metricName : gaugeMetricNames) {
+            for (String metricName : gaugeMetricNames) {
                 try {
                     metricRegistry.remove(metricName);
                 } catch (RuntimeException e) {
@@ -155,10 +155,20 @@ class GaugeSupport {
             gaugeMetricNames.add(metricName);
         } catch (IllegalArgumentException e) {
             if (queueName != null && count <= 10) {
-                logger.debug("Failed to register suffix {} for the queue {}, attempt {}, retrying.", suffix, queueName, count, e);
+                logger.debug(
+                        "Failed to register suffix {} for the queue {}, attempt {}, retrying.",
+                        suffix,
+                        queueName,
+                        count,
+                        e);
                 registerWithSuffix(suffix, count + 1, value);
             } else {
-                logger.error("Failed to register suffix {} for the queue {}, attempt {}, giving up.", suffix, queueName, count, e);
+                logger.error(
+                        "Failed to register suffix {} for the queue {}, attempt {}, giving up.",
+                        suffix,
+                        queueName,
+                        count,
+                        e);
             }
         }
     }

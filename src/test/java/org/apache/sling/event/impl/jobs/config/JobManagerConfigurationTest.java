@@ -18,11 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs.config;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +35,11 @@ import org.apache.sling.event.impl.discovery.InitDelayingTopologyEventListener;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.osgi.service.condition.Condition;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class JobManagerConfigurationTest {
 
@@ -72,7 +72,7 @@ public class JobManagerConfigurationTest {
         }
 
         public void await() throws Exception {
-            if ( !latch.await(8000, TimeUnit.MILLISECONDS) ) {
+            if (!latch.await(8000, TimeUnit.MILLISECONDS)) {
                 throw new Exception("No configuration event within 8 seconds.");
             }
         }
@@ -84,21 +84,23 @@ public class JobManagerConfigurationTest {
         }
     }
 
-    @Test public void testTopologyChange() throws Exception {
+    @Test
+    public void testTopologyChange() throws Exception {
         // mock scheduler
         final ChangeListener ccl = new ChangeListener();
 
         // add change listener and verify
         ccl.init(1);
         final JobManagerConfiguration config = new JobManagerConfiguration();
-        ((AtomicBoolean)TestUtil.getFieldValue(config, "active")).set(true);
-        InitDelayingTopologyEventListener startupDelayListener = new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
+        ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
+        InitDelayingTopologyEventListener startupDelayListener =
+                new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
 
-            @Override
-            public void handleTopologyEvent(TopologyEvent event) {
-                config.doHandleTopologyEvent(event);
-            }
-        });
+                    @Override
+                    public void handleTopologyEvent(TopologyEvent event) {
+                        config.doHandleTopologyEvent(event);
+                    }
+                });
         TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
 
         // Create and bind the condition
@@ -141,6 +143,5 @@ public class JobManagerConfigurationTest {
         // we wait another 4 secs to see if there is no another event
         Thread.sleep(4000);
         assertEquals(2, ccl.events.size());
-
     }
 }

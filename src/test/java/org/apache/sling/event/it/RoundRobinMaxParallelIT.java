@@ -43,26 +43,25 @@ public class RoundRobinMaxParallelIT extends AbstractMaxParallelIT {
     @Configuration
     public Option[] configuration() {
         return options(
-            baseConfiguration(),
-            factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
-                .put(ConfigurationConstants.PROP_NAME, "round-robin-max-parallel")
-                .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
-                .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
-                .put(ConfigurationConstants.PROP_RETRIES, 2)
-                .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
-                .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PARALLEL)
-                .asOption()
-        );
+                baseConfiguration(),
+                factoryConfiguration("org.apache.sling.event.jobs.QueueConfiguration")
+                        .put(ConfigurationConstants.PROP_NAME, "round-robin-max-parallel")
+                        .put(ConfigurationConstants.PROP_TYPE, QueueConfiguration.Type.TOPIC_ROUND_ROBIN.name())
+                        .put(ConfigurationConstants.PROP_TOPICS, TOPIC_NAME)
+                        .put(ConfigurationConstants.PROP_RETRIES, 2)
+                        .put(ConfigurationConstants.PROP_RETRY_DELAY, 2000L)
+                        .put(ConfigurationConstants.PROP_MAX_PARALLEL, MAX_PARALLEL)
+                        .asOption());
     }
 
-    @Test(timeout=DURATION * 16000L)
+    @Test(timeout = DURATION * 16000L)
     public void testRoundRobinMaxParallel_slow() throws Exception {
         doTestMaxParallel(20, 1717, DURATION);
 
         assertTrue(max <= MAX_PARALLEL);
     }
 
-    @Test(timeout=DURATION * 16000L)
+    @Test(timeout = DURATION * 16000L)
     public void testRoundRobinMaxParallel_fast() throws Exception {
         doTestMaxParallel(200, 123, DURATION);
 

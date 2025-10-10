@@ -18,6 +18,13 @@
  */
 package org.apache.sling.event.impl.jobs.tasks;
 
+import java.time.Clock;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
@@ -33,14 +40,6 @@ import org.apache.sling.event.jobs.consumer.JobExecutionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-
 /**
  * Maintenance task...
  *
@@ -52,7 +51,7 @@ public class CleanUpTask {
     private static final String PROPERTY_LAST_CHECKED = "lastCheckedForCleanup";
 
     /** Time to keep empty folders, defaults to 1 day */
-    private static final long KEEP_DURATION = 24*60*60*1000;
+    private static final long KEEP_DURATION = 24 * 60 * 60 * 1000;
 
     /** Number of id folders to be removed on each run */
     private static final long MAX_REMOVE_ID_FOLDERS = 8;
@@ -104,40 +103,39 @@ public class CleanUpTask {
         logger.debug("Job manager maintenance: Starting #{}", this.schedulerRuns);
 
         final TopologyCapabilities topologyCapabilities = configuration.getTopologyCapabilities();
-        if ( topologyCapabilities != null ) {
+        if (topologyCapabilities != null) {
             // Clean up
-            final String cleanUpUnassignedPath;;
-            if ( topologyCapabilities.isLeader() ) {
+            final String cleanUpUnassignedPath;
+            ;
+            if (topologyCapabilities.isLeader()) {
                 cleanUpUnassignedPath = this.configuration.getUnassignedJobsPath();
             } else {
                 cleanUpUnassignedPath = null;
             }
 
             // job scheduler is handled every third run
-            if ( schedulerRuns % 3 == 1 ) {
+            if (schedulerRuns % 3 == 1) {
                 this.jobScheduler.maintenance();
             }
-            if ( schedulerRuns % 60 == 0 ) { // full clean up is done every hour
+            if (schedulerRuns % 60 == 0) { // full clean up is done every hour
                 this.fullEmptyFolderCleanup(topologyCapabilities, this.configuration.getLocalJobsPath());
-                if ( cleanUpUnassignedPath != null ) {
+                if (cleanUpUnassignedPath != null) {
                     this.fullEmptyFolderCleanup(topologyCapabilities, cleanUpUnassignedPath);
                 }
-                if ( topologyCapabilities.isLeader() ) {
+                if (topologyCapabilities.isLeader()) {
                     this.cleanUpInstanceIdFolders(topologyCapabilities, this.configuration.getAssginedJobsPath());
                 }
-            } else if ( schedulerRuns % 5 == 0 ) { // simple clean up every 5 minutes
+            } else if (schedulerRuns % 5 == 0) { // simple clean up every 5 minutes
                 this.simpleEmptyFolderCleanup(topologyCapabilities, this.configuration.getLocalJobsPath());
-                if ( cleanUpUnassignedPath != null ) {
+                if (cleanUpUnassignedPath != null) {
                     this.simpleEmptyFolderCleanup(topologyCapabilities, cleanUpUnassignedPath);
                 }
             }
         }
 
-
-        if (this.configuration.getHistoryCleanUpRemovedJobs() > 0 &&
-                schedulerRuns % 60 == 1) {
+        if (this.configuration.getHistoryCleanUpRemovedJobs() > 0 && schedulerRuns % 60 == 1) {
             Calendar removeDate = getCalendarInstance();
-            removeDate.add(Calendar.MINUTE, - this.configuration.getHistoryCleanUpRemovedJobs());
+            removeDate.add(Calendar.MINUTE, -this.configuration.getHistoryCleanUpRemovedJobs());
             this.historyCleanUpRemovedJobs(removeDate);
         }
 
@@ -156,9 +154,7 @@ public class CleanUpTask {
                      */
                     new JobExecutionContext() {
                         @Override
-                        public void asyncProcessingFinished(JobExecutionResult result) {
-
-                        }
+                        public void asyncProcessingFinished(JobExecutionResult result) {}
 
                         @Override
                         public boolean isStopped() {
@@ -166,29 +162,19 @@ public class CleanUpTask {
                         }
 
                         @Override
-                        public void initProgress(int steps, long eta) {
-
-                        }
+                        public void initProgress(int steps, long eta) {}
 
                         @Override
-                        public void incrementProgressCount(int steps) {
-
-                        }
+                        public void incrementProgressCount(int steps) {}
 
                         @Override
-                        public void updateProgress(long eta) {
-
-                        }
+                        public void updateProgress(long eta) {}
 
                         @Override
-                        public void log(String message, Object... args) {
-
-                        }
+                        public void log(String message, Object... args) {}
 
                         @Override
-                        public void setProperty(String name, Object value) {
-
-                        }
+                        public void setProperty(String name, Object value) {}
 
                         @Override
                         public ResultBuilder result() {
@@ -197,10 +183,7 @@ public class CleanUpTask {
                     },
                     this.configuration.getStoredCancelledJobsPath(),
                     null,
-                    Arrays.asList(
-                            Job.JobState.DROPPED.name(),
-                            Job.JobState.ERROR.name()
-                    ));
+                    Arrays.asList(Job.JobState.DROPPED.name(), Job.JobState.ERROR.name()));
         } catch (PersistenceException e) {
             this.logger.warn("Exception during job resource tree cleanup.", e);
         } finally {
@@ -223,13 +206,13 @@ public class CleanUpTask {
 
             final Resource baseResource = resolver.getResource(basePath);
             // sanity check - should never be null
-            if ( baseResource != null ) {
+            if (baseResource != null) {
                 final Iterator<Resource> topicIter = baseResource.listChildren();
-                while ( caps.isActive() && topicIter.hasNext() ) {
+                while (caps.isActive() && topicIter.hasNext()) {
                     final Resource topicResource = topicIter.next();
 
-                    for(int i = 0; i < 10; i++) {
-                        if ( caps.isActive() ) {
+                    for (int i = 0; i < 10; i++) {
+                        if (caps.isActive()) {
                             final StringBuilder sb = new StringBuilder(topicResource.getPath());
                             sb.append('/');
                             sb.append(cleanUpDate.get(Calendar.YEAR));
@@ -244,15 +227,17 @@ public class CleanUpTask {
                             final String path = sb.toString();
 
                             final Resource dateResource = resolver.getResource(path);
-                            if ( dateResource != null && !dateResource.listChildren().hasNext() ) {
+                            if (dateResource != null
+                                    && !dateResource.listChildren().hasNext()) {
                                 resolver.delete(dateResource);
                                 resolver.commit();
                             }
                             // check hour folder
-                            if ( path.endsWith("59") ) {
+                            if (path.endsWith("59")) {
                                 final String hourPath = path.substring(0, path.length() - 3);
                                 final Resource hourResource = resolver.getResource(hourPath);
-                                if ( hourResource != null && !hourResource.listChildren().hasNext() ) {
+                                if (hourResource != null
+                                        && !hourResource.listChildren().hasNext()) {
                                     resolver.delete(hourResource);
                                     resolver.commit();
                                 }
@@ -278,13 +263,13 @@ public class CleanUpTask {
     private void fullEmptyFolderCleanup(final TopologyCapabilities caps, final String basePath) {
         this.logger.debug("Cleaning up job resource tree: removing ALL empty folders");
         final ResourceResolver resolver = this.configuration.createResourceResolver();
-        if ( resolver == null ) {
+        if (resolver == null) {
             return;
         }
         try {
             final Resource baseResource = resolver.getResource(basePath);
             // sanity check - should never be null
-            if ( baseResource != null ) {
+            if (baseResource != null) {
                 final Calendar now = getCalendarInstance();
                 final int removeYear = now.get(Calendar.YEAR);
                 final int removeMonth = now.get(Calendar.MONTH) + 1;
@@ -292,58 +277,59 @@ public class CleanUpTask {
                 final int removeHour = now.get(Calendar.HOUR_OF_DAY);
 
                 final Iterator<Resource> topicIter = baseResource.listChildren();
-                while ( caps.isActive() && topicIter.hasNext() ) {
+                while (caps.isActive() && topicIter.hasNext()) {
                     final Resource topicResource = topicIter.next();
 
                     // now years
                     final Iterator<Resource> yearIter = topicResource.listChildren();
-                    while ( caps.isActive() && yearIter.hasNext() ) {
+                    while (caps.isActive() && yearIter.hasNext()) {
                         final Resource yearResource = yearIter.next();
                         final int year = Integer.valueOf(yearResource.getName());
                         // we should not have a year higher than "now", but we test anyway
-                        if ( year > removeYear ) {
+                        if (year > removeYear) {
                             continue;
                         }
                         final boolean oldYear = year < removeYear;
 
                         // months
                         final Iterator<Resource> monthIter = yearResource.listChildren();
-                        while ( caps.isActive() && monthIter.hasNext() ) {
+                        while (caps.isActive() && monthIter.hasNext()) {
                             final Resource monthResource = monthIter.next();
                             final int month = Integer.valueOf(monthResource.getName());
-                            if ( !oldYear && month > removeMonth ) {
+                            if (!oldYear && month > removeMonth) {
                                 continue;
                             }
                             final boolean oldMonth = oldYear || month < removeMonth;
 
                             // days
                             final Iterator<Resource> dayIter = monthResource.listChildren();
-                            while ( caps.isActive() && dayIter.hasNext() ) {
+                            while (caps.isActive() && dayIter.hasNext()) {
                                 final Resource dayResource = dayIter.next();
                                 final int day = Integer.valueOf(dayResource.getName());
-                                if ( !oldMonth && day > removeDay ) {
+                                if (!oldMonth && day > removeDay) {
                                     continue;
                                 }
                                 final boolean oldDay = oldMonth || day < removeDay;
 
                                 // hours
                                 final Iterator<Resource> hourIter = dayResource.listChildren();
-                                while ( caps.isActive() && hourIter.hasNext() ) {
+                                while (caps.isActive() && hourIter.hasNext()) {
                                     final Resource hourResource = hourIter.next();
                                     final int hour = Integer.valueOf(hourResource.getName());
-                                    if ( !oldDay && hour > removeHour ) {
+                                    if (!oldDay && hour > removeHour) {
                                         continue;
                                     }
-                                    final boolean oldHour = (oldDay && (oldMonth || removeHour > 0)) || hour < (removeHour -1);
+                                    final boolean oldHour =
+                                            (oldDay && (oldMonth || removeHour > 0)) || hour < (removeHour - 1);
 
                                     // we only remove minutes if the hour is old
-                                    if ( oldHour ) {
+                                    if (oldHour) {
                                         final Iterator<Resource> minuteIter = hourResource.listChildren();
-                                        while ( caps.isActive() && minuteIter.hasNext() ) {
+                                        while (caps.isActive() && minuteIter.hasNext()) {
                                             final Resource minuteResource = minuteIter.next();
 
                                             // check if we can delete the minute
-                                            if ( !minuteResource.listChildren().hasNext() ) {
+                                            if (!minuteResource.listChildren().hasNext()) {
                                                 resolver.delete(minuteResource);
                                                 resolver.commit();
                                             }
@@ -351,27 +337,35 @@ public class CleanUpTask {
                                     }
 
                                     // check if we can delete the hour
-                                    if ( caps.isActive() && oldHour && !hourResource.listChildren().hasNext()) {
+                                    if (caps.isActive()
+                                            && oldHour
+                                            && !hourResource.listChildren().hasNext()) {
                                         resolver.delete(hourResource);
                                         resolver.commit();
                                     }
                                 }
                                 // check if we can delete the day
-                                if ( caps.isActive() && oldDay && !dayResource.listChildren().hasNext()) {
+                                if (caps.isActive()
+                                        && oldDay
+                                        && !dayResource.listChildren().hasNext()) {
                                     resolver.delete(dayResource);
                                     resolver.commit();
                                 }
                             }
 
                             // check if we can delete the month
-                            if ( caps.isActive() && oldMonth && !monthResource.listChildren().hasNext() ) {
+                            if (caps.isActive()
+                                    && oldMonth
+                                    && !monthResource.listChildren().hasNext()) {
                                 resolver.delete(monthResource);
                                 resolver.commit();
                             }
                         }
 
                         // check if we can delete the year
-                        if ( caps.isActive() && oldYear && !yearResource.listChildren().hasNext() ) {
+                        if (caps.isActive()
+                                && oldYear
+                                && !yearResource.listChildren().hasNext()) {
                             resolver.delete(yearResource);
                             resolver.commit();
                         }
@@ -387,52 +381,51 @@ public class CleanUpTask {
         }
     }
 
-
     /**
      * Clean up empty instance id folders
      * @param assginedJobsPath The root path for the assigned jobs
      */
     private void cleanUpInstanceIdFolders(final TopologyCapabilities caps, final String assginedJobsPath) {
         final ResourceResolver resolver = this.configuration.createResourceResolver();
-        if ( resolver == null ) {
+        if (resolver == null) {
             return;
         }
         try {
             final Resource baseResource = resolver.getResource(assginedJobsPath);
             // sanity check - should never be null
-            if ( baseResource != null ) {
+            if (baseResource != null) {
                 final List<Resource> toDelete = new ArrayList<>();
                 // iterate over children == instance id folders
-                for(final Resource r : baseResource.getChildren()) {
-                    if ( !caps.isActive() ) {
+                for (final Resource r : baseResource.getChildren()) {
+                    if (!caps.isActive()) {
                         // shutdown, stop check
                         toDelete.clear();
                         break;
                     }
                     final String instanceId = r.getName();
-                    if ( !caps.isActive(instanceId) ) {
+                    if (!caps.isActive(instanceId)) {
                         // is the resource empty?
-                        if ( !hasJobs(caps, r) ) {
+                        if (!hasJobs(caps, r)) {
                             // check for timestamp
                             final long timestamp = r.getValueMap().get(PROPERTY_LAST_CHECKED, -1L);
                             final long now = currentTimeMillis();
-                            if ( timestamp > 0 && (timestamp + KEEP_DURATION <= now) ) {
+                            if (timestamp > 0 && (timestamp + KEEP_DURATION <= now)) {
                                 toDelete.add(r);
-                                if ( toDelete.size() == MAX_REMOVE_ID_FOLDERS ) {
+                                if (toDelete.size() == MAX_REMOVE_ID_FOLDERS) {
                                     break;
                                 }
-                            } else if ( timestamp == -1 ) {
+                            } else if (timestamp == -1) {
                                 final ModifiableValueMap mvm = r.adaptTo(ModifiableValueMap.class);
-                                if ( mvm != null ) {
+                                if (mvm != null) {
                                     mvm.put(PROPERTY_LAST_CHECKED, now);
                                     resolver.commit();
                                 }
                             }
                         } else {
                             // not empty, check if timestamp exists
-                            if ( r.getValueMap().containsKey(PROPERTY_LAST_CHECKED) ) {
+                            if (r.getValueMap().containsKey(PROPERTY_LAST_CHECKED)) {
                                 final ModifiableValueMap mvm = r.adaptTo(ModifiableValueMap.class);
-                                if ( mvm != null ) {
+                                if (mvm != null) {
                                     mvm.remove(PROPERTY_LAST_CHECKED);
                                     resolver.commit();
                                 }
@@ -442,8 +435,8 @@ public class CleanUpTask {
                 }
 
                 // remove obsolete nodes
-                for(final Resource r : toDelete) {
-                    if ( caps.isActive() ) {
+                for (final Resource r : toDelete) {
+                    if (caps.isActive()) {
                         resolver.delete(r);
                         resolver.commit();
                     }
@@ -467,9 +460,9 @@ public class CleanUpTask {
         boolean result = false;
 
         final Iterator<Resource> iter = root.listChildren();
-        while ( !result && caps.isActive() && iter.hasNext() ) {
+        while (!result && caps.isActive() && iter.hasNext()) {
             final Resource child = iter.next();
-            if ( ResourceHelper.RESOURCE_TYPE_JOB.equals(child.getResourceType()) ) {
+            if (ResourceHelper.RESOURCE_TYPE_JOB.equals(child.getResourceType())) {
                 result = true;
             } else {
                 result = hasJobs(caps, child);
