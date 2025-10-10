@@ -59,6 +59,7 @@ public abstract class JobsTestSupport extends TestSupport {
             // Sling Event
             testBundle("bundle.filename"),
             slingEvent(),
+            mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.event.api").versionAsInProject(),
             // testing configurations
             newConfiguration("org.apache.sling.event.impl.jobs.jcr.PersistenceHandler")
                 .put(JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY, backgroundLoadDelay())

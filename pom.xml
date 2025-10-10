@@ -47,6 +47,8 @@
         <min.port>37000</min.port>
         <max.port>37999</max.port>
         <project.build.outputTimestamp>2025-06-04T08:33:29Z</project.build.outputTimestamp>
+        <!-- Mockito does no longer support Java 8 -->
+        <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     </properties>
 
 
