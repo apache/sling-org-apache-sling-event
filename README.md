@@ -7,13 +7,12 @@
 This module is part of the [Apache Sling](https://sling.apache.org) project.
 
 For user documentation see https://sling.apache.org/documentation/bundles/apache-sling-eventing-and-job-handling.html. 
-This README contains information on the bundle, APIs and implementation details.
+This README contains information on the bundle's implementation details.
 
 ## Bundle
 
-Sling Event contains support for Jobs. It provides an Api for Job, JobManager and Queue, as well as consumer Apis for a 
-JobConsumer. There are ancillary APIs to support the work of these core interfaces. The core APIs are exported from 
-org.apache.sling.event.jobs with the consumers exported from org.apache.sling.event.jobs.consumer.
+Sling Event contains support for Jobs. It provides an implementation for Job, JobManager and Queue as defined by the Sling Event API.
+The API itself is maintained at <https://github.com/apache/sling-org-apache-sling-event-api>.
 
 
 ## Design and implementation
