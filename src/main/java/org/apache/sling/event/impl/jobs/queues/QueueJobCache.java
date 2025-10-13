@@ -221,8 +221,7 @@ public class QueueJobCache {
 
         final Map<String, List<JobImpl>> topicCache = new HashMap<String, List<JobImpl>>();
 
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
             final Resource baseResource = resolver.getResource(this.configuration.getLocalJobsPath());
             // sanity check - should never be null
             if ( baseResource != null ) {
@@ -234,8 +233,6 @@ public class QueueJobCache {
                     }
                 }
             }
-        } finally {
-            resolver.close();
         }
         orderTopics(topicCache);
 

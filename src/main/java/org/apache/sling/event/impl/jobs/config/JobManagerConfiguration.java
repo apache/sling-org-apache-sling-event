@@ -35,6 +35,7 @@ import org.apache.sling.event.impl.support.Environment;
 import org.apache.sling.event.impl.support.ResourceHelper;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.serviceusermapping.ServiceUserMapped;
+import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -284,15 +285,12 @@ public class JobManagerConfiguration {
         this.historyCleanUpRemovedJobs = config.cleanup_period();
 
         // create initial resources
-        final ResourceResolver resolver = this.createResourceResolver();
-        try {
+        try (final ResourceResolver resolver = this.createResourceResolver();) {
             ResourceHelper.getOrCreateBasePath(resolver, this.getLocalJobsPath());
             ResourceHelper.getOrCreateBasePath(resolver, this.getUnassignedJobsPath());
         } catch ( final PersistenceException pe ) {
             logger.error("Unable to create default paths: " + pe.getMessage(), pe);
             throw new RuntimeException(pe);
-        } finally {
-            resolver.close();
         }
         this.active.set(true);
 
@@ -361,21 +359,21 @@ public class JobManagerConfiguration {
      * This ResourceResolver provides read and write access to all resources relevant for the event
      * and job handling.
      * 
-     * @return A resource resolver or {@code null} if the component is already deactivated.
+     * @return A resource resolver 
      * @throws RuntimeException if the resolver can't be created.
      */
-    public ResourceResolver createResourceResolver() {
-        ResourceResolver resolver = null;
+    public @NotNull ResourceResolver createResourceResolver() {
         final ResourceResolverFactory factory = this.resourceResolverFactory;
         if ( factory != null ) {
             try {
-                resolver = this.resourceResolverFactory.getServiceResourceResolver(null);
+                return this.resourceResolverFactory.getServiceResourceResolver(null);
             } catch ( final LoginException le) {
                 logger.error("Unable to create new resource resolver: " + le.getMessage(), le);
                 throw new RuntimeException(le);
             }
+        } else {
+            throw new RuntimeException ("ResourceResolverFactory is null, cannot create ResourceResolver");
         }
-        return resolver;
     }
 
     /**

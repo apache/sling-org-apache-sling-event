@@ -72,29 +72,24 @@ public class CheckTopologyTask {
     private void reassignJobsFromStoppedInstances() {
         if ( caps.isLeader() && caps.isActive() ) {
             this.logger.debug("Checking for stopped instances...");
-            final ResourceResolver resolver = this.configuration.createResourceResolver();
-            if ( resolver != null ) {
-                try {
-                    final Resource jobsRoot = resolver.getResource(this.configuration.getAssginedJobsPath());
-                    this.logger.debug("Got jobs root {}", jobsRoot);
+            try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
+                final Resource jobsRoot = resolver.getResource(this.configuration.getAssginedJobsPath());
+                this.logger.debug("Got jobs root {}", jobsRoot);
 
-                    // this resource should exist, but we check anyway
-                    if ( jobsRoot != null ) {
-                        final Iterator<Resource> instanceIter = jobsRoot.listChildren();
-                        while ( caps.isActive() && instanceIter.hasNext() ) {
-                            final Resource instanceResource = instanceIter.next();
+                // this resource should exist, but we check anyway
+                if ( jobsRoot != null ) {
+                    final Iterator<Resource> instanceIter = jobsRoot.listChildren();
+                    while ( caps.isActive() && instanceIter.hasNext() ) {
+                        final Resource instanceResource = instanceIter.next();
 
-                            final String instanceId = instanceResource.getName();
-                            if ( !caps.isActive(instanceId) ) {
-                                logger.debug("Found stopped instance {}", instanceId);
-                                assignJobs(instanceResource, true);
-                            }
+                        final String instanceId = instanceResource.getName();
+                        if ( !caps.isActive(instanceId) ) {
+                            logger.debug("Found stopped instance {}", instanceId);
+                            assignJobs(instanceResource, true);
                         }
                     }
-                } finally {
-                    resolver.close();
                 }
-            }
+            } 
         }
     }
 
@@ -104,85 +99,80 @@ public class CheckTopologyTask {
     private void reassignStaleJobs() {
         if ( caps.isActive() ) {
             this.logger.debug("Checking for stale jobs...");
-            final ResourceResolver resolver = this.configuration.createResourceResolver();
-            if ( resolver != null ) {
-                try {
-                    final Resource jobsRoot = resolver.getResource(this.configuration.getLocalJobsPath());
+            try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
+                final Resource jobsRoot = resolver.getResource(this.configuration.getLocalJobsPath());
 
-                    // this resource should exist, but we check anyway
-                    if ( jobsRoot != null ) {
-                        final Iterator<Resource> topicIter = jobsRoot.listChildren();
-                        while ( caps.isActive() && topicIter.hasNext() ) {
-                            final Resource topicResource = topicIter.next();
+                // this resource should exist, but we check anyway
+                if ( jobsRoot != null ) {
+                    final Iterator<Resource> topicIter = jobsRoot.listChildren();
+                    while ( caps.isActive() && topicIter.hasNext() ) {
+                        final Resource topicResource = topicIter.next();
 
-                            final String topicName = topicResource.getName().replace('.', '/');
-                            this.logger.debug("Checking topic {}..." , topicName);
-                            final List<InstanceDescription> potentialTargets = caps.getPotentialTargets(topicName);
-                            boolean reassign = true;
-                            for(final InstanceDescription desc : potentialTargets) {
-                                if ( desc.isLocal() ) {
-                                    reassign = false;
-                                    break;
-                                }
+                        final String topicName = topicResource.getName().replace('.', '/');
+                        this.logger.debug("Checking topic {}..." , topicName);
+                        final List<InstanceDescription> potentialTargets = caps.getPotentialTargets(topicName);
+                        boolean reassign = true;
+                        for(final InstanceDescription desc : potentialTargets) {
+                            if ( desc.isLocal() ) {
+                                reassign = false;
+                                break;
                             }
-                            if ( reassign ) {
-                                final QueueConfigurationManager qcm = this.configuration.getQueueConfigurationManager();
-                                if ( qcm == null ) {
-                                    break;
-                                }
-                                final QueueInfo info = qcm.getQueueInfo(topicName);
-				logger.info ("Start reassigning stale jobs");
-                                JobTopicTraverser.traverse(this.logger, topicResource, new JobTopicTraverser.ResourceCallback() {
+                        }
+                        if ( reassign ) {
+                            final QueueConfigurationManager qcm = this.configuration.getQueueConfigurationManager();
+                            if ( qcm == null ) {
+                                break;
+                            }
+                            final QueueInfo info = qcm.getQueueInfo(topicName);
+                            logger.info ("Start reassigning stale jobs");
+                            JobTopicTraverser.traverse(this.logger, topicResource, new JobTopicTraverser.ResourceCallback() {
 
-                                    @Override
-                                    public boolean handle(final Resource rsrc) {
+                                @Override
+                                public boolean handle(final Resource rsrc) {
+                                    try {
+                                        final ValueMap vm = ResourceHelper.getValueMap(rsrc);
+                                        final String targetId = caps.detectTarget(topicName, vm, info);
+
+                                        final Map<String, Object> props = new HashMap<>(vm);
+                                        props.remove(Job.PROPERTY_JOB_STARTED_TIME);
+
+                                        final String newPath;
+                                        if ( targetId != null ) {
+                                            newPath = configuration.getAssginedJobsPath() + '/' + targetId + '/' + topicResource.getName() + rsrc.getPath().substring(topicResource.getPath().length());
+                                            props.put(Job.PROPERTY_JOB_QUEUE_NAME, info.queueName);
+                                            props.put(Job.PROPERTY_JOB_TARGET_INSTANCE, targetId);
+                                        } else {
+                                            newPath = configuration.getUnassignedJobsPath() + '/' + topicResource.getName() + rsrc.getPath().substring(topicResource.getPath().length());
+                                            props.remove(Job.PROPERTY_JOB_QUEUE_NAME);
+                                            props.remove(Job.PROPERTY_JOB_TARGET_INSTANCE);
+                                        }
                                         try {
-                                            final ValueMap vm = ResourceHelper.getValueMap(rsrc);
-                                            final String targetId = caps.detectTarget(topicName, vm, info);
-
-                                            final Map<String, Object> props = new HashMap<>(vm);
-                                            props.remove(Job.PROPERTY_JOB_STARTED_TIME);
-
-                                            final String newPath;
+                                            ResourceHelper.getOrCreateResource(resolver, newPath, props);
+                                            resolver.delete(rsrc);
+                                            resolver.commit();
+                                            final String jobId = vm.get(ResourceHelper.PROPERTY_JOB_ID, String.class);
                                             if ( targetId != null ) {
-                                                newPath = configuration.getAssginedJobsPath() + '/' + targetId + '/' + topicResource.getName() + rsrc.getPath().substring(topicResource.getPath().length());
-                                                props.put(Job.PROPERTY_JOB_QUEUE_NAME, info.queueName);
-                                                props.put(Job.PROPERTY_JOB_TARGET_INSTANCE, targetId);
+                                                configuration.getAuditLogger().debug("REASSIGN OK {} : {}", targetId, jobId);
                                             } else {
-                                                newPath = configuration.getUnassignedJobsPath() + '/' + topicResource.getName() + rsrc.getPath().substring(topicResource.getPath().length());
-                                                props.remove(Job.PROPERTY_JOB_QUEUE_NAME);
-                                                props.remove(Job.PROPERTY_JOB_TARGET_INSTANCE);
+                                                configuration.getAuditLogger().debug("REUNASSIGN OK : {}", jobId);
                                             }
-                                            try {
-                                                ResourceHelper.getOrCreateResource(resolver, newPath, props);
-                                                resolver.delete(rsrc);
-                                                resolver.commit();
-                                                final String jobId = vm.get(ResourceHelper.PROPERTY_JOB_ID, String.class);
-                                                if ( targetId != null ) {
-                                                    configuration.getAuditLogger().debug("REASSIGN OK {} : {}", targetId, jobId);
-                                                } else {
-                                                    configuration.getAuditLogger().debug("REUNASSIGN OK : {}", jobId);
-                                                }
-                                            } catch ( final PersistenceException pe ) {
-                                                logger.warn("Unable to move stale job from " + rsrc.getPath() + " to " + newPath, pe);
-                                                resolver.refresh();
-                                                resolver.revert();
-                                            }
-                                        } catch (final InstantiationException ie) {
-                                            // something happened with the resource in the meantime
-                                            logger.warn("Unable to move stale job from " + rsrc.getPath(), ie);
+                                        } catch ( final PersistenceException pe ) {
+                                            logger.warn("Unable to move stale job from " + rsrc.getPath() + " to " + newPath, pe);
                                             resolver.refresh();
                                             resolver.revert();
                                         }
-                                        return caps.isActive();
+                                    } catch (final InstantiationException ie) {
+                                        // something happened with the resource in the meantime
+                                        logger.warn("Unable to move stale job from " + rsrc.getPath(), ie);
+                                        resolver.refresh();
+                                        resolver.revert();
                                     }
-                                });
+                                    return caps.isActive();
+                                }
+                            });
 
-                            }
                         }
                     }
-                } finally {
-                    resolver.close();
                 }
             }
         }
@@ -197,18 +187,13 @@ public class CheckTopologyTask {
     public void assignUnassignedJobs() {
         if ( caps != null && caps.isLeader() && caps.isActive() ) {
             logger.debug("Checking unassigned jobs...");
-            final ResourceResolver resolver = this.configuration.createResourceResolver();
-            if ( resolver != null ) {
-                try {
-                    final Resource unassignedRoot = resolver.getResource(this.configuration.getUnassignedJobsPath());
-                    logger.debug("Got unassigned root {}", unassignedRoot);
+            try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
+                final Resource unassignedRoot = resolver.getResource(this.configuration.getUnassignedJobsPath());
+                logger.debug("Got unassigned root {}", unassignedRoot);
 
-                    // this resource should exist, but we check anyway
-                    if ( unassignedRoot != null ) {
-                        assignJobs(unassignedRoot, false);
-                    }
-                } finally {
-                    resolver.close();
+                // this resource should exist, but we check anyway
+                if ( unassignedRoot != null ) {
+                    assignJobs(unassignedRoot, false);
                 }
             }
         }

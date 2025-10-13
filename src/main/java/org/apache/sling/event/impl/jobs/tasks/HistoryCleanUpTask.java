@@ -96,8 +96,7 @@ public class HistoryCleanUpTask implements JobExecutor {
         } else {
             stateList = null;
         }
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        try (final ResourceResolver resolver = this.configuration.createResourceResolver();) {
             if ( stateList == null || stateList.contains(Job.JobState.SUCCEEDED.name()) ) {
                 this.cleanup(removeDate, resolver, context, configuration.getStoredSuccessfulJobsPath(), topics, null);
             }
@@ -111,8 +110,6 @@ public class HistoryCleanUpTask implements JobExecutor {
         } catch (final PersistenceException pe) {
             // in the case of an error, we just log this as a warning
             this.logger.warn("Exception during job resource tree cleanup.", pe);
-        } finally {
-            resolver.close();
         }
         return context.result().succeeded();
     }
