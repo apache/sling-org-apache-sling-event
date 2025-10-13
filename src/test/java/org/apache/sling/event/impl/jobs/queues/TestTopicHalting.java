@@ -168,17 +168,18 @@ public class TestTopicHalting {
 
         queueManager.activate(null);
 
-        @SuppressWarnings("deprecation")
-        ResourceResolver resourceResolver = factory.getAdministrativeResourceResolver(null);
-        ContentBuilder contentBuilder = new ContentBuilder(resourceResolver);
+        try (@SuppressWarnings("deprecation")
+                ResourceResolver resourceResolver = factory.getAdministrativeResourceResolver(null)) {
+            ContentBuilder contentBuilder = new ContentBuilder(resourceResolver);
 
-        final String topic = "aTopic";
-        for (int year = 2019; year <= 2022; year++) {
-            for (int month = 1; month <= 12; month++) {
-                createJob(contentBuilder, ownSlingId, topic, year, month);
+            final String topic = "aTopic";
+            for (int year = 2019; year <= 2022; year++) {
+                for (int month = 1; month <= 12; month++) {
+                    createJob(contentBuilder, ownSlingId, topic, year, month);
+                }
             }
+            resourceResolver.commit();
         }
-        resourceResolver.commit();
     }
 
     private void initQueueConfigurationManagerMocks() {

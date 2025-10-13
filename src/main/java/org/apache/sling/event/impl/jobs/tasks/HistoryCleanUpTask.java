@@ -202,7 +202,7 @@ public class HistoryCleanUpTask implements JobExecutor {
 
                                     // check if we can delete the minute
                                     final int minute = Integer.valueOf(minuteResource.getName());
-                                    final boolean oldMinute = oldHour || minute <= removeMinute;
+                                    final boolean oldMinute = oldHour || minute < removeMinute;
 
                                     if (oldMinute) {
                                         final Iterator<Resource> jobIter = minuteResource.listChildren();

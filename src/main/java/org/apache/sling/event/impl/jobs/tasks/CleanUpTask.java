@@ -142,11 +142,11 @@ public class CleanUpTask {
         logger.debug("Job manager maintenance: Finished #{}", this.schedulerRuns);
     }
 
-    private void historyCleanUpRemovedJobs(Calendar since) {
+    private void historyCleanUpRemovedJobs(Calendar olderThan) {
         ResourceResolver resolver = this.configuration.createResourceResolver();
         try {
             HistoryCleanUpTask.cleanup(
-                    since,
+                    olderThan,
                     resolver,
                     /**
                      * We use a dummy context here as we are running it as a

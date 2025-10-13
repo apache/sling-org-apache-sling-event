@@ -45,7 +45,6 @@ public class HistoryCleanUpRemovedJobsTest {
     private static final String JCR_TOPIC = "test";
     private static final String JCR_JOB_NAME = "test-job";
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy/MM/dd/HH/mm");
-    private static final int MAX_AGE_IN_DAYS = 60;
 
     @Rule
     public final SlingContext ctx = new SlingContext();
@@ -67,6 +66,7 @@ public class HistoryCleanUpRemovedJobsTest {
     private void setupConfiguration() {
         Mockito.when(configuration.getStoredCancelledJobsPath()).thenReturn(JCR_PATH);
         Mockito.when(configuration.createResourceResolver()).thenReturn(ctx.resourceResolver());
+        // should remove jobs completed more than 1 minute ago
         Mockito.when(configuration.getHistoryCleanUpRemovedJobs()).thenReturn(1);
     }
 
@@ -77,6 +77,7 @@ public class HistoryCleanUpRemovedJobsTest {
     @Test
     public void shouldNotDeleteDroppedResourcesYoungerThanRemoveDate() {
         Calendar calendar = Calendar.getInstance();
+        // this should be at less than 1 minute earlier than the cut-off date (disregarding seconds)
         calendar.add(Calendar.SECOND, -1);
         Resource resource = createResourceForDate(calendar, Job.JobState.DROPPED.name());
         task.run();
@@ -86,6 +87,7 @@ public class HistoryCleanUpRemovedJobsTest {
     @Test
     public void shouldNotDeleteErrorResourcesYoungerThanRemoveDate() {
         Calendar calendar = Calendar.getInstance();
+        // this should be at less than 1 minute earlier than the cut-off date (disregarding seconds)
         calendar.add(Calendar.SECOND, -1);
         Resource resource = createResourceForDate(calendar, Job.JobState.ERROR.name());
         task.run();
@@ -95,8 +97,8 @@ public class HistoryCleanUpRemovedJobsTest {
     @Test
     public void shouldNotDeleteSuccessfulResourcesOlderThanRemoveDate() {
         Calendar calendar = Calendar.getInstance();
-
-        calendar.add(Calendar.MINUTE, -1);
+        // this should be at least 1 minute earlier than the cut-off date (disregarding seconds)
+        calendar.add(Calendar.MINUTE, -2);
         Resource resource = createResourceForDate(calendar, Job.JobState.SUCCEEDED.name());
 
         task.run();
@@ -106,8 +108,8 @@ public class HistoryCleanUpRemovedJobsTest {
     @Test
     public void shouldDeleteDroppedResourcesOlderThanRemoveDate() {
         Calendar calendar = Calendar.getInstance();
-
-        calendar.add(Calendar.MINUTE, -1);
+        // this should be at least 1 minute earlier than the cut-off date (disregarding seconds)
+        calendar.add(Calendar.MINUTE, -2);
         Resource resource = createResourceForDate(calendar, Job.JobState.DROPPED.name());
 
         task.run();
@@ -117,8 +119,8 @@ public class HistoryCleanUpRemovedJobsTest {
     @Test
     public void shouldDeleteErrorResourcesOlderThanRemoveDate() {
         Calendar calendar = Calendar.getInstance();
-
-        calendar.add(Calendar.MINUTE, -1);
+        // this should be at least 1 minute earlier than the cut-off date (disregarding seconds)
+        calendar.add(Calendar.MINUTE, -2);
         Resource resource = createResourceForDate(calendar, Job.JobState.DROPPED.name());
 
         task.run();
