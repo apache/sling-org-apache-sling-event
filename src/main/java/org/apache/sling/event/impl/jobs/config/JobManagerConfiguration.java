@@ -65,37 +65,54 @@ import org.slf4j.LoggerFactory;
  * Configuration of the job handling
  *
  */
-@Component(immediate = true, service = JobManagerConfiguration.class, name = "org.apache.sling.event.impl.jobs.jcr.PersistenceHandler", property = {
-        Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
-        JobManagerConfiguration.PROPERTY_REPOSITORY_PATH + "=" + JobManagerConfiguration.DEFAULT_REPOSITORY_PATH,
-        JobManagerConfiguration.PROPERTY_SCHEDULED_JOBS_PATH + "="
-                + JobManagerConfiguration.DEFAULT_SCHEDULED_JOBS_PATH,
-        JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY + ":Long="
-                + JobManagerConfiguration.DEFAULT_BACKGROUND_LOAD_DELAY })
+@Component(
+        immediate = true,
+        service = JobManagerConfiguration.class,
+        name = "org.apache.sling.event.impl.jobs.jcr.PersistenceHandler",
+        property = {
+            Constants.SERVICE_VENDOR + "=The Apache Software Foundation",
+            JobManagerConfiguration.PROPERTY_REPOSITORY_PATH + "=" + JobManagerConfiguration.DEFAULT_REPOSITORY_PATH,
+            JobManagerConfiguration.PROPERTY_SCHEDULED_JOBS_PATH + "="
+                    + JobManagerConfiguration.DEFAULT_SCHEDULED_JOBS_PATH,
+            JobManagerConfiguration.PROPERTY_BACKGROUND_LOAD_DELAY + ":Long="
+                    + JobManagerConfiguration.DEFAULT_BACKGROUND_LOAD_DELAY
+        })
 @Designate(ocd = JobManagerConfiguration.Config.class)
 public class JobManagerConfiguration {
 
-    @ObjectClassDefinition(name = "Apache Sling Job Manager", description = "This is the central service of the job handling.")
+    @ObjectClassDefinition(
+            name = "Apache Sling Job Manager",
+            description = "This is the central service of the job handling.")
     public @interface Config {
 
-        @AttributeDefinition(name = "Disable Distribution", description = "If the distribution is disabled, all jobs will be processed on the leader only! "
-                + "Please use this switch with care.")
+        @AttributeDefinition(
+                name = "Disable Distribution",
+                description = "If the distribution is disabled, all jobs will be processed on the leader only! "
+                        + "Please use this switch with care.")
         boolean job_consumermanager_disableDistribution() default false;
 
-        @AttributeDefinition(name = "Startup Delay", description = "Specify amount in seconds that job manager waits on startup before starting with job handling. "
-                + "This can be used to allow enough time to restart a cluster before jobs are eventually reassigned.")
+        @AttributeDefinition(
+                name = "Startup Delay",
+                description =
+                        "Specify amount in seconds that job manager waits on startup before starting with job handling. "
+                                + "This can be used to allow enough time to restart a cluster before jobs are eventually reassigned.")
         long startup_delay() default 30;
 
-        @AttributeDefinition(name = "Clean-up removed jobs period", description = "Specify the periodic interval in minutes (default is 48h - use 0 to disable) after which "
-                + "removed jobs (ERROR or DROPPED) should be cleaned from the repository.")
+        @AttributeDefinition(
+                name = "Clean-up removed jobs period",
+                description =
+                        "Specify the periodic interval in minutes (default is 48h - use 0 to disable) after which "
+                                + "removed jobs (ERROR or DROPPED) should be cleaned from the repository.")
         int cleanup_period() default 2880;
 
-        @AttributeDefinition(name = "Progress Log message's max count", description = "Max number of log messages that can stored by consumer to add information about current state of Job.\n"
-                + "Any attempt to add more information would result into purging of the least recent messages."
-                + "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
+        @AttributeDefinition(
+                name = "Progress Log message's max count",
+                description =
+                        "Max number of log messages that can stored by consumer to add information about current state of Job.\n"
+                                + "Any attempt to add more information would result into purging of the least recent messages."
+                                + "Use 0 to discard all the logs. default is -1 (to indicate infinite). ")
         int progresslog_maxCount() default -1;
     }
-
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger("org.apache.sling.event.impl.jobs");
 
@@ -114,17 +131,17 @@ public class JobManagerConfiguration {
     /** The path where all jobs are stored. */
     public static final String PROPERTY_REPOSITORY_PATH = "repository.path";
 
-    /**
-     * The background loader waits this time of seconds after startup before loading
-     * events from the repository. (in secs)
-     */
+    /** The background loader waits this time of seconds after startup before loading events from the repository. (in secs) */
     public static final String PROPERTY_BACKGROUND_LOAD_DELAY = "load.delay";
 
     /** Configuration property for the scheduled jobs path. */
     public static final String PROPERTY_SCHEDULED_JOBS_PATH = "job.scheduled.jobs.path";
 
-    static JobManagerConfiguration newForTest(ResourceResolverFactory resourceResolverFactory,
-            QueueConfigurationManager queueConfigurationManager, Map<String, Object> activateProps, Config config) {
+    static JobManagerConfiguration newForTest(
+            ResourceResolverFactory resourceResolverFactory,
+            QueueConfigurationManager queueConfigurationManager,
+            Map<String, Object> activateProps,
+            Config config) {
         final JobManagerConfiguration jobMgrConfig = new JobManagerConfiguration();
         jobMgrConfig.resourceResolverFactory = resourceResolverFactory;
         jobMgrConfig.queueConfigManager = queueConfigurationManager;
@@ -144,10 +161,7 @@ public class JobManagerConfiguration {
     /** The base path for assigned jobs to the current instance. */
     private String localJobsPath;
 
-    /**
-     * The base path for assigned jobs to the current instance - ending with a
-     * slash.
-     */
+    /** The base path for assigned jobs to the current instance - ending with a slash. */
     private String localJobsPathWithSlash;
 
     private String previousVersionAnonPath;
@@ -206,10 +220,13 @@ public class JobManagerConfiguration {
 
     /**
      * Handle binding of the job processing condition.
-     * 
      * @param condition The condition being bound
      */
-    @Reference(target = "(osgi.condition.id=true)", cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY)
+    @Reference(
+            target = "(osgi.condition.id=true)",
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            policyOption = ReferencePolicyOption.GREEDY)
     protected void bindJobProcessingEnabledCondition(final Condition condition) {
         if (this.jobProcessingEnabledCondition != null) {
             logger.warn("Job processing readiness condition already set - ignoring new condition");
@@ -225,7 +242,6 @@ public class JobManagerConfiguration {
 
     /**
      * Handle unbinding of the job processing condition.
-     * 
      * @param condition The condition being unbound
      */
     protected void unbindJobProcessingEnabledCondition(final Condition condition) {
@@ -239,10 +255,9 @@ public class JobManagerConfiguration {
     }
 
     /**
-     * Check if job processing is enabled. This only affects whether jobs are
-     * processed/executed - jobs can still be assigned, stored, and managed through
-     * the API even when processing is disabled.
-     * 
+     * Check if job processing is enabled.
+     * This only affects whether jobs are processed/executed - jobs can still be
+     * assigned, stored, and managed through the API even when processing is disabled.
      * @return true if job processing is enabled, false otherwise
      */
     public boolean isJobProcessingEnabled() {
@@ -251,16 +266,15 @@ public class JobManagerConfiguration {
 
     /**
      * Activate this component.
-     * 
-     * @param props  Configuration properties
+     * @param props Configuration properties
      * @param config Configuration properties
      * @throws RuntimeException If the default paths can't be created
      */
     @Activate
     protected void activate(final Map<String, Object> props, final Config config) {
         this.update(props, config);
-        this.jobsBasePathWithSlash = PropertiesUtil.toString(props.get(PROPERTY_REPOSITORY_PATH),
-                DEFAULT_REPOSITORY_PATH) + '/';
+        this.jobsBasePathWithSlash =
+                PropertiesUtil.toString(props.get(PROPERTY_REPOSITORY_PATH), DEFAULT_REPOSITORY_PATH) + '/';
 
         // create initial resources
         this.assignedJobsPath = this.jobsBasePathWithSlash + "assigned";
@@ -275,27 +289,30 @@ public class JobManagerConfiguration {
         this.storedCancelledJobsPath = this.jobsBasePathWithSlash + "cancelled";
         this.storedSuccessfulJobsPath = this.jobsBasePathWithSlash + "finished";
 
-        this.scheduledJobsPath = PropertiesUtil.toString(props.get(PROPERTY_SCHEDULED_JOBS_PATH),
-                DEFAULT_SCHEDULED_JOBS_PATH);
+        this.scheduledJobsPath =
+                PropertiesUtil.toString(props.get(PROPERTY_SCHEDULED_JOBS_PATH), DEFAULT_SCHEDULED_JOBS_PATH);
         this.scheduledJobsPathWithSlash = this.scheduledJobsPath + "/";
 
         this.historyCleanUpRemovedJobs = config.cleanup_period();
 
         // create initial resources
-        try (ResourceResolver resolver = this.createResourceResolver()) {
+        final ResourceResolver resolver = this.createResourceResolver();
+        try {
             ResourceHelper.getOrCreateBasePath(resolver, this.getLocalJobsPath());
             ResourceHelper.getOrCreateBasePath(resolver, this.getUnassignedJobsPath());
         } catch (final PersistenceException pe) {
             logger.error("Unable to create default paths: " + pe.getMessage(), pe);
             throw new RuntimeException(pe);
+        } finally {
+            resolver.close();
         }
         this.active.set(true);
 
         // SLING-5560 : use an InitDelayingTopologyEventListener
         if (this.startupDelay > 0) {
             logger.debug("activate: job manager will start in {} sec. ({})", this.startupDelay, config.startup_delay());
-            this.startupDelayListener = new InitDelayingTopologyEventListener(startupDelay,
-                    new TopologyEventListener() {
+            this.startupDelayListener =
+                    new InitDelayingTopologyEventListener(startupDelay, new TopologyEventListener() {
 
                         @Override
                         public void handleTopologyEvent(TopologyEvent event) {
@@ -303,7 +320,9 @@ public class JobManagerConfiguration {
                         }
                     });
         } else {
-            logger.debug("activate: job manager will start without delay. ({}:{})", config.startup_delay(),
+            logger.debug(
+                    "activate: job manager will start without delay. ({}:{})",
+                    config.startup_delay(),
                     this.startupDelay);
         }
     }
@@ -314,8 +333,8 @@ public class JobManagerConfiguration {
     @Modified
     protected void update(final Map<String, Object> props, final Config config) {
         this.disabledDistribution = config.job_consumermanager_disableDistribution();
-        this.backgroundLoadDelay = PropertiesUtil.toLong(props.get(PROPERTY_BACKGROUND_LOAD_DELAY),
-                DEFAULT_BACKGROUND_LOAD_DELAY);
+        this.backgroundLoadDelay =
+                PropertiesUtil.toLong(props.get(PROPERTY_BACKGROUND_LOAD_DELAY), DEFAULT_BACKGROUND_LOAD_DELAY);
         // SLING-5560: note that currently you can't change the startupDelay to have
         // an immediate effect - it will only have an effect on next activation.
         // (as 'startup delay runnable' is already scheduled in activate)
@@ -344,10 +363,8 @@ public class JobManagerConfiguration {
     public int getHistoryCleanUpRemovedJobs() {
         return this.historyCleanUpRemovedJobs;
     }
-
     /**
      * Is this component still active?
-     * 
      * @return Active?
      */
     public boolean isActive() {
@@ -355,13 +372,12 @@ public class JobManagerConfiguration {
     }
 
     /**
-     * Create a new resource resolver for reading and writing the resource tree. The
-     * resolver needs to be closed by the client. This ResourceResolver provides
-     * read and write access to all resources relevant for the event and job
-     * handling.
+     * Create a new resource resolver for reading and writing the resource tree.
+     * The resolver needs to be closed by the client.
+     * This ResourceResolver provides read and write access to all resources relevant for the event
+     * and job handling.
      *
-     * @return A resource resolver or {@code null} if the component is already
-     *         deactivated.
+     * @return A resource resolver or {@code null} if the component is already deactivated.
      * @throws RuntimeException if the resolver can't be created.
      */
     public ResourceResolver createResourceResolver() {
@@ -380,7 +396,6 @@ public class JobManagerConfiguration {
 
     /**
      * Get the current topology capabilities.
-     * 
      * @return The capabilities or {@code null}
      */
     public TopologyCapabilities getTopologyCapabilities() {
@@ -393,7 +408,6 @@ public class JobManagerConfiguration {
 
     /**
      * Get main logger.
-     * 
      * @return The main logger.
      */
     public Logger getMainLogger() {
@@ -402,7 +416,6 @@ public class JobManagerConfiguration {
 
     /**
      * Get the resource path for all assigned jobs.
-     * 
      * @return The path - does not end with a slash.
      */
     public String getAssginedJobsPath() {
@@ -411,7 +424,6 @@ public class JobManagerConfiguration {
 
     /**
      * Get the resource path for all unassigned jobs.
-     * 
      * @return The path - does not end with a slash.
      */
     public String getUnassignedJobsPath() {
@@ -420,7 +432,6 @@ public class JobManagerConfiguration {
 
     /**
      * Get the resource path for all jobs assigned to the current instance
-     * 
      * @return The path - does not end with a slash
      */
     public String getLocalJobsPath() {
@@ -433,8 +444,8 @@ public class JobManagerConfiguration {
     /**
      * Create a unique job path (folder and name) for the job.
      */
-    public String getUniquePath(final String targetId, final String topic, final String jobId,
-            final Map<String, Object> jobProperties) {
+    public String getUniquePath(
+            final String targetId, final String topic, final String jobId, final Map<String, Object> jobProperties) {
         final String topicName = topic.replace('/', '.');
         final StringBuilder sb = new StringBuilder();
         if (targetId != null) {
@@ -513,9 +524,8 @@ public class JobManagerConfiguration {
 
     /**
      * Get the storage path for finished jobs.
-     * 
-     * @param topic     Topic of the finished job
-     * @param jobId     The job id of the finished job.
+     * @param topic Topic of the finished job
+     * @param jobId The job id of the finished job.
      * @param isSuccess Whether processing was successful or not
      * @return The complete storage path
      */
@@ -544,9 +554,7 @@ public class JobManagerConfiguration {
 
     /**
      * Get the scheduled jobs path
-     * 
-     * @param slash If {@code false} the path is returned, if {@code true} the path
-     *              appended with a slash is returned.
+     * @param slash If {@code false} the path is returned, if {@code true} the path appended with a slash is returned.
      * @return The path for the scheduled jobs
      */
     public String getScheduledJobsPath(final boolean slash) {
@@ -573,9 +581,8 @@ public class JobManagerConfiguration {
 
     /**
      * Start processing
-     * 
      * @param eventType The event type
-     * @param newCaps   The new capabilities
+     * @param newCaps The new capabilities
      */
     private void startProcessing(final Type eventType, final TopologyCapabilities newCaps) {
         logger.debug("Starting job processing...");
@@ -598,20 +605,22 @@ public class JobManagerConfiguration {
             // and run checker again in some seconds (if leader)
             // notify listeners afterwards
             final Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
+            timer.schedule(
+                    new TimerTask() {
 
-                @Override
-                public void run() {
-                    if (newCaps == topologyCapabilities && newCaps.isActive()) {
-                        // start listeners
-                        notifyListeners();
-                        if (newCaps.isLeader() && newCaps.isActive()) {
-                            final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
-                            mt.fullRun();
+                        @Override
+                        public void run() {
+                            if (newCaps == topologyCapabilities && newCaps.isActive()) {
+                                // start listeners
+                                notifyListeners();
+                                if (newCaps.isLeader() && newCaps.isActive()) {
+                                    final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
+                                    mt.fullRun();
+                                }
+                            }
                         }
-                    }
-                }
-            }, this.backgroundLoadDelay * 1000);
+                    },
+                    this.backgroundLoadDelay * 1000);
         }
         logger.debug("Job processing started");
     }
@@ -629,9 +638,8 @@ public class JobManagerConfiguration {
     }
 
     /**
-     * This method is invoked asynchronously from the TopologyHandler. Therefore
-     * this method can't be invoked concurrently
-     * 
+     * This method is invoked asynchronously from the TopologyHandler.
+     * Therefore this method can't be invoked concurrently
      * @see org.apache.sling.discovery.TopologyEventListener#handleTopologyEvent(org.apache.sling.discovery.TopologyEvent)
      */
     public void handleTopologyEvent(TopologyEvent event) {
@@ -663,7 +671,8 @@ public class JobManagerConfiguration {
         if (eventType == Type.TOPOLOGY_CHANGING) {
             this.stopProcessing();
 
-        } else if (eventType == Type.TOPOLOGY_INIT || event.getType() == Type.TOPOLOGY_CHANGED
+        } else if (eventType == Type.TOPOLOGY_INIT
+                || event.getType() == Type.TOPOLOGY_CHANGED
                 || event.getType() == Type.PROPERTIES_CHANGED) {
 
             if (stopProcessing) {
@@ -676,7 +685,6 @@ public class JobManagerConfiguration {
 
     /**
      * Add a topology aware listener
-     * 
      * @param service Listener to notify about changes.
      */
     public void addListener(final ConfigurationChangeListener service) {
@@ -688,7 +696,6 @@ public class JobManagerConfiguration {
 
     /**
      * Remove a topology aware listener
-     * 
      * @param service Listener to notify about changes.
      */
     public void removeListener(final ConfigurationChangeListener service) {
@@ -728,7 +735,6 @@ public class JobManagerConfiguration {
 
     /**
      * The audit logger is logging actions for auditing.
-     * 
      * @return The logger
      */
     public Logger getAuditLogger() {
