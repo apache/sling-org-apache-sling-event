@@ -475,8 +475,7 @@ public class JobSchedulerImpl
      * @param flag The corresponding flag
      */
     public void setSuspended(final ScheduledJobInfoImpl info, final boolean flag) {
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        try {
+        try (ResourceResolver resolver = configuration.createResourceResolver()) {
             final StringBuilder sb = new StringBuilder(this.configuration.getScheduledJobsPath(true));
             sb.append(ResourceHelper.filterName(info.getName()));
             final String path = sb.toString();
@@ -499,8 +498,6 @@ public class JobSchedulerImpl
         } catch (final PersistenceException pe) {
             // we ignore the exception if removing fails
             ignoreException(pe);
-        } finally {
-            resolver.close();
         }
     }
 

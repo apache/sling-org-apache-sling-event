@@ -140,36 +140,31 @@ public class ScheduledJobHandler implements Runnable {
     }
 
     private void scan() {
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        if (resolver != null) {
-            try {
-                logger.debug("Scanning for scheduled jobs...");
-                final String path = this.configuration.getScheduledJobsPath(false);
-                final Resource startResource = resolver.getResource(path);
-                if (startResource != null) {
-                    final Map<String, Holder> newScheduledJobs = new HashMap<String, Holder>();
-                    synchronized (this.scheduledJobs) {
-                        for (final Resource rsrc : startResource.getChildren()) {
-                            if (!isRunning.get()) {
-                                break;
-                            }
-                            handleAddOrUpdate(newScheduledJobs, rsrc);
+        try (ResourceResolver resolver = configuration.createResourceResolver()) {
+            logger.debug("Scanning for scheduled jobs...");
+            final String path = this.configuration.getScheduledJobsPath(false);
+            final Resource startResource = resolver.getResource(path);
+            if (startResource != null) {
+                final Map<String, Holder> newScheduledJobs = new HashMap<String, Holder>();
+                synchronized (this.scheduledJobs) {
+                    for (final Resource rsrc : startResource.getChildren()) {
+                        if (!isRunning.get()) {
+                            break;
                         }
-                        if (isRunning.get()) {
-                            for (final Holder h : this.scheduledJobs.values()) {
-                                if (h.info != null) {
-                                    this.jobScheduler.unscheduleJob(h.info);
-                                }
+                        handleAddOrUpdate(newScheduledJobs, rsrc);
+                    }
+                    if (isRunning.get()) {
+                        for (final Holder h : this.scheduledJobs.values()) {
+                            if (h.info != null) {
+                                this.jobScheduler.unscheduleJob(h.info);
                             }
-                            this.scheduledJobs.clear();
-                            this.scheduledJobs.putAll(newScheduledJobs);
                         }
+                        this.scheduledJobs.clear();
+                        this.scheduledJobs.putAll(newScheduledJobs);
                     }
                 }
-                logger.debug("Finished scanning for scheduled jobs...");
-            } finally {
-                resolver.close();
             }
+            logger.debug("Finished scanning for scheduled jobs...");
         }
     }
 
@@ -237,8 +232,7 @@ public class ScheduledJobHandler implements Runnable {
             final boolean suspend,
             final List<ScheduleInfoImpl> scheduleInfos)
             throws PersistenceException {
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
             // create properties
             final Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -286,8 +280,6 @@ public class ScheduledJobHandler implements Runnable {
             properties.put(ResourceHelper.PROPERTY_SCHEDULE_INFO, scheduleInfos);
 
             return properties;
-        } finally {
-            resolver.close();
         }
     }
 
@@ -330,23 +322,18 @@ public class ScheduledJobHandler implements Runnable {
                     }
                 }
                 if (!updateJobs.isEmpty() && isRunning.get()) {
-                    ResourceResolver resolver = configuration.createResourceResolver();
-                    if (resolver != null) {
-                        try {
-                            for (final Map.Entry<String, Holder> entry : updateJobs.entrySet()) {
-                                final String path = configuration.getScheduledJobsPath(true) + entry.getKey();
-                                final Resource rsrc = resolver.getResource(path);
-                                if (!isRunning.get()) {
-                                    break;
-                                }
-                                if (rsrc != null) {
-                                    synchronized (scheduledJobs) {
-                                        handleAddOrUpdate(scheduledJobs, rsrc);
-                                    }
+                    try (ResourceResolver resolver = configuration.createResourceResolver()) {
+                        for (final Map.Entry<String, Holder> entry : updateJobs.entrySet()) {
+                            final String path = configuration.getScheduledJobsPath(true) + entry.getKey();
+                            final Resource rsrc = resolver.getResource(path);
+                            if (!isRunning.get()) {
+                                break;
+                            }
+                            if (rsrc != null) {
+                                synchronized (scheduledJobs) {
+                                    handleAddOrUpdate(scheduledJobs, rsrc);
                                 }
                             }
-                        } finally {
-                            resolver.close();
                         }
                     }
                 }
@@ -386,17 +373,12 @@ public class ScheduledJobHandler implements Runnable {
             @Override
             public void run() {
                 if (isRunning.get()) {
-                    final ResourceResolver resolver = configuration.createResourceResolver();
-                    if (resolver != null) {
-                        try {
-                            final Resource rsrc = resolver.getResource(path);
-                            if (rsrc != null) {
-                                synchronized (scheduledJobs) {
-                                    handleAddOrUpdate(scheduledJobs, rsrc);
-                                }
+                    try (ResourceResolver resolver = configuration.createResourceResolver()) {
+                        final Resource rsrc = resolver.getResource(path);
+                        if (rsrc != null) {
+                            synchronized (scheduledJobs) {
+                                handleAddOrUpdate(scheduledJobs, rsrc);
                             }
-                        } finally {
-                            resolver.close();
                         }
                     }
                 }
@@ -461,8 +443,7 @@ public class ScheduledJobHandler implements Runnable {
     public void remove(final ScheduledJobInfoImpl info) {
         final String scheduleKey = ResourceHelper.filterName(info.getName());
 
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        try {
+        try (ResourceResolver resolver = configuration.createResourceResolver()) {
             final StringBuilder sb = new StringBuilder(configuration.getScheduledJobsPath(true));
             sb.append(scheduleKey);
             final String path = sb.toString();
@@ -475,8 +456,6 @@ public class ScheduledJobHandler implements Runnable {
         } catch (final PersistenceException pe) {
             // we ignore the exception if removing fails
             ignoreException(pe);
-        } finally {
-            resolver.close();
         }
 
         synchronized (this.scheduledJobs) {
@@ -489,8 +468,7 @@ public class ScheduledJobHandler implements Runnable {
 
     public void updateSchedule(final String scheduleName, final Collection<ScheduleInfo> scheduleInfo) {
 
-        final ResourceResolver resolver = configuration.createResourceResolver();
-        try {
+        try (ResourceResolver resolver = configuration.createResourceResolver()) {
             final String scheduleKey = ResourceHelper.filterName(scheduleName);
 
             final StringBuilder sb = new StringBuilder(configuration.getScheduledJobsPath(true));
@@ -526,8 +504,6 @@ public class ScheduledJobHandler implements Runnable {
                     logger.warn("Unable to update scheduled job " + scheduleName, pe);
                 }
             }
-        } finally {
-            resolver.close();
         }
     }
 

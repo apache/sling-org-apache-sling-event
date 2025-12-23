@@ -143,8 +143,7 @@ public class CleanUpTask {
     }
 
     private void historyCleanUpRemovedJobs(Calendar olderThan) {
-        ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
             HistoryCleanUpTask.cleanup(
                     olderThan,
                     resolver,
@@ -186,8 +185,6 @@ public class CleanUpTask {
                     Arrays.asList(Job.JobState.DROPPED.name(), Job.JobState.ERROR.name()));
         } catch (PersistenceException e) {
             this.logger.warn("Exception during job resource tree cleanup.", e);
-        } finally {
-            resolver.close();
         }
     }
 
@@ -198,8 +195,7 @@ public class CleanUpTask {
      */
     private void simpleEmptyFolderCleanup(final TopologyCapabilities caps, final String basePath) {
         this.logger.debug("Cleaning up job resource tree: looking for empty folders");
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        try {
+        try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
             final Calendar cleanUpDate = getCalendarInstance();
             // go back five minutes
             cleanUpDate.add(Calendar.MINUTE, -5);
@@ -252,8 +248,6 @@ public class CleanUpTask {
         } catch (final PersistenceException pe) {
             // in the case of an error, we just log this as a warning
             this.logger.warn("Exception during job resource tree cleanup.", pe);
-        } finally {
-            resolver.close();
         }
     }
 
@@ -262,11 +256,7 @@ public class CleanUpTask {
      */
     private void fullEmptyFolderCleanup(final TopologyCapabilities caps, final String basePath) {
         this.logger.debug("Cleaning up job resource tree: removing ALL empty folders");
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        if (resolver == null) {
-            return;
-        }
-        try {
+        try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
             final Resource baseResource = resolver.getResource(basePath);
             // sanity check - should never be null
             if (baseResource != null) {
@@ -376,8 +366,6 @@ public class CleanUpTask {
         } catch (final PersistenceException pe) {
             // in the case of an error, we just log this as a warning
             this.logger.warn("Exception during job resource tree cleanup.", pe);
-        } finally {
-            resolver.close();
         }
     }
 
@@ -386,11 +374,7 @@ public class CleanUpTask {
      * @param assginedJobsPath The root path for the assigned jobs
      */
     private void cleanUpInstanceIdFolders(final TopologyCapabilities caps, final String assginedJobsPath) {
-        final ResourceResolver resolver = this.configuration.createResourceResolver();
-        if (resolver == null) {
-            return;
-        }
-        try {
+        try (ResourceResolver resolver = this.configuration.createResourceResolver()) {
             final Resource baseResource = resolver.getResource(assginedJobsPath);
             // sanity check - should never be null
             if (baseResource != null) {
@@ -445,8 +429,6 @@ public class CleanUpTask {
         } catch (final PersistenceException e) {
             // in the case of an error, we just log this as a warning
             this.logger.warn("Exception during job resource tree cleanup.", e);
-        } finally {
-            resolver.close();
         }
     }
 
