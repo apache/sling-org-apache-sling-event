@@ -58,6 +58,9 @@ public class TopologyHandler implements TopologyEventListener, Runnable {
         this.isActive.set(true);
         final Thread thread = new Thread(this, "Apache Sling Job Topology Listener Thread");
         thread.setDaemon(true);
+        thread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
+            logger.error("Job Topology Listener Thread was terminated unexpectedly", e);
+        });
 
         thread.start();
     }
@@ -88,25 +91,21 @@ public class TopologyHandler implements TopologyEventListener, Runnable {
 
     @Override
     public void run() {
-        try {
-            while (isActive.get()) {
-                QueueItem item = null;
-                try {
-                    item = this.queue.take();
-                } catch (final InterruptedException ie) {
-                    logger.warn("Thread got interrupted.", ie);
-                    Thread.currentThread().interrupt();
-                    isActive.set(false);
-                }
-                if (isActive.get() && item != null && item.event != null) {
-                    final JobManagerConfiguration config = this.configuration;
-                    if (config != null) {
-                        config.handleTopologyEvent(item.event);
-                    }
+        while (isActive.get()) {
+            QueueItem item = null;
+            try {
+                item = this.queue.take();
+            } catch (final InterruptedException ie) {
+                logger.warn("Thread got interrupted.", ie);
+                Thread.currentThread().interrupt();
+                isActive.set(false);
+            }
+            if (isActive.get() && item != null && item.event != null) {
+                final JobManagerConfiguration config = this.configuration;
+                if (config != null) {
+                    config.handleTopologyEvent(item.event);
                 }
             }
-        } catch (Throwable t) {
-            logger.error("TopologyListener thread terminated unexpectetly", t);
         }
     }
 
