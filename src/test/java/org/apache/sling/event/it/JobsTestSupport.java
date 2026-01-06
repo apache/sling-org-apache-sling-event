@@ -22,6 +22,7 @@ import javax.inject.Inject;
 
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.jobs.JobManager;
+import org.apache.sling.testing.paxexam.SlingOptions;
 import org.apache.sling.testing.paxexam.TestSupport;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.options.ModifiableCompositeOption;
@@ -55,6 +56,7 @@ public abstract class JobsTestSupport extends TestSupport {
         return composite(
                         super.baseConfiguration(),
                         slingQuickstart(),
+                        SlingOptions.logback(),
                         // Sling Event
                         testBundle("bundle.filename"),
                         slingEvent(),
