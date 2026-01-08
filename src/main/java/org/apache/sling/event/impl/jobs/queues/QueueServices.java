@@ -43,4 +43,6 @@ public class QueueServices {
     public StatisticsManager statisticsManager;
 
     public ThreadPool eventingThreadPool;
+
+    public JobReschedulingManager reschedulingManager;
 }
