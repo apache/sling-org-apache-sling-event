@@ -23,8 +23,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -84,6 +82,8 @@ public class JobQueueImpl implements Queue {
     private final Map<String, JobHandler> processingJobsLists = new HashMap<>();
 
     private final ThreadPool threadPool;
+
+    private final JobReschedulingManager jobReschedulingManager;
 
     /** Async counter. */
     private final AtomicInteger asyncCounter = new AtomicInteger();
@@ -175,17 +175,19 @@ public class JobQueueImpl implements Queue {
             final QueueServices services,
             final QueueJobCache cache,
             final OutdatedJobQueueInfo outdatedQueue) {
+        this.queueName = name;
+        this.configuration = config;
+
         if (config.getOwnThreadPoolSize() > 0) {
             this.threadPool = new EventingThreadPool(services.threadPoolManager, config.getOwnThreadPoolSize());
         } else {
             this.threadPool = services.eventingThreadPool;
         }
-        this.queueName = name;
-        this.configuration = config;
         this.services = services;
         this.logger = LoggerFactory.getLogger(this.getClass().getName() + '.' + name);
         this.running = true;
         this.cache = cache;
+        this.jobReschedulingManager = services.reschedulingManager;
         this.maxParallel = config.getMaxParallel();
         if (outdatedQueue == null) {
             // queue is created the first time
@@ -799,7 +801,7 @@ public class JobQueueImpl implements Queue {
                 this.isSleepingUntil = fireDate.getTime();
             }
 
-            final Runnable t = new Runnable() {
+            final Runnable task = new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -817,16 +819,7 @@ public class JobQueueImpl implements Queue {
                 }
             };
             this.waitCounter.incrementAndGet();
-            final Timer timer = new Timer();
-            timer.schedule(
-                    new TimerTask() {
-
-                        @Override
-                        public void run() {
-                            t.run();
-                        }
-                    },
-                    delay);
+            this.jobReschedulingManager.reschedule(task, delay);
         } else {
             // put directly into queue
             this.requeue(handler);
