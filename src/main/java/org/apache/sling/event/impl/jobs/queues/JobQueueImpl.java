@@ -676,8 +676,7 @@ public class JobQueueImpl implements Queue {
 
         if (!topics.isEmpty()) {
 
-            final ResourceResolver resolver = this.services.configuration.createResourceResolver();
-            try {
+            try (ResourceResolver resolver = this.services.configuration.createResourceResolver()) {
                 final Resource baseResource = resolver.getResource(this.services.configuration.getLocalJobsPath());
 
                 // sanity check - should never be null
@@ -714,8 +713,6 @@ public class JobQueueImpl implements Queue {
                         logger.error("Unable to remove jobs", ignore);
                     }
                 }
-            } finally {
-                resolver.close();
             }
         }
     }
