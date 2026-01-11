@@ -248,9 +248,7 @@ public class JobManagerConfiguration {
         if (this.jobProcessingEnabledCondition == condition) {
             this.jobProcessingEnabledCondition = null;
             logger.info("Job processing readiness condition has been removed - jobs will not be processed");
-            // Signal jobs to stop before notifying listeners
             stopProcessing();
-            notifyListeners();
         }
     }
 
