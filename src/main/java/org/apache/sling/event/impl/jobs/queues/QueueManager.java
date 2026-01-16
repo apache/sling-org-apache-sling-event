@@ -115,6 +115,9 @@ public class QueueManager implements Runnable, EventHandler, ConfigurationChange
     @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private ThreadPoolManager threadPoolManager;
 
+    @Reference(policyOption = ReferencePolicyOption.GREEDY)
+    private JobReschedulingManager jobReschedulingManager;
+
     /**
      * Our thread pool.
      */
@@ -164,6 +167,7 @@ public class QueueManager implements Runnable, EventHandler, ConfigurationChange
         queueServices.threadPoolManager = this.threadPoolManager;
         queueServices.statisticsManager = statisticsManager;
         queueServices.eventingThreadPool = this.threadPool;
+        queueServices.reschedulingManager = this.jobReschedulingManager;
         this.configuration.addListener(this);
         logger.info("Apache Sling Queue Manager started on instance {}", Environment.APPLICATION_ID);
     }
