@@ -58,9 +58,9 @@ public class TopologyHandler implements TopologyEventListener, Runnable {
         this.isActive.set(true);
         final Thread thread = new Thread(this, "Apache Sling Job Topology Listener Thread");
         thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler((Thread t, Throwable e) -> {
-            logger.error("Job Topology Listener Thread was terminated unexpectedly", e);
-        });
+        thread.setUncaughtExceptionHandler((Thread t, Throwable e) -> 
+            logger.error("Job Topology Listener Thread was terminated unexpectedly", e)
+        );
 
         thread.start();
     }
