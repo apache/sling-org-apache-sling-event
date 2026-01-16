@@ -78,7 +78,7 @@ public class JobReschedulingManager {
     }
 
     /**
-     * Start the provided task with a delay in a fire & forgot way
+     * Start the provided task with a delay in a fire and forgot way
      * @param task the task to execute
      * @param delayInMilis the delay in milliseconds
      */
