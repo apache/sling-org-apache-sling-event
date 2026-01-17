@@ -79,7 +79,9 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
      */
     public synchronized void finishedJob(final long jobTime) {
         super.finishedJob(jobTime);
-        this.activeJobs.decrementAndGet();
+        if (this.activeJobs.get() > 0) {
+            this.activeJobs.decrementAndGet();
+        }
     }
 
     /**
@@ -87,7 +89,9 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
      */
     public synchronized void failedJob() {
         super.failedJob();
-        this.activeJobs.decrementAndGet();
+        if (this.activeJobs.get() > 0) {
+            this.activeJobs.decrementAndGet();
+        }
     }
 
     /**
@@ -95,7 +99,9 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
      */
     public synchronized void cancelledJob() {
         super.cancelledJob();
-        this.activeJobs.decrementAndGet();
+        if (this.activeJobs.get() > 0) {
+            this.activeJobs.decrementAndGet();
+        }
     }
 
     /**
@@ -109,7 +115,9 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
      * Job not processed by us
      */
     public void decQueued() {
-        this.queuedJobs.decrementAndGet();
+        if (this.queuedJobs.get() > 0) {
+            this.queuedJobs.decrementAndGet();
+        }
     }
 
     /**
@@ -125,7 +133,9 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
      */
     public synchronized void addActive(final long queueTime) {
         super.addActive(queueTime);
-        this.queuedJobs.decrementAndGet();
+        if (this.queuedJobs.get() > 0) {
+            this.queuedJobs.decrementAndGet();
+        }
         this.activeJobs.incrementAndGet();
     }
 
@@ -163,6 +173,8 @@ public class StatisticsImpl extends BaseStatisticsImpl implements Statistics {
     @Override
     public synchronized void reset() {
         this.startTime.set(System.currentTimeMillis());
+        this.activeJobs.set(0);
+        this.queuedJobs.set(0);
         super.reset();
     }
 }
