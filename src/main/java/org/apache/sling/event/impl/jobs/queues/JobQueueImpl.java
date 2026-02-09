@@ -804,20 +804,17 @@ public class JobQueueImpl implements Queue {
                 this.isSleepingUntil = fireDate.getTime();
             }
 
-            final Runnable task = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (handler.removeFromRetryList()) {
-                            requeue(handler);
-                        }
-                        waitCounter.decrementAndGet();
-                    } finally {
-                        if (configuration.getType() == Type.ORDERED) {
-                            isSleepingUntil = -1;
-                            cache.setIsBlocked(false);
-                            startJobs();
-                        }
+            final Runnable task = () -> {
+                try {
+                    if (handler.removeFromRetryList()) {
+                        requeue(handler);
+                    }
+                    waitCounter.decrementAndGet();
+                } finally {
+                    if (configuration.getType() == Type.ORDERED) {
+                        isSleepingUntil = -1;
+                        cache.setIsBlocked(false);
+                        startJobs();
                     }
                 }
             };

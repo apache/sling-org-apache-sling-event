@@ -63,9 +63,8 @@ public class JobReschedulingManager {
             public Thread newThread(final Runnable r) {
                 final Thread t = new Thread(r, "sling-job-rescheduler-" + threadNumber.getAndIncrement());
                 t.setDaemon(true);
-                t.setUncaughtExceptionHandler((Thread thread, Throwable e) -> {
-                    logger.error("Thread '" + thread.getName() + "' terminated unexpectedly", e);
-                });
+                t.setUncaughtExceptionHandler((Thread thread, Throwable e) ->
+                        logger.error("Thread '" + thread.getName() + "' terminated unexpectedly", e));
                 return t;
             }
         });
