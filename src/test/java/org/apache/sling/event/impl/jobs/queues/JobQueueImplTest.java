@@ -27,6 +27,7 @@ import org.apache.sling.event.impl.jobs.JobHandler;
 import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.stats.StatisticsManager;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -69,6 +70,13 @@ public class JobQueueImplTest {
         cache = mock(QueueJobCache.class);
         threadPool = mock(ThreadPool.class);
         jobQueue = new JobQueueImpl(testQueue, internalConfig, services, cache, null);
+    }
+
+    @After
+    public void tearDown() {
+        if (jobQueue != null) {
+            jobQueue.close();
+        }
     }
 
     @Test
