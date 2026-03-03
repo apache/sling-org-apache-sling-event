@@ -384,8 +384,7 @@ public class JobConsumerManager {
                                     if (oldConsumer.equals(info) && oldConsumer.executor != null) {
                                         for (final Object[] listenerObjects : this.listenerMap.values()) {
                                             if (listenerObjects[0] == oldConsumer.executor) {
-                                                asyncCallbacks.add(
-                                                        (JobExecutionContext) listenerObjects[1]);
+                                                asyncCallbacks.add((JobExecutionContext) listenerObjects[1]);
                                                 break;
                                             }
                                         }
@@ -411,7 +410,8 @@ public class JobConsumerManager {
                 } catch (final IllegalStateException ise) {
                     logger.debug(
                             "Ignoring IllegalStateException while finishing async processing during unbind of {}",
-                            serviceReference, ise);
+                            serviceReference,
+                            ise);
                 }
             }
             if (changed && this.propagationService != null) {
