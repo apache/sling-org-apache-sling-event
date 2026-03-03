@@ -406,7 +406,13 @@ public class JobConsumerManager {
             }
             // notify listeners outside the lock
             for (final JobExecutionContext context : asyncCallbacks) {
-                context.asyncProcessingFinished(context.result().failed());
+                try {
+                    context.asyncProcessingFinished(context.result().failed());
+                } catch (final IllegalStateException ise) {
+                    logger.debug(
+                            "Ignoring IllegalStateException while finishing async processing during unbind of {}",
+                            serviceReference, ise);
+                }
             }
             if (changed && this.propagationService != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
