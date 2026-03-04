@@ -370,6 +370,9 @@ public class JobConsumerManager {
         if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
+            // Collect async callbacks to invoke outside the lock to avoid
+            // lock-order inversion between topicToConsumerMap and QueueJobCache.cache
+            final List<JobExecutionContext> asyncCallbacks = new ArrayList<>();
             synchronized (this.topicToConsumerMap) {
                 for (final String t : topics) {
                     if (t != null) {
@@ -379,13 +382,9 @@ public class JobConsumerManager {
                             if (consumers != null) { // sanity check
                                 for (final ConsumerInfo oldConsumer : consumers) {
                                     if (oldConsumer.equals(info) && oldConsumer.executor != null) {
-                                        // notify listener
                                         for (final Object[] listenerObjects : this.listenerMap.values()) {
                                             if (listenerObjects[0] == oldConsumer.executor) {
-                                                final JobExecutionContext context =
-                                                        (JobExecutionContext) listenerObjects[1];
-                                                context.asyncProcessingFinished(
-                                                        context.result().failed());
+                                                asyncCallbacks.add((JobExecutionContext) listenerObjects[1]);
                                                 break;
                                             }
                                         }
@@ -402,6 +401,17 @@ public class JobConsumerManager {
                 }
                 if (changed) {
                     this.calculateTopics(this.propagationService != null);
+                }
+            }
+            // notify listeners outside the lock
+            for (final JobExecutionContext context : asyncCallbacks) {
+                try {
+                    context.asyncProcessingFinished(context.result().failed());
+                } catch (final IllegalStateException ise) {
+                    logger.debug(
+                            "Ignoring IllegalStateException while finishing async processing during unbind of {}",
+                            serviceReference,
+                            ise);
                 }
             }
             if (changed && this.propagationService != null) {
