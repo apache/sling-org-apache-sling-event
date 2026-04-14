@@ -212,10 +212,25 @@ public class JobManagerConfiguration {
     /** Is this still active? */
     private final AtomicBoolean active = new AtomicBoolean(false);
 
-    /** The topology capabilities. */
+    /**
+     * The current cluster topology capabilities, or {@code null} if no topology event has been
+     * received yet (or the topology has been explicitly invalidated by a topology change event).
+     *
+     * <p>SLING-12743: A non-null value means "we know the cluster layout" — it does NOT by itself
+     * mean that job processing is active. The readiness condition ({@link #jobProcessingEnabledCondition})
+     * must also be present. Use {@link #isProcessingActive()} for the combined check.
+     *
+     * <p>This field is only set to {@code null} by {@link #stopProcessing()}, which is called
+     * during real topology changes (TOPOLOGY_CHANGING). It is deliberately NOT nulled when the
+     * readiness condition is unbound, so that topology state is preserved for automatic recovery
+     * when the condition returns.
+     */
     private volatile TopologyCapabilities topologyCapabilities;
 
-    /** The condition that determines if job processing is enabled. */
+    /**
+     * External readiness signal (e.g. from a Kubernetes readiness probe via an OSGi Condition
+     * service). When {@code null}, job processing is paused but the topology state is preserved.
+     */
     private volatile Condition jobProcessingEnabledCondition;
 
     /**
@@ -242,14 +257,17 @@ public class JobManagerConfiguration {
 
     /**
      * Handle unbinding of the job processing condition.
+     * <p>
+     * SLING-12743: Do NOT call stopProcessing() here — that destroys topology state and prevents
+     * recovery when the condition returns (e.g. after a transient readiness probe blip).
+     * Instead, notifyListeners() propagates the combined state (topology AND readiness) to all
+     * listeners, allowing automatic recovery when the condition is rebound.
      * @param condition The condition being unbound
      */
     protected void unbindJobProcessingEnabledCondition(final Condition condition) {
         if (this.jobProcessingEnabledCondition == condition) {
             this.jobProcessingEnabledCondition = null;
             logger.info("Job processing readiness condition has been removed - jobs will not be processed");
-            // Signal jobs to stop before notifying listeners
-            stopProcessing();
             notifyListeners();
         }
     }
@@ -395,8 +413,11 @@ public class JobManagerConfiguration {
     }
 
     /**
-     * Get the current topology capabilities.
-     * @return The capabilities or {@code null}
+     * Get the current topology capabilities — the cluster layout (instances, leaders, topic
+     * assignments). A non-null return value means the cluster layout is known but does NOT imply
+     * that job processing is active; check {@link #isProcessingActive()} for that.
+     *
+     * @return The capabilities, or {@code null} if no topology has been established yet
      */
     public TopologyCapabilities getTopologyCapabilities() {
         return this.topologyCapabilities;
@@ -626,13 +647,20 @@ public class JobManagerConfiguration {
     }
 
     /**
+     * Processing is active: topology must be present AND job processing
+     * must be enabled (readiness condition bound).
+     */
+    private boolean isProcessingActive() {
+        return this.topologyCapabilities != null && isJobProcessingEnabled();
+    }
+
+    /**
      * Notify all listeners
      */
     private void notifyListeners() {
         synchronized (this.listeners) {
-            final TopologyCapabilities caps = this.topologyCapabilities;
             for (final ConfigurationChangeListener l : this.listeners) {
-                l.configurationChanged(caps != null);
+                l.configurationChanged(isProcessingActive());
             }
         }
     }
@@ -690,7 +718,7 @@ public class JobManagerConfiguration {
     public void addListener(final ConfigurationChangeListener service) {
         synchronized (this.listeners) {
             this.listeners.add(service);
-            service.configurationChanged(this.topologyCapabilities != null);
+            service.configurationChanged(isProcessingActive());
         }
     }
 
