@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -84,15 +87,159 @@ public class JobManagerConfigurationTest {
         }
     }
 
-    @Test
-    public void testTopologyChange() throws Exception {
-        // mock scheduler
-        final ChangeListener ccl = new ChangeListener();
+    /**
+     * A ScheduledExecutorService that captures submitted tasks without executing them.
+     * Tests call {@link #runAll()} to execute captured tasks on demand.
+     */
+    private static class ManualScheduler implements ScheduledExecutorService {
 
-        // add change listener and verify
-        ccl.init(1);
+        private final List<Runnable> tasks = new ArrayList<>();
+
+        /** Execute all captured tasks and clear the list. */
+        public void runAll() {
+            final List<Runnable> copy = new ArrayList<>(tasks);
+            tasks.clear();
+            copy.forEach(Runnable::run);
+        }
+
+        /** Return the number of pending (un-executed) tasks. */
+        public int pendingCount() {
+            return tasks.size();
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            tasks.add(command);
+            return new CompletedFuture<>();
+        }
+
+        // -- unused ScheduledExecutorService methods --
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(java.util.concurrent.Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(
+                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void shutdown() {}
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return false;
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return false;
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) {
+            return true;
+        }
+
+        @Override
+        public <T> java.util.concurrent.Future<T> submit(java.util.concurrent.Callable<T> task) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> java.util.concurrent.Future<T> submit(Runnable task, T result) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public java.util.concurrent.Future<?> submit(Runnable task) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> List<java.util.concurrent.Future<T>> invokeAll(
+                java.util.Collection<? extends java.util.concurrent.Callable<T>> tasks) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> List<java.util.concurrent.Future<T>> invokeAll(
+                java.util.Collection<? extends java.util.concurrent.Callable<T>> tasks, long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> T invokeAny(java.util.Collection<? extends java.util.concurrent.Callable<T>> tasks) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> T invokeAny(
+                java.util.Collection<? extends java.util.concurrent.Callable<T>> tasks, long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            throw new UnsupportedOperationException();
+        }
+
+        /** Minimal no-op ScheduledFuture returned by schedule(). */
+        private static class CompletedFuture<V> implements ScheduledFuture<V> {
+            @Override
+            public long getDelay(TimeUnit unit) {
+                return 0;
+            }
+
+            @Override
+            public int compareTo(Delayed o) {
+                return 0;
+            }
+
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                return false;
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
+
+            @Override
+            public boolean isDone() {
+                return true;
+            }
+
+            @Override
+            public V get() {
+                return null;
+            }
+
+            @Override
+            public V get(long timeout, TimeUnit unit) {
+                return null;
+            }
+        }
+    }
+
+    private JobManagerConfiguration createConfig(ManualScheduler manualScheduler) {
         final JobManagerConfiguration config = new JobManagerConfiguration();
         ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
+        config.setScheduler(manualScheduler);
         InitDelayingTopologyEventListener startupDelayListener =
                 new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
 
@@ -102,46 +249,61 @@ public class JobManagerConfigurationTest {
                     }
                 });
         TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
+        return config;
+    }
+
+    @Test
+    public void testTopologyChange() throws Exception {
+        final ChangeListener ccl = new ChangeListener();
+        final ManualScheduler manualScheduler = new ManualScheduler();
+        final JobManagerConfiguration config = createConfig(manualScheduler);
 
         // Create and bind the condition
         Condition condition = mock(Condition.class);
         config.bindJobProcessingEnabledCondition(condition);
 
+        ccl.init(1);
         config.addListener(ccl);
         ccl.await();
 
         assertEquals(1, ccl.events.size());
         assertFalse(ccl.events.get(0));
 
-        // create init view
+        // TOPOLOGY_INIT notifies listeners synchronously (no scheduler involved)
         ccl.init(1);
         final TopologyView initView = createView();
-        final TopologyEvent init = new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView);
-        config.handleTopologyEvent(init);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView));
         ccl.await();
 
         assertEquals(1, ccl.events.size());
         assertTrue(ccl.events.get(0));
 
-        // change view, followed by change props
-        ccl.init(2);
+        // TOPOLOGY_CHANGED: stopProcessing fires synchronous false, startProcessing schedules delayed task
+        ccl.init(1);
         final TopologyView view2 = createView();
         Mockito.when(initView.isCurrent()).thenReturn(false);
-        final TopologyEvent change1 = new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2);
-        final TopologyView view3 = createView();
-        final TopologyEvent change2 = new TopologyEvent(TopologyEvent.Type.PROPERTIES_CHANGED, view2, view3);
-
-        config.handleTopologyEvent(change1);
-        Mockito.when(view2.isCurrent()).thenReturn(false);
-        config.handleTopologyEvent(change2);
-
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2));
         ccl.await();
-        assertEquals(2, ccl.events.size());
-        assertFalse(ccl.events.get(0));
-        assertTrue(ccl.events.get(1));
 
-        // we wait another 4 secs to see if there is no another event
-        Thread.sleep(4000);
-        assertEquals(2, ccl.events.size());
+        assertEquals(1, ccl.events.size());
+        assertFalse("stopProcessing should fire active=false", ccl.events.get(0));
+        assertEquals("TOPOLOGY_CHANGED should schedule one delayed task", 1, manualScheduler.pendingCount());
+
+        // PROPERTIES_CHANGED: for views with same capabilities, stopProcessing is skipped,
+        // only a new delayed task is scheduled
+        final TopologyView view3 = createView();
+        Mockito.when(view2.isCurrent()).thenReturn(false);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.PROPERTIES_CHANGED, view2, view3));
+
+        assertEquals("Two delayed tasks pending", 2, manualScheduler.pendingCount());
+
+        // Execute all pending tasks — only the latest should fire (earlier caps were deactivated)
+        ccl.init(1);
+        manualScheduler.runAll();
+        ccl.await();
+
+        assertEquals(1, ccl.events.size());
+        assertTrue("Delayed task should notify active=true", ccl.events.get(0));
+        assertEquals("No pending tasks remain", 0, manualScheduler.pendingCount());
     }
 }

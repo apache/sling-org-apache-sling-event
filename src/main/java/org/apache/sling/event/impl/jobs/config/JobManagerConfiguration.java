@@ -23,8 +23,9 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -149,6 +150,14 @@ public class JobManagerConfiguration {
         return jobMgrConfig;
     }
 
+    /**
+     * Replace the scheduler used for delayed topology change processing.
+     * Package-private for testability.
+     */
+    void setScheduler(final ScheduledExecutorService scheduler) {
+        this.scheduler = scheduler;
+    }
+
     /** The jobs base path with a slash. */
     private String jobsBasePathWithSlash;
 
@@ -171,6 +180,9 @@ public class JobManagerConfiguration {
     private volatile long backgroundLoadDelay;
 
     private volatile long startupDelay;
+
+    /** Scheduler for delayed topology change processing. Replaceable in tests. */
+    private volatile ScheduledExecutorService scheduler;
 
     /**
      * The max count of job progress log messages
@@ -307,6 +319,9 @@ public class JobManagerConfiguration {
             resolver.close();
         }
         this.active.set(true);
+        if (this.scheduler == null) {
+            this.scheduler = Executors.newSingleThreadScheduledExecutor();
+        }
 
         // SLING-5560 : use an InitDelayingTopologyEventListener
         if (this.startupDelay > 0) {
@@ -356,6 +371,10 @@ public class JobManagerConfiguration {
         if (this.startupDelayListener != null) {
             this.startupDelayListener.dispose();
             this.startupDelayListener = null;
+        }
+        if (this.scheduler != null) {
+            this.scheduler.shutdownNow();
+            this.scheduler = null;
         }
         this.stopProcessing();
     }
@@ -604,23 +623,19 @@ public class JobManagerConfiguration {
         } else {
             // and run checker again in some seconds (if leader)
             // notify listeners afterwards
-            final Timer timer = new Timer();
-            timer.schedule(
-                    new TimerTask() {
-
-                        @Override
-                        public void run() {
-                            if (newCaps == topologyCapabilities && newCaps.isActive()) {
-                                // start listeners
-                                notifyListeners();
-                                if (newCaps.isLeader() && newCaps.isActive()) {
-                                    final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
-                                    mt.fullRun();
-                                }
+            this.scheduler.schedule(
+                    () -> {
+                        if (newCaps == topologyCapabilities && newCaps.isActive()) {
+                            // start listeners
+                            notifyListeners();
+                            if (newCaps.isLeader() && newCaps.isActive()) {
+                                final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
+                                mt.fullRun();
                             }
                         }
                     },
-                    this.backgroundLoadDelay * 1000);
+                    this.backgroundLoadDelay,
+                    TimeUnit.SECONDS);
         }
         logger.debug("Job processing started");
     }
