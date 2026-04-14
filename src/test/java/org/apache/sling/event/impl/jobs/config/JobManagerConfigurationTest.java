@@ -398,4 +398,69 @@ public class JobManagerConfigurationTest {
         // No task should have been queued (scheduler rejected it)
         assertEquals("No tasks should be queued on shut-down scheduler", 0, manualScheduler.pendingCount());
     }
+
+    /**
+     * Verify that startProcessing() handles a null scheduler reference gracefully.
+     * This covers the race where deactivate() has already cleared the AtomicReference
+     * (via getAndSet(null)) before a topology event reaches startProcessing().
+     */
+    @Test
+    public void testStartProcessingWithNullScheduler() throws Exception {
+        final ChangeListener ccl = new ChangeListener();
+        final ManualScheduler manualScheduler = new ManualScheduler();
+        final JobManagerConfiguration config = createConfig(manualScheduler);
+
+        Condition condition = mock(Condition.class);
+        config.bindJobProcessingEnabledCondition(condition);
+
+        ccl.init(1);
+        config.addListener(ccl);
+        ccl.await();
+
+        // Establish topology via TOPOLOGY_INIT
+        ccl.init(1);
+        final TopologyView initView = createView();
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView));
+        ccl.await();
+        assertTrue(ccl.events.get(0));
+
+        // Clear the scheduler reference directly — simulates deactivate() having already
+        // called scheduler.getAndSet(null) before the topology event arrives
+        config.setScheduler(null);
+
+        // TOPOLOGY_CHANGED triggers stopProcessing (synchronous false) then startProcessing
+        // which reads scheduler.get() → null and must return early without throwing NPE
+        ccl.init(1);
+        final TopologyView view2 = createView();
+        Mockito.when(initView.isCurrent()).thenReturn(false);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2));
+        ccl.await();
+
+        // Only the synchronous false from stopProcessing should have been delivered
+        assertEquals(1, ccl.events.size());
+        assertFalse("Only stopProcessing event should fire", ccl.events.get(0));
+        // No task queued anywhere — scheduler was null
+        assertEquals("No tasks should be pending", 0, manualScheduler.pendingCount());
+    }
+
+    /**
+     * Verify that deactivate() handles a null scheduler reference gracefully.
+     * This covers the case where the scheduler was never initialized (e.g. activate()
+     * was never called) or was already cleared by a prior deactivate().
+     */
+    @Test
+    public void testDeactivateWithNullScheduler() {
+        final JobManagerConfiguration config = new JobManagerConfiguration();
+        ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
+        // Do NOT set a scheduler — the AtomicReference holds null
+
+        // deactivate() must not throw NPE when scheduler.getAndSet(null) returns null
+        config.deactivate();
+
+        assertFalse("Component should be inactive after deactivate", config.isActive());
+
+        // Calling deactivate() a second time must also be safe (double-deactivate)
+        config.deactivate();
+        assertFalse("Component should remain inactive", config.isActive());
+    }
 }
