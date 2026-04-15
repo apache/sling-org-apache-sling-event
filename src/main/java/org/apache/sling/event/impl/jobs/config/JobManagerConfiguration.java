@@ -151,14 +151,6 @@ public class JobManagerConfiguration {
         return jobMgrConfig;
     }
 
-    /**
-     * Replace the scheduler used for delayed topology change processing.
-     * Package-private for testability.
-     */
-    void setScheduler(final ScheduledExecutorService scheduler) {
-        this.scheduler.set(scheduler);
-    }
-
     /** The jobs base path with a slash. */
     private String jobsBasePathWithSlash;
 

@@ -84,10 +84,17 @@ public class JobManagerConfigurationTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static void setScheduler(JobManagerConfiguration config, java.util.concurrent.ScheduledExecutorService s) {
+        ((java.util.concurrent.atomic.AtomicReference<java.util.concurrent.ScheduledExecutorService>)
+                        TestUtil.getFieldValue(config, "scheduler"))
+                .set(s);
+    }
+
     private JobManagerConfiguration createConfig(ManualScheduler manualScheduler) {
         final JobManagerConfiguration config = new JobManagerConfiguration();
         ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
-        config.setScheduler(manualScheduler);
+        setScheduler(config, manualScheduler);
         InitDelayingTopologyEventListener startupDelayListener =
                 new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
 
@@ -205,7 +212,7 @@ public class JobManagerConfigurationTest {
         // was cleared by deactivate). This must not throw NPE.
         // To also exercise the RejectedExecutionException path, we re-inject the shut-down
         // scheduler and trigger a non-INIT event.
-        config.setScheduler(manualScheduler);
+        setScheduler(config, manualScheduler);
         ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
         InitDelayingTopologyEventListener startupDelayListener =
                 new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
@@ -259,7 +266,7 @@ public class JobManagerConfigurationTest {
 
         // Clear the scheduler reference directly — simulates deactivate() having already
         // called scheduler.getAndSet(null) before the topology event arrives
-        config.setScheduler(null);
+        setScheduler(config, null);
 
         // TOPOLOGY_CHANGED triggers stopProcessing (synchronous false) then startProcessing
         // which reads scheduler.get() → null and must return early without throwing NPE
