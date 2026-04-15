@@ -23,10 +23,12 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.PersistenceException;
@@ -172,6 +174,9 @@ public class JobManagerConfiguration {
 
     private volatile long startupDelay;
 
+    /** Scheduler for delayed topology change processing. Replaceable in tests. */
+    private final AtomicReference<ScheduledExecutorService> scheduler = new AtomicReference<>();
+
     /**
      * The max count of job progress log messages
      */
@@ -307,6 +312,7 @@ public class JobManagerConfiguration {
             resolver.close();
         }
         this.active.set(true);
+        this.scheduler.compareAndSet(null, Executors.newSingleThreadScheduledExecutor());
 
         // SLING-5560 : use an InitDelayingTopologyEventListener
         if (this.startupDelay > 0) {
@@ -356,6 +362,10 @@ public class JobManagerConfiguration {
         if (this.startupDelayListener != null) {
             this.startupDelayListener.dispose();
             this.startupDelayListener = null;
+        }
+        final ScheduledExecutorService s = this.scheduler.getAndSet(null);
+        if (s != null) {
+            s.shutdownNow();
         }
         this.stopProcessing();
     }
@@ -604,23 +614,27 @@ public class JobManagerConfiguration {
         } else {
             // and run checker again in some seconds (if leader)
             // notify listeners afterwards
-            final Timer timer = new Timer();
-            timer.schedule(
-                    new TimerTask() {
-
-                        @Override
-                        public void run() {
+            final ScheduledExecutorService s = this.scheduler.get();
+            if (s == null) {
+                logger.debug("Scheduler already shut down — skipping delayed listener notification");
+                return;
+            }
+            try {
+                s.schedule(
+                        () -> {
                             if (newCaps == topologyCapabilities && newCaps.isActive()) {
-                                // start listeners
                                 notifyListeners();
                                 if (newCaps.isLeader() && newCaps.isActive()) {
                                     final CheckTopologyTask mt = new CheckTopologyTask(JobManagerConfiguration.this);
                                     mt.fullRun();
                                 }
                             }
-                        }
-                    },
-                    this.backgroundLoadDelay * 1000);
+                        },
+                        this.backgroundLoadDelay,
+                        TimeUnit.SECONDS);
+            } catch (final java.util.concurrent.RejectedExecutionException e) {
+                logger.debug("Scheduler shut down before task could be submitted — skipping delayed notification", e);
+            }
         }
         logger.debug("Job processing started");
     }

@@ -84,14 +84,135 @@ public class JobManagerConfigurationTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static void setScheduler(JobManagerConfiguration config, java.util.concurrent.ScheduledExecutorService s) {
+        ((java.util.concurrent.atomic.AtomicReference<java.util.concurrent.ScheduledExecutorService>)
+                        TestUtil.getFieldValue(config, "scheduler"))
+                .set(s);
+    }
+
+    private JobManagerConfiguration createConfig(ManualScheduler manualScheduler) {
+        final JobManagerConfiguration config = new JobManagerConfiguration();
+        ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
+        setScheduler(config, manualScheduler);
+        InitDelayingTopologyEventListener startupDelayListener =
+                new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
+
+                    @Override
+                    public void handleTopologyEvent(TopologyEvent event) {
+                        config.doHandleTopologyEvent(event);
+                    }
+                });
+        TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
+        return config;
+    }
+
     @Test
     public void testTopologyChange() throws Exception {
-        // mock scheduler
         final ChangeListener ccl = new ChangeListener();
+        final ManualScheduler manualScheduler = new ManualScheduler();
+        final JobManagerConfiguration config = createConfig(manualScheduler);
 
-        // add change listener and verify
+        // Create and bind the condition
+        Condition condition = mock(Condition.class);
+        config.bindJobProcessingEnabledCondition(condition);
+
         ccl.init(1);
-        final JobManagerConfiguration config = new JobManagerConfiguration();
+        config.addListener(ccl);
+        ccl.await();
+
+        assertEquals(1, ccl.events.size());
+        assertFalse(ccl.events.get(0));
+
+        // TOPOLOGY_INIT notifies listeners synchronously (no scheduler involved)
+        ccl.init(1);
+        final TopologyView initView = createView();
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView));
+        ccl.await();
+
+        assertEquals(1, ccl.events.size());
+        assertTrue(ccl.events.get(0));
+
+        // TOPOLOGY_CHANGED: stopProcessing fires synchronous false, startProcessing schedules delayed task
+        ccl.init(1);
+        final TopologyView view2 = createView();
+        Mockito.when(initView.isCurrent()).thenReturn(false);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2));
+        ccl.await();
+
+        assertEquals(1, ccl.events.size());
+        assertFalse("stopProcessing should fire active=false", ccl.events.get(0));
+        assertEquals("TOPOLOGY_CHANGED should schedule one delayed task", 1, manualScheduler.pendingCount());
+
+        // PROPERTIES_CHANGED: for views with same capabilities, stopProcessing is skipped,
+        // only a new delayed task is scheduled
+        final TopologyView view3 = createView();
+        Mockito.when(view2.isCurrent()).thenReturn(false);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.PROPERTIES_CHANGED, view2, view3));
+
+        assertEquals("Two delayed tasks pending", 2, manualScheduler.pendingCount());
+
+        // Execute all pending tasks — only the latest should fire (earlier caps were deactivated)
+        ccl.init(1);
+        manualScheduler.runAll();
+        ccl.await();
+
+        assertEquals(1, ccl.events.size());
+        assertTrue("Delayed task should notify active=true", ccl.events.get(0));
+        assertEquals("No pending tasks remain", 0, manualScheduler.pendingCount());
+    }
+
+    /**
+     * Verify that deactivation prevents delayed listener notifications from firing
+     * and that a schedule/shutdown race does not produce exceptions.
+     */
+    @Test
+    public void testDeactivatePreventsDelayedNotification() throws Exception {
+        final ChangeListener ccl = new ChangeListener();
+        final ManualScheduler manualScheduler = new ManualScheduler();
+        final JobManagerConfiguration config = createConfig(manualScheduler);
+
+        Condition condition = mock(Condition.class);
+        config.bindJobProcessingEnabledCondition(condition);
+
+        ccl.init(1);
+        config.addListener(ccl);
+        ccl.await(); // initial state: no topology → false
+
+        // Establish topology via TOPOLOGY_INIT (synchronous notification)
+        ccl.init(1);
+        final TopologyView initView = createView();
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView));
+        ccl.await();
+        assertTrue("Should be active after TOPOLOGY_INIT", ccl.events.get(0));
+
+        // TOPOLOGY_CHANGED queues a delayed task via the scheduler
+        ccl.init(1);
+        final TopologyView view2 = createView();
+        Mockito.when(initView.isCurrent()).thenReturn(false);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2));
+        ccl.await(); // synchronous false from stopProcessing
+        assertEquals("One delayed task should be pending", 1, manualScheduler.pendingCount());
+
+        // Deactivate before the delayed task runs — this calls shutdownNow() on the scheduler
+        // (deactivate also calls stopProcessing → notifyListeners which fires a synchronous event)
+        config.deactivate();
+        ccl.events.clear();
+
+        // shutdownNow() must have cleared the pending task
+        assertEquals("Pending tasks must be cleared after deactivate", 0, manualScheduler.pendingCount());
+        assertTrue("Scheduler must be shut down", manualScheduler.isShutdown());
+
+        // Running the scheduler after shutdown must not deliver any events
+        manualScheduler.runAll();
+        assertTrue("No events should be delivered after deactivate", ccl.events.isEmpty());
+
+        // Simulate the race: a topology event arrives while deactivation is in progress.
+        // The production code reads scheduler.get() which now returns null (AtomicReference
+        // was cleared by deactivate). This must not throw NPE.
+        // To also exercise the RejectedExecutionException path, we re-inject the shut-down
+        // scheduler and trigger a non-INIT event.
+        setScheduler(config, manualScheduler);
         ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
         InitDelayingTopologyEventListener startupDelayListener =
                 new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
@@ -103,45 +224,83 @@ public class JobManagerConfigurationTest {
                 });
         TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
 
-        // Create and bind the condition
+        // This TOPOLOGY_INIT sets up topology state so the next TOPOLOGY_CHANGED reaches startProcessing
+        final TopologyView view3 = createView();
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, view3));
+
+        // Now trigger TOPOLOGY_CHANGED — scheduler.schedule() will throw RejectedExecutionException
+        // which must be caught by the production code, not escape to the caller
+        ccl.events.clear();
+        final TopologyView view4 = createView();
+        Mockito.when(view3.isCurrent()).thenReturn(false);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, view3, view4));
+
+        // No task should have been queued (scheduler rejected it)
+        assertEquals("No tasks should be queued on shut-down scheduler", 0, manualScheduler.pendingCount());
+    }
+
+    /**
+     * Verify that startProcessing() handles a null scheduler reference gracefully.
+     * This covers the race where deactivate() has already cleared the AtomicReference
+     * (via getAndSet(null)) before a topology event reaches startProcessing().
+     */
+    @Test
+    public void testStartProcessingWithNullScheduler() throws Exception {
+        final ChangeListener ccl = new ChangeListener();
+        final ManualScheduler manualScheduler = new ManualScheduler();
+        final JobManagerConfiguration config = createConfig(manualScheduler);
+
         Condition condition = mock(Condition.class);
         config.bindJobProcessingEnabledCondition(condition);
 
+        ccl.init(1);
         config.addListener(ccl);
         ccl.await();
 
-        assertEquals(1, ccl.events.size());
-        assertFalse(ccl.events.get(0));
-
-        // create init view
+        // Establish topology via TOPOLOGY_INIT
         ccl.init(1);
         final TopologyView initView = createView();
-        final TopologyEvent init = new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView);
-        config.handleTopologyEvent(init);
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, initView));
         ccl.await();
-
-        assertEquals(1, ccl.events.size());
         assertTrue(ccl.events.get(0));
 
-        // change view, followed by change props
-        ccl.init(2);
+        // Clear the scheduler reference directly — simulates deactivate() having already
+        // called scheduler.getAndSet(null) before the topology event arrives
+        setScheduler(config, null);
+
+        // TOPOLOGY_CHANGED triggers stopProcessing (synchronous false) then startProcessing
+        // which reads scheduler.get() → null and must return early without throwing NPE
+        ccl.init(1);
         final TopologyView view2 = createView();
         Mockito.when(initView.isCurrent()).thenReturn(false);
-        final TopologyEvent change1 = new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2);
-        final TopologyView view3 = createView();
-        final TopologyEvent change2 = new TopologyEvent(TopologyEvent.Type.PROPERTIES_CHANGED, view2, view3);
-
-        config.handleTopologyEvent(change1);
-        Mockito.when(view2.isCurrent()).thenReturn(false);
-        config.handleTopologyEvent(change2);
-
+        config.handleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_CHANGED, initView, view2));
         ccl.await();
-        assertEquals(2, ccl.events.size());
-        assertFalse(ccl.events.get(0));
-        assertTrue(ccl.events.get(1));
 
-        // we wait another 4 secs to see if there is no another event
-        Thread.sleep(4000);
-        assertEquals(2, ccl.events.size());
+        // Only the synchronous false from stopProcessing should have been delivered
+        assertEquals(1, ccl.events.size());
+        assertFalse("Only stopProcessing event should fire", ccl.events.get(0));
+        // No task queued anywhere — scheduler was null
+        assertEquals("No tasks should be pending", 0, manualScheduler.pendingCount());
+    }
+
+    /**
+     * Verify that deactivate() handles a null scheduler reference gracefully.
+     * This covers the case where the scheduler was never initialized (e.g. activate()
+     * was never called) or was already cleared by a prior deactivate().
+     */
+    @Test
+    public void testDeactivateWithNullScheduler() {
+        final JobManagerConfiguration config = new JobManagerConfiguration();
+        ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
+        // Do NOT set a scheduler — the AtomicReference holds null
+
+        // deactivate() must not throw NPE when scheduler.getAndSet(null) returns null
+        config.deactivate();
+
+        assertFalse("Component should be inactive after deactivate", config.isActive());
+
+        // Calling deactivate() a second time must also be safe (double-deactivate)
+        config.deactivate();
+        assertFalse("Component should remain inactive", config.isActive());
     }
 }
