@@ -91,13 +91,13 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
             public JobResult process(final Job job) {
                 int c = concurrentExecutionsCounter.incrementAndGet();
                 registerMax(c);
-                log.info("process : start delaying. concurrentExecutions =" + c + ", id=" + job.getId());
+                log.info("process : start delaying. concurrentExecutions=%s, id=%s", c, job.getId());
                 try {
                     Thread.sleep(jobDuration);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                log.info("process : done delaying. concurrentExecutions =" + c + ", id=" + job.getId());
+                log.info("process : done delaying. concurrentExecutions=%s, id=%s", c, job.getId());
                 concurrentExecutionsCounter.decrementAndGet();
                 return JobResult.OK;
             }
@@ -125,7 +125,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
             AtomicInteger cnt = new AtomicInteger(0);
             for (int i = 0; i < numJobs; i++) {
                 final int c = cnt.incrementAndGet();
-                log.info("run: creating job " + c + " on topic " + TOPIC_NAME);
+                log.info("run: creating job %s on topic %s", c, TOPIC_NAME);
                 if (jobManager.addJob(TOPIC_NAME, null) != null) {
                     created.get(TOPIC_NAME).incrementAndGet();
                 }
@@ -263,15 +263,15 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         new CreateJobThread(jobManager, created, numJobs).start();
 
         // wait until 1 job is being processed
-        log.info("doTestMaxParallel : waiting until 1 job is being processed");
+        log.info("doTestMaxParallel : waiting until at least 1 job is being processed");
         while (max <= 0) {
             this.sleep(100);
         }
-        log.info("doTestMaxParallel : 1 job was processed, ready to go. max=" + max);
+        log.info("doTestMaxParallel : job processing started, ready to go");
 
         this.setupChaosThreads(threads, jobsCompletedLatch, chaosLatch);
 
-        log.info("doTestMaxParallel : starting threads (" + threads.size() + ")");
+        log.info("doTestMaxParallel : starting %s threads", threads.size());
         // start threads
         for (final Thread t : threads) {
             t.setDaemon(true);
@@ -280,7 +280,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
         // a generous timeout to wait until a jobs are created
         final long timeoutMillis = duration * 4 * 1000L;
-        log.info("doTestMaxParallel: waiting for all " + numJobs + " jobs to be created...");
+        log.info("doTestMaxParallel: waiting for all %s jobs to be created...", numJobs);
         assertTrue(
                 "Not all " + numJobs + " jobs created within " + (duration * 4) + " seconds",
                 jobsCreatedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS));
@@ -289,7 +289,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         // generous timeout to fail fast instead of hanging if jobs get stuck; job processing under
         // topology chaos is much slower than the ideal throughput, so allow a wide margin while
         // still staying well below the JUnit @Test timeout
-        log.info("doTestMaxParallel: waiting for all " + numJobs + " jobs to finish...");
+        log.info("doTestMaxParallel: waiting for all %s jobs to finish...", numJobs);
         assertTrue(
                 "Not all " + numJobs + " jobs finished within " + (duration * 4) + " seconds",
                 jobsCompletedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS));
