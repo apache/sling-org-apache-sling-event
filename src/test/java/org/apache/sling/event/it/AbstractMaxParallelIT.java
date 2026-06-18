@@ -66,7 +66,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
     private final Object syncObj = new Object();
 
-    protected int max = -1;
+    protected volatile int max = -1;
 
     @Override
     protected long backgroundLoadDelay() {
