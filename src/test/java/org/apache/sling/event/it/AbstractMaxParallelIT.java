@@ -21,12 +21,11 @@ package org.apache.sling.event.it;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -48,12 +47,14 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
     private static final int BACKGROUND_LOAD_DELAY_SECONDS = 1;
 
-    private static final int EXTRA_CHAOS_DURATION_SECONDS = 20;
+    /** Grace period (in seconds) the chaos thread keeps running after all jobs have finished. */
+    private static final int CHAOS_GRACE_SECONDS = 5;
 
     private static final int UNKNOWN_TOPOLOGY_FACTOR_MILLIS = 15; // 100;
 
@@ -81,24 +82,23 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
     /**
      * Setup consumers
      */
-    private void setupJobConsumers(long jobRunMillis) {
+    private void setupJobConsumers(long jobDuration) {
         this.registerJobConsumer(TOPIC_NAME, new JobConsumer() {
 
-            private AtomicInteger cnt = new AtomicInteger(0);
+            private AtomicInteger concurrentExecutionsCounter = new AtomicInteger(0);
 
             @Override
             public JobResult process(final Job job) {
-                int c = cnt.incrementAndGet();
+                int c = concurrentExecutionsCounter.incrementAndGet();
                 registerMax(c);
-                log.info("process : start delaying. count=" + c + ", id=" + job.getId());
+                log.info("process : start delaying. concurrentExecutions =" + c + ", id=" + job.getId());
                 try {
-                    Thread.sleep(jobRunMillis);
+                    Thread.sleep(jobDuration);
                 } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
-                log.info("process : done delaying. count=" + c + ", id=" + job.getId());
-                cnt.decrementAndGet();
+                log.info("process : done delaying. concurrentExecutions =" + c + ", id=" + job.getId());
+                concurrentExecutionsCounter.decrementAndGet();
                 return JobResult.OK;
             }
         });
@@ -110,20 +110,13 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
 
         private final JobManager jobManager;
 
-        final AtomicLong finishedThreads;
-
         private final Map<String, AtomicLong> created;
 
         private final int numJobs;
 
-        public CreateJobThread(
-                final JobManager jobManager,
-                Map<String, AtomicLong> created,
-                final AtomicLong finishedThreads,
-                int numJobs) {
+        public CreateJobThread(final JobManager jobManager, Map<String, AtomicLong> created, int numJobs) {
             this.jobManager = jobManager;
             this.created = created;
-            this.finishedThreads = finishedThreads;
             this.numJobs = numJobs;
         }
 
@@ -137,7 +130,6 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
                     created.get(TOPIC_NAME).incrementAndGet();
                 }
             }
-            finishedThreads.incrementAndGet();
         }
     }
 
@@ -146,7 +138,8 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
      *
      * Chaos is right now created by sending topology changing/changed events randomly
      */
-    private void setupChaosThreads(final List<Thread> threads, final AtomicLong finishedThreads, long duration) {
+    private void setupChaosThreads(
+            final List<Thread> threads, final CountDownLatch jobsLatch, final CountDownLatch chaosLatch) {
         final List<TopologyView> views = new ArrayList<>();
         // register topology listener
         final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(
@@ -189,16 +182,23 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
             log.info("setupChaosThreads : simulating TOPOLOGY_INIT");
             tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_INIT, null, view));
 
-            threads.add(new Thread() {
+            threads.add(new Thread("topology-changer") {
 
                 private final Random random = new Random();
 
                 @Override
                 public void run() {
-                    final long startTime = System.currentTimeMillis();
-                    // this thread runs 30 seconds longer than the job creation thread
-                    final long endTime = startTime + (duration + EXTRA_CHAOS_DURATION_SECONDS) * 1000;
-                    while (System.currentTimeMillis() < endTime) {
+                    long graceDeadline = -1;
+                    while (true) {
+                        if (jobsLatch.getCount() == 0) {
+                            // keep creating chaos while jobs are still being processed and for a short
+                            // grace period afterwards
+                            if (graceDeadline < 0) {
+                                graceDeadline = System.currentTimeMillis() + CHAOS_GRACE_SECONDS * 1000L;
+                            } else if (System.currentTimeMillis() >= graceDeadline) {
+                                break;
+                            }
+                        }
                         final int sleepTime = random.nextInt(25) + 15;
                         try {
                             Thread.sleep(sleepTime * STABLE_TOPOLOGY_FACTOR_MILLIS);
@@ -216,8 +216,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
                         log.info("setupChaosThreads : simulating TOPOLOGY_CHANGED");
                         tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGED, view, view));
                     }
-                    tel.getClass().getName();
-                    finishedThreads.incrementAndGet();
+                    chaosLatch.countDown();
                 }
             });
         } catch (InvalidSyntaxException e) {
@@ -230,14 +229,17 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         final Map<String, AtomicLong> added = new HashMap<>();
         final Map<String, AtomicLong> created = new HashMap<>();
         final Map<String, AtomicLong> finished = new HashMap<>();
-        final List<String> topics = new ArrayList<>();
         added.put(TOPIC_NAME, new AtomicLong());
         created.put(TOPIC_NAME, new AtomicLong());
         finished.put(TOPIC_NAME, new AtomicLong());
-        topics.add(TOPIC_NAME);
 
         final List<Thread> threads = new ArrayList<>();
-        final AtomicLong finishedThreads = new AtomicLong();
+        // count down for every job created
+        final CountDownLatch jobsCreatedLatch = new CountDownLatch(numJobs);
+        // counted down once for every finished job; lets us wait exactly until all jobs are done
+        final CountDownLatch jobsCompletedLatch = new CountDownLatch(numJobs);
+        // counted down by the chaos thread once it has stopped
+        final CountDownLatch chaosLatch = new CountDownLatch(1);
 
         this.registerEventHandler("org/apache/sling/event/notification/job/*", new EventHandler() {
 
@@ -246,8 +248,10 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
                 final String topic = (String) event.getProperty(NotificationConstants.NOTIFICATION_PROPERTY_JOB_TOPIC);
                 if (NotificationConstants.TOPIC_JOB_FINISHED.equals(event.getTopic())) {
                     finished.get(topic).incrementAndGet();
+                    jobsCompletedLatch.countDown();
                 } else if (NotificationConstants.TOPIC_JOB_ADDED.equals(event.getTopic())) {
                     added.get(topic).incrementAndGet();
+                    jobsCreatedLatch.countDown();
                 }
             }
         });
@@ -256,7 +260,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         this.setupJobConsumers(jobRunMillis);
 
         // setup job creation tests
-        new CreateJobThread(jobManager, created, finishedThreads, numJobs).start();
+        new CreateJobThread(jobManager, created, numJobs).start();
 
         // wait until 1 job is being processed
         log.info("doTestMaxParallel : waiting until 1 job is being processed");
@@ -265,7 +269,7 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
         }
         log.info("doTestMaxParallel : 1 job was processed, ready to go. max=" + max);
 
-        this.setupChaosThreads(threads, finishedThreads, duration);
+        this.setupChaosThreads(threads, jobsCompletedLatch, chaosLatch);
 
         log.info("doTestMaxParallel : starting threads (" + threads.size() + ")");
         // start threads
@@ -274,32 +278,25 @@ public abstract class AbstractMaxParallelIT extends AbstractJobHandlingIT {
             t.start();
         }
 
-        log.info("doTestMaxParallel: sleeping for " + duration + " seconds to wait for threads to finish...");
-        // for sure we can sleep for the duration
-        this.sleep(duration * 1000);
+        // a generous timeout to wait until a jobs are created
+        final long timeoutMillis = duration * 4 * 1000L;
+        log.info("doTestMaxParallel: waiting for all " + numJobs + " jobs to be created...");
+        assertTrue(
+                "Not all " + numJobs + " jobs created within " + (duration * 4) + " seconds",
+                jobsCreatedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS));
+        log.info("All jobs were created");
 
-        log.info("doTestMaxParallel: polling for threads to finish...");
-        // wait until threads are finished
-        while (finishedThreads.get() < threads.size()) {
-            this.sleep(100);
-        }
+        // generous timeout to fail fast instead of hanging if jobs get stuck; job processing under
+        // topology chaos is much slower than the ideal throughput, so allow a wide margin while
+        // still staying well below the JUnit @Test timeout
+        log.info("doTestMaxParallel: waiting for all " + numJobs + " jobs to finish...");
+        assertTrue(
+                "Not all " + numJobs + " jobs finished within " + (duration * 4) + " seconds",
+                jobsCompletedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS));
 
-        final Set<String> allTopics = new HashSet<>(topics);
-        log.info("doTestMaxParallel: waiting for job handling to finish... " + allTopics.size());
-        while (!allTopics.isEmpty()) {
-            final Iterator<String> iter = allTopics.iterator();
-            while (iter.hasNext()) {
-                final String topic = iter.next();
-                log.info("doTestMaxParallel: checking topic= " + topic + ", finished="
-                        + finished.get(topic).get() + ", created="
-                        + created.get(topic).get());
-                if (finished.get(topic).get() == created.get(topic).get()) {
-                    iter.remove();
-                }
-            }
-            log.info("doTestMaxParallel: waiting for job handling to finish... " + allTopics.size());
-            this.sleep(1000);
-        }
+        log.info("doTestMaxParallel: waiting for chaos thread to stop...");
+        assertTrue("Chaos thread did not stop in time", chaosLatch.await(CHAOS_GRACE_SECONDS * 2L, TimeUnit.SECONDS));
+
         log.info("doTestMaxParallel: done.");
     }
 }
