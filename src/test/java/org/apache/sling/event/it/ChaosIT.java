@@ -70,6 +70,9 @@ public class ChaosIT extends AbstractJobHandlingIT {
     /** Grace period (in seconds) the chaos thread keeps running after job creation has finished. */
     private static final int CHAOS_GRACE_SECONDS = 5;
 
+    /** Maximum time (in seconds) to wait for all created jobs to finish processing. */
+    private static final int JOB_DRAIN_TIMEOUT_SECONDS = 120;
+
     private static final int NUM_ORDERED_THREADS = 3;
     private static final int NUM_PARALLEL_THREADS = 6;
     private static final int NUM_ROUND_THREADS = 6;
@@ -293,23 +296,38 @@ public class ChaosIT extends AbstractJobHandlingIT {
                             }
                         }
                         final int sleepTime = random.nextInt(25) + 15;
-                        try {
-                            Thread.sleep(sleepTime * 1000);
-                        } catch (final InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
+                        chaosSleep(sleepTime * 1000L);
                         tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGING, view, null));
                         log.info("Sent TopologyEvent (newView = null)");
                         final int changingTime = random.nextInt(20) + 3;
-                        try {
-                            Thread.sleep(changingTime * 1000);
-                        } catch (final InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
+                        chaosSleep(changingTime * 1000L);
                         tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGED, view, view));
                         log.info("Sent TopologyEvent (newView not null)");
                     }
                     allThreadsLatch.countDown();
+                }
+
+                /**
+                 * Sleep up to {@code totalMillis}, but in small chunks so the stop condition is
+                 * re-checked frequently. Returns early once job creation has finished, so the
+                 * grace period is actually honoured instead of being masked by a single long
+                 * sleep. A thread interrupt also terminates the sleep instead of busy-looping.
+                 */
+                private void chaosSleep(final long totalMillis) {
+                    long remaining = totalMillis;
+                    while (remaining > 0) {
+                        final long chunk = Math.min(remaining, 250L);
+                        try {
+                            Thread.sleep(chunk);
+                        } catch (final InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                        remaining -= chunk;
+                        if (creationLatch.getCount() == 0) {
+                            return;
+                        }
+                    }
                 }
             });
         } catch (InvalidSyntaxException e) {
@@ -384,12 +402,17 @@ public class ChaosIT extends AbstractJobHandlingIT {
         // wait until all threads (job creation + chaos) have finished; the creation threads run
         // for DURATION seconds, the chaos thread for a short grace period longer
         final long threadTimeout = (DURATION + CHAOS_GRACE_SECONDS) * 1000L + 60_000L;
+        boolean allThreadsFinished = allThreadsLatch.await(threadTimeout, TimeUnit.MILLISECONDS);
+
+        // there is a small race condition in here, .getCount() could be null already
         assertTrue(
-                "Job creation and chaos threads did not finish in time",
-                allThreadsLatch.await(threadTimeout, TimeUnit.MILLISECONDS));
+                "Job creation and chaos threads did not finish in time, still waiting for " + allThreadsLatch.getCount()
+                        + "threads",
+                allThreadsFinished);
 
         log.info("Waiting for job handling to finish...");
         final Set<String> allTopics = new HashSet<>(topics);
+        final long drainDeadline = System.currentTimeMillis() + JOB_DRAIN_TIMEOUT_SECONDS * 1000L;
         while (!allTopics.isEmpty()) {
             final Iterator<String> iter = allTopics.iterator();
             while (iter.hasNext()) {
@@ -398,7 +421,13 @@ public class ChaosIT extends AbstractJobHandlingIT {
                     iter.remove();
                 }
             }
-            this.sleep(100);
+            if (!allTopics.isEmpty()) {
+                assertTrue(
+                        "Jobs did not finish within " + JOB_DRAIN_TIMEOUT_SECONDS + " seconds; topics still pending: "
+                                + allTopics,
+                        System.currentTimeMillis() < drainDeadline);
+                this.sleep(100);
+            }
         }
         log.info("Completed");
         /* We could try to enable this with Oak again - but right now JR observation handler is too
