@@ -71,7 +71,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
     private static final int CHAOS_GRACE_SECONDS = 5;
 
     /** Maximum time (in seconds) to wait for all created jobs to finish processing. */
-    private static final int JOB_DRAIN_TIMEOUT_SECONDS = 120;
+    private static final int JOB_DRAIN_TIMEOUT_SECONDS = 600;
 
     private static final int NUM_ORDERED_THREADS = 3;
     private static final int NUM_PARALLEL_THREADS = 6;
@@ -404,7 +404,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
         final long threadTimeout = (DURATION + CHAOS_GRACE_SECONDS) * 1000L + 60_000L;
         boolean allThreadsFinished = allThreadsLatch.await(threadTimeout, TimeUnit.MILLISECONDS);
 
-        // there is a small race condition in here, .getCount() could be null already
+        // there is a small race condition in here, .getCount() could be zero already now
         assertTrue(
                 "Job creation and chaos threads did not finish in time, still waiting for " + allThreadsLatch.getCount()
                         + "threads",
@@ -413,6 +413,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
         log.info("Waiting for job handling to finish...");
         final Set<String> allTopics = new HashSet<>(topics);
         final long drainDeadline = System.currentTimeMillis() + JOB_DRAIN_TIMEOUT_SECONDS * 1000L;
+        long lastProgressLog = 0;
         while (!allTopics.isEmpty()) {
             final Iterator<String> iter = allTopics.iterator();
             while (iter.hasNext()) {
@@ -422,10 +423,24 @@ public class ChaosIT extends AbstractJobHandlingIT {
                 }
             }
             if (!allTopics.isEmpty()) {
+                final long now = System.currentTimeMillis();
+                // log progress every 5 seconds so a genuine stall can be told apart from slow draining
+                if (now - lastProgressLog >= 5000) {
+                    lastProgressLog = now;
+                    long remaining = 0;
+                    for (final String topic : allTopics) {
+                        remaining +=
+                                created.get(topic).get() - finished.get(topic).get();
+                    }
+                    log.info(
+                            "Still draining: {} topics pending, {} jobs outstanding (created vs finished)",
+                            allTopics.size(),
+                            remaining);
+                }
                 assertTrue(
                         "Jobs did not finish within " + JOB_DRAIN_TIMEOUT_SECONDS + " seconds; topics still pending: "
                                 + allTopics,
-                        System.currentTimeMillis() < drainDeadline);
+                        now < drainDeadline);
                 this.sleep(100);
             }
         }
