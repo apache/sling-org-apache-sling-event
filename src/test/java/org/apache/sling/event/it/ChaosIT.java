@@ -200,11 +200,7 @@ public class ChaosIT extends AbstractJobHandlingIT {
                     }
                 }
                 final int sleepTime = random.nextInt(200);
-                try {
-                    Thread.sleep(sleepTime);
-                } catch (final InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
+                this.sleep(sleepTime);
             }
             creationLatch.countDown();
             allThreadsLatch.countDown();
@@ -366,8 +362,12 @@ public class ChaosIT extends AbstractJobHandlingIT {
 
         final List<Thread> threads = new ArrayList<>();
         final int numCreationThreads = NUM_ORDERED_THREADS + NUM_PARALLEL_THREADS + NUM_ROUND_THREADS;
+        // Signals that all job-creation threads have finished. This is the chaos thread's only cue
+        // to wind down (arm its grace period and stop). It cannot key off allThreadsLatch for this,
+        // since that latch includes the chaos thread itself and can never reach zero from within it.
         final CountDownLatch creationLatch = new CountDownLatch(numCreationThreads);
-        // all creation threads plus the single chaos thread
+        // all creation threads plus the single chaos thread; awaited by the test to know when every
+        // worker thread has terminated
         final CountDownLatch allThreadsLatch = new CountDownLatch(numCreationThreads + 1);
 
         this.registerEventHandler("org/apache/sling/event/notification/job/*", new EventHandler() {
