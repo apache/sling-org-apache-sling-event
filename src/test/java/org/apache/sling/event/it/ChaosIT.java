@@ -200,7 +200,11 @@ public class ChaosIT extends AbstractJobHandlingIT {
                     }
                 }
                 final int sleepTime = random.nextInt(200);
-                this.sleep(sleepTime);
+                try {
+                    this.sleep(sleepTime);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
             creationLatch.countDown();
             allThreadsLatch.countDown();
