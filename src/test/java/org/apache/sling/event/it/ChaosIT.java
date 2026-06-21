@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.sling.discovery.TopologyEvent;
@@ -54,6 +56,7 @@ import org.osgi.service.event.EventHandler;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
@@ -63,6 +66,12 @@ public class ChaosIT extends AbstractJobHandlingIT {
 
     /** Duration for firing jobs in seconds. */
     private static final long DURATION = 1 * 60;
+
+    /** Grace period (in seconds) the chaos thread keeps running after job creation has finished. */
+    private static final int CHAOS_GRACE_SECONDS = 5;
+
+    /** Maximum time (in seconds) to wait for all created jobs to finish processing. */
+    private static final int JOB_DRAIN_TIMEOUT_SECONDS = 600;
 
     private static final int NUM_ORDERED_THREADS = 3;
     private static final int NUM_PARALLEL_THREADS = 6;
@@ -158,17 +167,21 @@ public class ChaosIT extends AbstractJobHandlingIT {
 
         final Map<String, AtomicLong> created;
 
-        final AtomicLong finishedThreads;
+        final CountDownLatch creationLatch;
+
+        final CountDownLatch allThreadsLatch;
 
         public CreateJobThread(
                 final JobManager jobManager,
                 final String[] topics,
                 final Map<String, AtomicLong> created,
-                final AtomicLong finishedThreads) {
+                final CountDownLatch creationLatch,
+                final CountDownLatch allThreadsLatch) {
             this.topics = topics;
             this.jobManager = jobManager;
             this.created = created;
-            this.finishedThreads = finishedThreads;
+            this.creationLatch = creationLatch;
+            this.allThreadsLatch = allThreadsLatch;
         }
 
         @Override
@@ -188,12 +201,13 @@ public class ChaosIT extends AbstractJobHandlingIT {
                 }
                 final int sleepTime = random.nextInt(200);
                 try {
-                    Thread.sleep(sleepTime);
-                } catch (final InterruptedException ie) {
+                    this.sleep(sleepTime);
+                } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
-            finishedThreads.incrementAndGet();
+            creationLatch.countDown();
+            allThreadsLatch.countDown();
         }
     }
 
@@ -204,15 +218,16 @@ public class ChaosIT extends AbstractJobHandlingIT {
             final List<Thread> threads,
             final JobManager jobManager,
             final Map<String, AtomicLong> created,
-            final AtomicLong finishedThreads) {
+            final CountDownLatch creationLatch,
+            final CountDownLatch allThreadsLatch) {
         for (int i = 0; i < NUM_ORDERED_THREADS; i++) {
-            threads.add(new CreateJobThread(jobManager, ORDERED_TOPICS, created, finishedThreads));
+            threads.add(new CreateJobThread(jobManager, ORDERED_TOPICS, created, creationLatch, allThreadsLatch));
         }
         for (int i = 0; i < NUM_PARALLEL_THREADS; i++) {
-            threads.add(new CreateJobThread(jobManager, PARALLEL_TOPICS, created, finishedThreads));
+            threads.add(new CreateJobThread(jobManager, PARALLEL_TOPICS, created, creationLatch, allThreadsLatch));
         }
         for (int i = 0; i < NUM_ROUND_THREADS; i++) {
-            threads.add(new CreateJobThread(jobManager, ROUND_TOPICS, created, finishedThreads));
+            threads.add(new CreateJobThread(jobManager, ROUND_TOPICS, created, creationLatch, allThreadsLatch));
         }
     }
 
@@ -221,7 +236,8 @@ public class ChaosIT extends AbstractJobHandlingIT {
      *
      * Chaos is right now created by sending topology changing/changed events randomly
      */
-    private void setupChaosThreads(final List<Thread> threads, final AtomicLong finishedThreads) {
+    private void setupChaosThreads(
+            final List<Thread> threads, final CountDownLatch creationLatch, final CountDownLatch allThreadsLatch) {
         final List<TopologyView> views = new ArrayList<>();
         // register topology listener
         final ServiceRegistration<TopologyEventListener> reg = this.bundleContext.registerService(
@@ -262,33 +278,56 @@ public class ChaosIT extends AbstractJobHandlingIT {
             assertNotNull(found);
             final TopologyEventListener tel = found;
 
-            threads.add(new Thread() {
+            threads.add(new Thread("chaos-topology-change") {
 
                 private final Random random = new Random();
 
                 @Override
                 public void run() {
-                    final long startTime = System.currentTimeMillis();
-                    // this thread runs 30 seconds longer than the job creation thread
-                    final long endTime = startTime + (DURATION + 30) * 1000;
-                    while (System.currentTimeMillis() < endTime) {
+                    // keep creating chaos while jobs are being created and for a short grace
+                    // period afterwards, so the drain phase is exercised under topology changes too
+                    long graceDeadline = -1;
+                    while (true) {
+                        if (creationLatch.getCount() == 0) {
+                            if (graceDeadline < 0) {
+                                graceDeadline = System.currentTimeMillis() + CHAOS_GRACE_SECONDS * 1000L;
+                            } else if (System.currentTimeMillis() >= graceDeadline) {
+                                break;
+                            }
+                        }
                         final int sleepTime = random.nextInt(25) + 15;
-                        try {
-                            Thread.sleep(sleepTime * 1000);
-                        } catch (final InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                        }
+                        chaosSleep(sleepTime * 1000L);
                         tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGING, view, null));
+                        log.info("Sent TopologyEvent (newView = null)");
                         final int changingTime = random.nextInt(20) + 3;
+                        chaosSleep(changingTime * 1000L);
+                        tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGED, view, view));
+                        log.info("Sent TopologyEvent (newView not null)");
+                    }
+                    allThreadsLatch.countDown();
+                }
+
+                /**
+                 * Sleep up to {@code totalMillis}, but in small chunks so the stop condition is
+                 * re-checked frequently. Returns early once job creation has finished, so the
+                 * grace period is actually honoured instead of being masked by a single long
+                 * sleep. A thread interrupt also terminates the sleep instead of busy-looping.
+                 */
+                private void chaosSleep(final long totalMillis) {
+                    long remaining = totalMillis;
+                    while (remaining > 0) {
+                        final long chunk = Math.min(remaining, 250L);
                         try {
-                            Thread.sleep(changingTime * 1000);
+                            Thread.sleep(chunk);
                         } catch (final InterruptedException ie) {
                             Thread.currentThread().interrupt();
+                            return;
                         }
-                        tel.handleTopologyEvent(new TopologyEvent(Type.TOPOLOGY_CHANGED, view, view));
+                        remaining -= chunk;
+                        if (creationLatch.getCount() == 0) {
+                            return;
+                        }
                     }
-                    tel.getClass().getName();
-                    finishedThreads.incrementAndGet();
                 }
             });
         } catch (InvalidSyntaxException e) {
@@ -326,7 +365,14 @@ public class ChaosIT extends AbstractJobHandlingIT {
         }
 
         final List<Thread> threads = new ArrayList<>();
-        final AtomicLong finishedThreads = new AtomicLong();
+        final int numCreationThreads = NUM_ORDERED_THREADS + NUM_PARALLEL_THREADS + NUM_ROUND_THREADS;
+        // Signals that all job-creation threads have finished. This is the chaos thread's only cue
+        // to wind down (arm its grace period and stop). It cannot key off allThreadsLatch for this,
+        // since that latch includes the chaos thread itself and can never reach zero from within it.
+        final CountDownLatch creationLatch = new CountDownLatch(numCreationThreads);
+        // all creation threads plus the single chaos thread; awaited by the test to know when every
+        // worker thread has terminated
+        final CountDownLatch allThreadsLatch = new CountDownLatch(numCreationThreads + 1);
 
         this.registerEventHandler("org/apache/sling/event/notification/job/*", new EventHandler() {
 
@@ -345,29 +391,33 @@ public class ChaosIT extends AbstractJobHandlingIT {
         this.setupJobConsumers();
 
         // setup job creation tests
-        this.setupJobCreationThreads(threads, jobManager, created, finishedThreads);
+        this.setupJobCreationThreads(threads, jobManager, created, creationLatch, allThreadsLatch);
 
-        this.setupChaosThreads(threads, finishedThreads);
+        this.setupChaosThreads(threads, creationLatch, allThreadsLatch);
 
-        System.out.println("Starting threads...");
+        log.info("Starting threads...");
         // start threads
         for (final Thread t : threads) {
             t.setDaemon(true);
             t.start();
         }
 
-        System.out.println("Sleeping for " + DURATION + " seconds to wait for threads to finish...");
-        // for sure we can sleep for the duration
-        this.sleep(DURATION * 1000);
+        log.info("Waiting for threads to finish...");
+        // wait until all threads (job creation + chaos) have finished; the creation threads run
+        // for DURATION seconds, the chaos thread for a short grace period longer
+        final long threadTimeout = (DURATION + CHAOS_GRACE_SECONDS) * 1000L + 60_000L;
+        boolean allThreadsFinished = allThreadsLatch.await(threadTimeout, TimeUnit.MILLISECONDS);
 
-        System.out.println("Polling for threads to finish...");
-        // wait until threads are finished
-        while (finishedThreads.get() < threads.size()) {
-            this.sleep(100);
-        }
+        // there is a small race condition in here, .getCount() could be zero already now
+        assertTrue(
+                "Job creation and chaos threads did not finish in time, still waiting for " + allThreadsLatch.getCount()
+                        + "threads",
+                allThreadsFinished);
 
-        System.out.println("Waiting for job handling to finish...");
+        log.info("Waiting for job handling to finish...");
         final Set<String> allTopics = new HashSet<>(topics);
+        final long drainDeadline = System.currentTimeMillis() + JOB_DRAIN_TIMEOUT_SECONDS * 1000L;
+        long lastProgressLog = 0;
         while (!allTopics.isEmpty()) {
             final Iterator<String> iter = allTopics.iterator();
             while (iter.hasNext()) {
@@ -376,8 +426,29 @@ public class ChaosIT extends AbstractJobHandlingIT {
                     iter.remove();
                 }
             }
-            this.sleep(100);
+            if (!allTopics.isEmpty()) {
+                final long now = System.currentTimeMillis();
+                // log progress every 5 seconds so a genuine stall can be told apart from slow draining
+                if (now - lastProgressLog >= 5000) {
+                    lastProgressLog = now;
+                    long remaining = 0;
+                    for (final String topic : allTopics) {
+                        remaining +=
+                                created.get(topic).get() - finished.get(topic).get();
+                    }
+                    log.info(
+                            "Still draining: {} topics pending, {} jobs outstanding (created vs finished)",
+                            allTopics.size(),
+                            remaining);
+                }
+                assertTrue(
+                        "Jobs did not finish within " + JOB_DRAIN_TIMEOUT_SECONDS + " seconds; topics still pending: "
+                                + allTopics,
+                        now < drainDeadline);
+                this.sleep(100);
+            }
         }
+        log.info("Completed");
         /* We could try to enable this with Oak again - but right now JR observation handler is too
         * slow.
                    System.out.println("Checking notifications...");
