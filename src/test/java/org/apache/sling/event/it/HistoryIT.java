@@ -53,7 +53,7 @@ public class HistoryIT extends AbstractJobHandlingIT {
 
     private static final String PROP_COUNTER = "counter";
 
-    // Processing delay per job. 
+    // Processing delay per job.
     private static final long JOB_PROCESSING_DELAY_MS = 50L;
 
     @Configuration
