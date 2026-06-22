@@ -53,14 +53,7 @@ public class HistoryIT extends AbstractJobHandlingIT {
 
     private static final String PROP_COUNTER = "counter";
 
-    // Processing delay per job. The HISTORY query orders results by finished date descending, so the
-    // jobs must finish far enough apart that every finished timestamp is distinct; otherwise the
-    // order of jobs sharing a timestamp is undefined and the ordering assertion below flakes. The
-    // queue is ORDERED (sequential), so this also spaces the timestamps monotonically.
-    // The delay must clear the "clock tick" granularity: Thread.sleep and the millisecond finished
-    // timestamp both resolve only on the OS scheduler tick (~15ms on Windows), so a too-small delay
-    // can let consecutive jobs land in the same tick and thus the same stored millisecond. 50ms
-    // comfortably exceeds any realistic tick.
+    // Processing delay per job. 
     private static final long JOB_PROCESSING_DELAY_MS = 50L;
 
     @Configuration
