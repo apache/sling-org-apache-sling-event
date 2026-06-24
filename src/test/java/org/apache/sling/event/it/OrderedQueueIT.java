@@ -21,6 +21,7 @@ package org.apache.sling.event.it;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.sling.event.impl.Barrier;
 import org.apache.sling.event.impl.jobs.config.ConfigurationConstants;
@@ -41,9 +42,9 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.ops4j.pax.exam.CoreOptions.options;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
 
@@ -80,6 +81,10 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
         final Barrier cb = new Barrier(2);
         final AtomicInteger count = new AtomicInteger(0);
         final AtomicInteger parallelCount = new AtomicInteger(0);
+        // The ordering invariant is checked on the queue worker thread, but assertions thrown there
+        // would be swallowed by the job framework (treated as a job failure) instead of failing the
+        // test. Record the first violation here and assert it on the test thread after processing.
+        final AtomicReference<String> orderingViolation = new AtomicReference<>();
         this.registerJobConsumer("sling/orderedtest/*", new JobConsumer() {
 
             private volatile int lastCounter = -1;
@@ -87,10 +92,12 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
             @Override
             public JobResult process(final Job job) {
                 final int counter = job.getProperty("counter", -10);
-                assertNotEquals("Counter property is missing", -10, counter);
-                assertTrue(
-                        "Counter should only increment by max of 1 " + counter + " - " + lastCounter,
-                        counter == lastCounter || counter == lastCounter + 1);
+                if (counter == -10) {
+                    orderingViolation.compareAndSet(null, "Counter property is missing");
+                } else if (!(counter == lastCounter || counter == lastCounter + 1)) {
+                    orderingViolation.compareAndSet(
+                            null, "Counter should only increment by max of 1: " + counter + " - " + lastCounter);
+                }
                 lastCounter = counter;
                 if ("sling/orderedtest/start".equals(job.getTopic())) {
                     cb.block();
@@ -150,13 +157,25 @@ public class OrderedQueueIT extends AbstractJobHandlingIT {
         }
         // start the queue
         q.resume();
-        while (count.get() < NUM_JOBS + 1) {
+        // Wait until the JOB_FINISHED notifications AND the queue/global statistics have all caught
+        // up. The statistics are updated on a different code path than the notification, so gating
+        // only on the notification count would let the assertions below read stale statistics.
+        while (count.get() < NUM_JOBS + 1
+                || q.getStatistics().getNumberOfFinishedJobs() < NUM_JOBS + 1
+                || jobManager.getStatistics().getNumberOfFinishedJobs() < NUM_JOBS + 1) {
             try {
-                Thread.sleep(500);
+                Thread.sleep(100);
             } catch (InterruptedException ie) {
                 // ignore
             }
         }
+
+        // fail the test on the test thread if the consumer observed an ordering violation
+        final String violation = orderingViolation.get();
+        if (violation != null) {
+            fail(violation);
+        }
+
         // we started one event before the test, so add one
         assertEquals("Finished count", NUM_JOBS + 1, count.get());
         assertEquals("Finished count", NUM_JOBS + 1, jobManager.getStatistics().getNumberOfFinishedJobs());
