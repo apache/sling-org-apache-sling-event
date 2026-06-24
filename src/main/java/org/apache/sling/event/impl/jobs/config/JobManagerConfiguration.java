@@ -368,7 +368,7 @@ public class JobManagerConfiguration {
             this.startupDelayListener.dispose();
             this.startupDelayListener = null;
         }
-        //this only applies to tests
+        // this only applies to tests
         final ScheduledExecutorService s = this.scheduler.getAndSet(null);
         if (s != null) {
             s.shutdownNow();
