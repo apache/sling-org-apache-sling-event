@@ -83,10 +83,21 @@ public class JobManagerConfigurationTest {
     }
 
     private JobManagerConfiguration createConfig(ManualScheduler manualScheduler) {
-    /**
-     * Test that unbinding the readiness condition preserves topology and that
-     * rebinding it restores listener active state — the core regression fix.
-     */
+        final JobManagerConfiguration config = new JobManagerConfiguration();
+        ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
+        config.setScheduler(manualScheduler);
+        InitDelayingTopologyEventListener startupDelayListener =
+                new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
+
+                    @Override
+                    public void handleTopologyEvent(TopologyEvent event) {
+                        config.doHandleTopologyEvent(event);
+                    }
+                });
+        TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
+        return config;
+    }
+
     @Test
     public void testConditionTogglePreservesTopology() throws Exception {
         final ChangeListener ccl = new ChangeListener();
@@ -250,28 +261,6 @@ public class JobManagerConfigurationTest {
         config.bindJobProcessingEnabledCondition(condition);
         ccl.await();
         assertTrue("Last event should be true after final rebind", ccl.events.get(0));
-    }
-
-    @Test
-    public void testTopologyChange() throws Exception {
-        // mock scheduler
-        final ChangeListener ccl = new ChangeListener();
-
-        // add change listener and verify
-        ccl.init(1);
-        final JobManagerConfiguration config = new JobManagerConfiguration();
-        ((AtomicBoolean) TestUtil.getFieldValue(config, "active")).set(true);
-        config.setScheduler(manualScheduler);
-        InitDelayingTopologyEventListener startupDelayListener =
-                new InitDelayingTopologyEventListener(1, new TopologyEventListener() {
-
-                    @Override
-                    public void handleTopologyEvent(TopologyEvent event) {
-                        config.doHandleTopologyEvent(event);
-                    }
-                });
-        TestUtil.setFieldValue(config, "startupDelayListener", startupDelayListener);
-        return config;
     }
 
     @Test
