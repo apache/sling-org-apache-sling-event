@@ -149,13 +149,13 @@
         <dependency>
             <groupId>org.apache.jackrabbit</groupId>
             <artifactId>jackrabbit-jcr-commons</artifactId>
-            <version>2.20.9</version>
+            <version>2.22.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.quartz-scheduler</groupId>
             <artifactId>quartz</artifactId>
-            <version>2.2.0</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <!-- Webconsole -->
@@ -215,13 +215,13 @@
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path</artifactId>
-            <version>2.6.0</version>
+            <version>2.9.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path-assert</artifactId>
-            <version>2.6.0</version>
+            <version>2.9.0</version>
             <scope>test</scope>
         </dependency>
 
