@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.discovery.TopologyView;
@@ -48,7 +49,7 @@ public class TopologyCapabilities {
     private final Map<String, List<InstanceDescription>> instanceCapabilities;
 
     /** Round robin map. */
-    private final Map<String, Integer> roundRobinMap = new HashMap<String, Integer>();
+    private final Map<String, Integer> roundRobinMap = new ConcurrentHashMap<String, Integer>();
 
     /** Instance map. */
     private final Map<String, InstanceDescription> instanceMap = new HashMap<String, InstanceDescription>();
@@ -302,14 +303,14 @@ public class TopologyCapabilities {
             }
             // TODO - this is a simple round robin which is not based on the actual load
             //        of the instances
-            Integer index = this.roundRobinMap.get(jobTopic);
-            if (index == null) {
-                index = 0;
-            }
-            if (index >= potentialTargets.size()) {
-                index = 0;
-            }
-            this.roundRobinMap.put(jobTopic, index + 1);
+            final int size = potentialTargets.size();
+            final int nextCounter = this.roundRobinMap.merge(jobTopic, 1, (previous, increment) -> {
+                if (previous >= size) {
+                    return 1;
+                }
+                return previous + 1;
+            });
+            final int index = nextCounter - 1;
             final String result = potentialTargets.get(index).getSlingId();
             logger.debug("Target for {} : {}", jobTopic, result);
             return result;
