@@ -99,6 +99,27 @@ public class JobManagerConfigurationTest {
     }
 
     @Test
+    public void testLastTopologyEventTimeTracksCompletedEvents() {
+        final JobManagerConfiguration config = Mockito.spy(new JobManagerConfiguration());
+        assertEquals(0, config.getLastTopologyEventTime());
+
+        final long before = System.currentTimeMillis();
+        config.doHandleTopologyEvent(new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, createView()));
+        final long completedAt = config.getLastTopologyEventTime();
+        assertTrue(completedAt >= before);
+        assertTrue(completedAt <= System.currentTimeMillis());
+
+        Mockito.doThrow(new IllegalStateException("resolver unavailable"))
+                .when(config)
+                .createResourceResolver();
+        assertThrows(
+                IllegalStateException.class,
+                () -> config.doHandleTopologyEvent(
+                        new TopologyEvent(TopologyEvent.Type.TOPOLOGY_INIT, null, createView())));
+        assertEquals(completedAt, config.getLastTopologyEventTime());
+    }
+
+    @Test
     public void testConditionTogglePreservesTopology() throws Exception {
         final ChangeListener ccl = new ChangeListener();
         final JobManagerConfiguration config = new JobManagerConfiguration();
