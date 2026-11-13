@@ -443,8 +443,11 @@ public class JobHandlingIT extends AbstractJobHandlingIT {
             assertEquals(JobState.QUEUED, job.getJobState());
 
             Predicate<String> matcher = (line) -> line.contains(
-                    "Persisting job Sling Job [topic=no/consumer/registered] into queue <main queue> with no assigned target");
-            assertTrue(TestUtil.containsLine(outContent, matcher));
+                            "Persisting job [topic=no/consumer/registered] into queue <main queue> with no assigned target")
+                    && line.contains("reason=no-matching-consumer");
+            assertTrue(
+                    "Missing unassigned-job diagnostic. Captured output:\n" + outContent,
+                    TestUtil.containsLine(outContent, matcher));
 
         } finally {
             System.setOut(originalOut);
