@@ -22,7 +22,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -70,7 +69,6 @@ public class JobManagerImplTest {
     private ByteArrayOutputStream outContent;
     private JobManagerConfiguration configuration;
     private JobConsumerManager consumerManager;
-    private Clock clock;
 
     private static final int LEVEL_DEBUG = 10;
     private static final int LEVEL_INFO = 20;
@@ -105,7 +103,6 @@ public class JobManagerImplTest {
         when(configuration.createResourceResolver()).thenReturn(resolver);
 
         this.consumerManager = mock(JobConsumerManager.class);
-        this.clock = mock(Clock.class);
 
         this.outContent = new ByteArrayOutputStream();
         this.originalErr = System.err;
@@ -215,29 +212,22 @@ public class JobManagerImplTest {
     }
 
     @Test
-    public void rateLimitsUnassignedDiagnosticsPerTopic() throws Exception {
+    public void logsEveryUnassignedSubmission() throws Exception {
         JobManagerImpl jobManager = getJobManager(LEVEL_INFO);
         assertNotNull(jobManager.addJob("not/assigned", null, null));
         assertEquals(1, countUnassignedMessages());
 
-        when(clock.millis()).thenReturn(TimeUnit.MINUTES.toMillis(5) - 1);
+        when(consumerManager.getTopics()).thenReturn("new/consumer");
         assertNotNull(jobManager.addJob("not/assigned", null, null));
-        assertEquals(1, countUnassignedMessages());
+        assertEquals(2, countUnassignedMessages());
+        assertTrue(TestUtil.containsLine(outContent, line -> line.contains("localTopics=new/consumer")));
 
         assertNotNull(jobManager.addJob("other/topic", null, null));
-        assertEquals(2, countUnassignedMessages());
-
-        when(clock.millis()).thenReturn(TimeUnit.MINUTES.toMillis(5));
-        assertNotNull(jobManager.addJob("not/assigned", null, null));
         assertEquals(3, countUnassignedMessages());
-
-        when(clock.millis()).thenReturn(0L);
-        assertNotNull(jobManager.addJob("not/assigned", null, null));
-        assertEquals(4, countUnassignedMessages());
     }
 
     @Test
-    public void rateLimitsConcurrentUnassignedDiagnostics() throws Exception {
+    public void logsEveryConcurrentUnassignedSubmission() throws Exception {
         JobManagerImpl jobManager = getJobManager(LEVEL_INFO);
         ExecutorService executor = Executors.newFixedThreadPool(8);
         CountDownLatch ready = new CountDownLatch(8);
@@ -256,7 +246,7 @@ public class JobManagerImplTest {
             for (Future<Job> submission : submissions) {
                 assertNotNull(submission.get(5, TimeUnit.SECONDS));
             }
-            assertEquals(1, countUnassignedMessages());
+            assertEquals(8, countUnassignedMessages());
         } finally {
             start.countDown();
             executor.shutdownNow();
@@ -293,7 +283,6 @@ public class JobManagerImplTest {
 
         FieldUtils.writeDeclaredField(jobManager, "configuration", configuration, true);
         FieldUtils.writeDeclaredField(jobManager, "jobConsumerManager", consumerManager, true);
-        jobManager.setClock(clock);
         return jobManager;
     }
 

@@ -18,7 +18,6 @@
  */
 package org.apache.sling.event.impl.jobs;
 
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -26,10 +25,8 @@ import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
@@ -99,30 +96,8 @@ public class JobManagerImpl implements JobManager, EventHandler, Runnable {
 
     private static final String GAUGE_TOTAL_SCHEDULED_JOBS = "event.scheduledJobs.count";
 
-    private static final long UNASSIGNED_LOG_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(5);
-
-    private static final int MAX_UNASSIGNED_LOG_TOPICS = 1000;
-
     /** Default logger. */
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    private Clock clock = Clock.systemUTC();
-
-    /**
-     * Remember the last diagnostic time per topic to limit logging to one message every five minutes.
-     * Guarded by the map's monitor. Eviction bounds memory for dynamic topics; an evicted topic may
-     * log again before the usual interval expires.
-     */
-    private final Map<String, Long> unassignedLogTimes = new LinkedHashMap<String, Long>(16, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(final Map.Entry<String, Long> eldest) {
-            return size() > MAX_UNASSIGNED_LOG_TOPICS;
-        }
-    };
-
-    void setClock(final Clock clock) {
-        this.clock = clock;
-    }
 
     @Reference(policyOption = ReferencePolicyOption.GREEDY)
     private EventAdmin eventAdmin;
@@ -645,15 +620,6 @@ public class JobManagerImpl implements JobManager, EventHandler, Runnable {
      * properties.
      */
     private void logUnassignedJob(final String jobTopic, final String queueName, final TopologyCapabilities caps) {
-        final long now = this.clock.millis();
-        // Log at max once per 5 minute interval and per topic
-        synchronized (this.unassignedLogTimes) {
-            final Long lastLogged = this.unassignedLogTimes.get(jobTopic);
-            if (lastLogged != null && now >= lastLogged && now - lastLogged < UNASSIGNED_LOG_INTERVAL_MILLIS) {
-                return;
-            }
-            this.unassignedLogTimes.put(jobTopic, now);
-        }
         logger.info(
                 "Persisting job [topic={}] into queue {} with no assigned target; reason={}, instanceId={}, "
                         + "readiness={}, capabilitiesActive={}, viewCurrent={}, leader={}, capabilitiesChanged={}, "
