@@ -105,10 +105,11 @@ public class JobConsumerManager {
     /** The map with the consumers, keyed by topic, sorted by service ranking. */
     private final Map<String, List<ConsumerInfo>> topicToConsumerMap = new HashMap<>();
 
-    /** ServiceRegistration for propagation. */
+    /** ServiceRegistration for propagation, guarded by topicToConsumerMap. */
     private ServiceRegistration<PropertyProvider> propagationService;
 
-    private String topics;
+    /** Discovery reads this value without acquiring the consumer-map lock. */
+    private volatile String topics;
 
     /** Diagnostic state only, guarded by topicToConsumerMap; never used to control publication. */
     private long publicationCycle;
@@ -186,33 +187,44 @@ public class JobConsumerManager {
 
     @Modified
     protected void modified(final BundleContext bc, final Config config, final DeprecatedConfig deprecatedConfig) {
-        final boolean wasEnabled = this.propagationService != null;
-        this.allowListMatchers = TopicMatcherHelper.buildMatchers(getAllowListConfig(config, deprecatedConfig));
-        this.denyListMatchers = TopicMatcherHelper.buildMatchers(getDenyListConfig(config, deprecatedConfig));
-
-        final boolean enable = this.allowListMatchers != null && this.denyListMatchers != TopicMatcherHelper.MATCH_ALL;
-        if (wasEnabled != enable) {
-            final long cycle;
-            final String initialTopics;
-            synchronized (this.topicToConsumerMap) {
-                this.topics = this.calculateTopics(enable);
-                if (enable) {
-                    this.publicationCycle++;
-                    this.publicationPending = true;
-                    this.publicationWindowChanges = 0;
-                }
-                cycle = this.publicationCycle;
-                initialTopics = this.topics;
+        final TopicMatcher[] allowMatchers =
+                TopicMatcherHelper.buildMatchers(getAllowListConfig(config, deprecatedConfig));
+        final TopicMatcher[] denyMatchers =
+                TopicMatcherHelper.buildMatchers(getDenyListConfig(config, deprecatedConfig));
+        final boolean enable = allowMatchers != null && denyMatchers != TopicMatcherHelper.MATCH_ALL;
+        final boolean wasEnabled;
+        final ServiceRegistration<PropertyProvider> registration;
+        final long cycle;
+        final String initialTopics;
+        // Apply both filters and calculate topics atomically with respect to consumer binding/unbinding.
+        synchronized (this.topicToConsumerMap) {
+            registration = this.propagationService;
+            wasEnabled = registration != null;
+            this.allowListMatchers = allowMatchers;
+            this.denyListMatchers = denyMatchers;
+            this.topics = this.calculateTopics(enable);
+            if (!enable) {
+                this.propagationService = null;
+            } else if (!wasEnabled) {
+                this.publicationCycle++;
+                this.publicationPending = true;
+                this.publicationWindowChanges = 0;
             }
+            cycle = this.publicationCycle;
+            initialTopics = this.topics;
+        }
+        if (wasEnabled != enable) {
             if (enable) {
                 logger.info(
                         "Consumer topic provider registration starting; cycle={}, publicationEnabled=true, topics={}",
                         cycle,
                         initialTopics);
                 logger.debug("Registering property provider with: {}", this.topics);
+                // Registration invokes OSGi listeners synchronously. Keep the map lock free:
+                // a listener may wait for another thread to bind or unbind a consumer.
                 boolean completed = false;
                 try {
-                    this.propagationService = bc.registerService(
+                    final ServiceRegistration<PropertyProvider> newRegistration = bc.registerService(
                             PropertyProvider.class,
                             new PropertyProvider() {
 
@@ -228,6 +240,16 @@ public class JobConsumerManager {
                                 }
                             },
                             this.getRegistrationProperties());
+                    synchronized (this.topicToConsumerMap) {
+                        this.propagationService = newRegistration;
+                        // Until registerService() returned, binding/unbinding saw a null handle,
+                        // could clear topics and could not notify Discovery. Rebuild from the current map.
+                        // Installing the handle under the same lock ensures later changes notify Discovery.
+                        this.topics = this.calculateTopics(true);
+                    }
+                    // Always notify: Discovery may have cached an intermediate value, even if an
+                    // add/remove sequence left the final consumer map identical to the initial one.
+                    newRegistration.setProperties(this.getRegistrationProperties());
                     completed = true;
                 } finally {
                     final String expected;
@@ -239,7 +261,6 @@ public class JobConsumerManager {
                         expected = this.calculateTopics(true);
                         actual = this.topics;
                     }
-                    // Observe only: do not replace the published topics or send a corrective modification event.
                     logger.info(
                             "Consumer topic provider registration finished; cycle={}, completed={}, "
                                     + "windowChanges={}, expectedTopics={}, actualTopics={}, topicsConsistent={}",
@@ -252,30 +273,28 @@ public class JobConsumerManager {
                 }
             } else {
                 logger.debug("Unregistering property provider with");
-                this.propagationService.unregister();
-                this.propagationService = null;
+                registration.unregister();
             }
         } else if (enable) {
             // update properties
-            synchronized (this.topicToConsumerMap) {
-                this.topics = this.calculateTopics(true);
-            }
             logger.debug("Updating property provider with: {}", this.topics);
-            this.propagationService.setProperties(this.getRegistrationProperties());
+            registration.setProperties(this.getRegistrationProperties());
             logger.debug("Consumer topic provider modification completed");
         }
     }
 
     @Deactivate
     protected void deactivate() {
-        if (this.propagationService != null) {
-            this.propagationService.unregister();
-            this.propagationService = null;
-        }
-        this.bundleContext = null;
+        final ServiceRegistration<PropertyProvider> registration;
         synchronized (this.topicToConsumerMap) {
+            registration = this.propagationService;
+            this.propagationService = null;
+            this.bundleContext = null;
             this.topicToConsumerMap.clear();
             this.listenerMap.clear();
+        }
+        if (registration != null) {
+            registration.unregister();
         }
     }
 
@@ -381,6 +400,7 @@ public class JobConsumerManager {
         if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
+            final ServiceRegistration<PropertyProvider> registration;
             Object[] diagnostic;
             synchronized (this.topicToConsumerMap) {
                 for (final String t : topics) {
@@ -402,12 +422,15 @@ public class JobConsumerManager {
                 if (changed) {
                     this.topics = this.calculateTopics(calculationEnabled);
                 }
+                // Capture under the lock for visibility; notify outside it because OSGi callbacks
+                // are synchronous. If registration is pending, modified() reconciles after it returns.
+                registration = this.propagationService;
                 diagnostic = this.publicationChange("bind", info.serviceId, topics, changed, calculationEnabled);
             }
             logPublicationChange(diagnostic);
-            if (changed && this.propagationService != null) {
+            if (changed && registration != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
-                this.propagationService.setProperties(this.getRegistrationProperties());
+                registration.setProperties(this.getRegistrationProperties());
                 logger.debug("Consumer topic notification completed; operation=bind, serviceId={}", info.serviceId);
             } else if (changed) {
                 logger.debug(
@@ -427,6 +450,7 @@ public class JobConsumerManager {
         if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
+            final ServiceRegistration<PropertyProvider> registration;
             Object[] diagnostic;
             // Collect async callbacks to invoke outside the lock to avoid
             // lock-order inversion between topicToConsumerMap and QueueJobCache.cache
@@ -461,6 +485,8 @@ public class JobConsumerManager {
                 if (changed) {
                     this.topics = this.calculateTopics(calculationEnabled);
                 }
+                // As in bindService(), snapshot under the lock but invoke OSGi callbacks outside it.
+                registration = this.propagationService;
                 diagnostic = this.publicationChange("unbind", info.serviceId, topics, changed, calculationEnabled);
             }
             logPublicationChange(diagnostic);
@@ -475,9 +501,9 @@ public class JobConsumerManager {
                             ise);
                 }
             }
-            if (changed && this.propagationService != null) {
+            if (changed && registration != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
-                this.propagationService.setProperties(this.getRegistrationProperties());
+                registration.setProperties(this.getRegistrationProperties());
                 logger.debug("Consumer topic notification completed; operation=unbind, serviceId={}", info.serviceId);
             } else if (changed) {
                 logger.debug(
