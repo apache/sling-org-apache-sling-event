@@ -35,12 +35,14 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.event.impl.TestUtil;
 import org.apache.sling.event.impl.jobs.config.InternalQueueConfiguration;
 import org.apache.sling.event.impl.jobs.config.JobManagerConfiguration;
 import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager;
 import org.apache.sling.event.impl.jobs.config.QueueConfigurationManager.QueueInfo;
 import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
+import org.apache.sling.event.impl.support.Environment;
 import org.apache.sling.event.jobs.Job;
 import org.apache.sling.event.jobs.JobManager.QueryType;
 import org.junit.After;
@@ -187,6 +189,8 @@ public class JobManagerImplTest {
         when(capabilities.isCurrent()).thenReturn(false);
         when(capabilities.isLeader()).thenReturn(true);
         when(consumerManager.getTopics()).thenReturn("common/core/email,other/**");
+        when(consumerManager.getPublicationDiagnostics("common/core/email"))
+                .thenReturn("localConsumerBound=true, publicationAllowed=true, registrationPending=false");
 
         assertNotNull(jobManager.addJob("common/core/email", null, null));
 
@@ -198,7 +202,10 @@ public class JobManagerImplTest {
                         && line.contains("viewCurrent=false")
                         && line.contains("leader=true")
                         && line.contains("capabilitiesChanged=false")
-                        && line.contains("localTopics=common/core/email,other/**")));
+                        && line.contains("localTopics=common/core/email,other/**")
+                        && line.contains("localInstanceAdvertised=false")
+                        && line.contains(
+                                "localConsumerBound=true, publicationAllowed=true, registrationPending=false")));
     }
 
     @Test
@@ -209,6 +216,31 @@ public class JobManagerImplTest {
         jobManager.addJob("not/assigned", null, null);
 
         assertTrue(TestUtil.containsLine(outContent, line -> line.contains("capabilitiesChanged=true")));
+    }
+
+    @Test
+    public void logsLocalAdvertisementSeparatelyFromRemoteConsumers() throws Exception {
+        final String originalId = Environment.APPLICATION_ID;
+        try {
+            Environment.APPLICATION_ID = "diagnostic-local";
+            final JobManagerImpl jobManager = getJobManager(LEVEL_INFO);
+            final InstanceDescription remote = mock(InstanceDescription.class);
+            when(remote.getSlingId()).thenReturn("diagnostic-remote");
+            when(capabilities.getPotentialTargets("not/assigned")).thenReturn(Collections.singletonList(remote));
+
+            assertNotNull(jobManager.addJob("not/assigned", null, null));
+            assertTrue(TestUtil.containsLine(outContent, line -> line.contains("localInstanceAdvertised=false")));
+
+            outContent.reset();
+            final InstanceDescription local = mock(InstanceDescription.class);
+            when(local.getSlingId()).thenReturn("diagnostic-local");
+            when(capabilities.getPotentialTargets("not/assigned")).thenReturn(Arrays.asList(remote, local));
+
+            assertNotNull(jobManager.addJob("not/assigned", null, null));
+            assertTrue(TestUtil.containsLine(outContent, line -> line.contains("localInstanceAdvertised=true")));
+        } finally {
+            Environment.APPLICATION_ID = originalId;
+        }
     }
 
     @Test

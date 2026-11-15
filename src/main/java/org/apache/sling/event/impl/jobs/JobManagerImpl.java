@@ -623,7 +623,7 @@ public class JobManagerImpl implements JobManager, EventHandler, Runnable {
         logger.info(
                 "Persisting job [topic={}] into queue {} with no assigned target; reason={}, instanceId={}, "
                         + "readiness={}, capabilitiesActive={}, viewCurrent={}, leader={}, capabilitiesChanged={}, "
-                        + "lastTopologyEventTime={}, localTopics={}",
+                        + "lastTopologyEventTime={}, localTopics={}, localInstanceAdvertised={}, localPublication=[{}]",
                 jobTopic,
                 queueName,
                 caps == null ? "no-topology" : "no-matching-consumer",
@@ -634,7 +634,12 @@ public class JobManagerImpl implements JobManager, EventHandler, Runnable {
                 caps == null ? null : caps.isLeader(),
                 caps != this.configuration.getTopologyCapabilities(),
                 this.configuration.getLastTopologyEventTime(),
-                this.jobConsumerManager.getTopics());
+                this.jobConsumerManager.getTopics(),
+                caps == null
+                        ? null
+                        : caps.getPotentialTargets(jobTopic).stream()
+                                .anyMatch(target -> target.getSlingId().equals(Environment.APPLICATION_ID)),
+                this.jobConsumerManager.getPublicationDiagnostics(jobTopic));
     }
 
     /**
