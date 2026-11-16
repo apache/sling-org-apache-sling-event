@@ -110,6 +110,13 @@ public class JobConsumerManager {
 
     private String topics;
 
+    /** Diagnostic state only, guarded by topicToConsumerMap; never used to control publication. */
+    private long publicationCycle;
+
+    private boolean publicationPending;
+
+    private int publicationWindowChanges;
+
     private TopicMatcher[] allowListMatchers;
 
     private TopicMatcher[] denyListMatchers;
@@ -185,24 +192,64 @@ public class JobConsumerManager {
 
         final boolean enable = this.allowListMatchers != null && this.denyListMatchers != TopicMatcherHelper.MATCH_ALL;
         if (wasEnabled != enable) {
+            final long cycle;
+            final String initialTopics;
             synchronized (this.topicToConsumerMap) {
-                this.calculateTopics(enable);
+                this.topics = this.calculateTopics(enable);
+                if (enable) {
+                    this.publicationCycle++;
+                    this.publicationPending = true;
+                    this.publicationWindowChanges = 0;
+                }
+                cycle = this.publicationCycle;
+                initialTopics = this.topics;
             }
             if (enable) {
+                logger.info(
+                        "Consumer topic provider registration starting; cycle={}, publicationEnabled=true, topics={}",
+                        cycle,
+                        initialTopics);
                 logger.debug("Registering property provider with: {}", this.topics);
-                this.propagationService = bc.registerService(
-                        PropertyProvider.class,
-                        new PropertyProvider() {
+                boolean completed = false;
+                try {
+                    this.propagationService = bc.registerService(
+                            PropertyProvider.class,
+                            new PropertyProvider() {
 
-                            @Override
-                            public String getProperty(final String name) {
-                                if (TopologyCapabilities.PROPERTY_TOPICS.equals(name)) {
-                                    return topics;
+                                @Override
+                                public String getProperty(final String name) {
+                                    if (TopologyCapabilities.PROPERTY_TOPICS.equals(name)) {
+                                        final String value = topics;
+                                        logger.debug(
+                                                "Discovery reading consumer topics; cycle={}, topics={}", cycle, value);
+                                        return value;
+                                    }
+                                    return null;
                                 }
-                                return null;
-                            }
-                        },
-                        this.getRegistrationProperties());
+                            },
+                            this.getRegistrationProperties());
+                    completed = true;
+                } finally {
+                    final String expected;
+                    final String actual;
+                    final int changes;
+                    synchronized (this.topicToConsumerMap) {
+                        this.publicationPending = false;
+                        changes = this.publicationWindowChanges;
+                        expected = this.calculateTopics(true);
+                        actual = this.topics;
+                    }
+                    // Observe only: do not replace the published topics or send a corrective modification event.
+                    logger.info(
+                            "Consumer topic provider registration finished; cycle={}, completed={}, "
+                                    + "windowChanges={}, expectedTopics={}, actualTopics={}, topicsConsistent={}",
+                            cycle,
+                            completed,
+                            changes,
+                            expected,
+                            actual,
+                            expected.equals(actual));
+                }
             } else {
                 logger.debug("Unregistering property provider with");
                 this.propagationService.unregister();
@@ -211,10 +258,11 @@ public class JobConsumerManager {
         } else if (enable) {
             // update properties
             synchronized (this.topicToConsumerMap) {
-                this.calculateTopics(true);
+                this.topics = this.calculateTopics(true);
             }
             logger.debug("Updating property provider with: {}", this.topics);
             this.propagationService.setProperties(this.getRegistrationProperties());
+            logger.debug("Consumer topic provider modification completed");
         }
     }
 
@@ -333,6 +381,7 @@ public class JobConsumerManager {
         if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
+            Object[] diagnostic;
             synchronized (this.topicToConsumerMap) {
                 for (final String t : topics) {
                     if (t != null) {
@@ -349,13 +398,21 @@ public class JobConsumerManager {
                         }
                     }
                 }
+                final boolean calculationEnabled = this.propagationService != null;
                 if (changed) {
-                    this.calculateTopics(this.propagationService != null);
+                    this.topics = this.calculateTopics(calculationEnabled);
                 }
+                diagnostic = this.publicationChange("bind", info.serviceId, topics, changed, calculationEnabled);
             }
+            logPublicationChange(diagnostic);
             if (changed && this.propagationService != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
                 this.propagationService.setProperties(this.getRegistrationProperties());
+                logger.debug("Consumer topic notification completed; operation=bind, serviceId={}", info.serviceId);
+            } else if (changed) {
+                logger.debug(
+                        "Consumer topic notification skipped; operation=bind, serviceId={}, reason=no-provider-handle",
+                        info.serviceId);
             }
         }
     }
@@ -370,6 +427,7 @@ public class JobConsumerManager {
         if (topics != null && topics.length > 0) {
             final ConsumerInfo info = new ConsumerInfo(serviceReference, isConsumer);
             boolean changed = false;
+            Object[] diagnostic;
             // Collect async callbacks to invoke outside the lock to avoid
             // lock-order inversion between topicToConsumerMap and QueueJobCache.cache
             final List<JobExecutionContext> asyncCallbacks = new ArrayList<>();
@@ -399,10 +457,13 @@ public class JobConsumerManager {
                         }
                     }
                 }
+                final boolean calculationEnabled = this.propagationService != null;
                 if (changed) {
-                    this.calculateTopics(this.propagationService != null);
+                    this.topics = this.calculateTopics(calculationEnabled);
                 }
+                diagnostic = this.publicationChange("unbind", info.serviceId, topics, changed, calculationEnabled);
             }
+            logPublicationChange(diagnostic);
             // notify listeners outside the lock
             for (final JobExecutionContext context : asyncCallbacks) {
                 try {
@@ -417,6 +478,11 @@ public class JobConsumerManager {
             if (changed && this.propagationService != null) {
                 logger.debug("Updating property provider with: {}", this.topics);
                 this.propagationService.setProperties(this.getRegistrationProperties());
+                logger.debug("Consumer topic notification completed; operation=unbind, serviceId={}", info.serviceId);
+            } else if (changed) {
+                logger.debug(
+                        "Consumer topic notification skipped; operation=unbind, serviceId={}, reason=no-provider-handle",
+                        info.serviceId);
             }
         }
     }
@@ -430,7 +496,8 @@ public class JobConsumerManager {
         return false;
     }
 
-    private void calculateTopics(final boolean enabled) {
+    /** Calculate an advertisement without changing publication state. Caller holds the map lock. */
+    private String calculateTopics(final boolean enabled) {
         if (enabled) {
             // create a sorted list - this ensures that the property value
             // is always the same for the same topics.
@@ -456,9 +523,77 @@ public class JobConsumerManager {
                 }
                 sb.append(topic);
             }
-            this.topics = sb.toString();
+            return sb.toString();
         } else {
-            this.topics = null;
+            return null;
+        }
+    }
+
+    /** Capture callback state under the map lock; logging must happen outside it. */
+    private Object[] publicationChange(
+            final String operation,
+            final long serviceId,
+            final String[] serviceTopics,
+            final boolean changed,
+            final boolean calculationEnabled) {
+        if (this.publicationPending && changed) {
+            this.publicationWindowChanges++;
+        }
+        if (!logger.isDebugEnabled()) {
+            return null;
+        }
+        return new Object[] {
+            operation,
+            serviceId,
+            serviceTopics,
+            this.publicationCycle,
+            this.publicationPending,
+            changed,
+            changed ? calculationEnabled : null,
+            this.topics,
+            changed && !calculationEnabled
+        };
+    }
+
+    private void logPublicationChange(final Object[] diagnostic) {
+        if (diagnostic != null) {
+            logger.debug(
+                    "Consumer topic change; operation={}, serviceId={}, serviceTopics={}, cycle={}, "
+                            + "registrationPending={}, topicMapChanged={}, calculationEnabled={}, "
+                            + "resultingTopics={}, notificationUnavailableAtCalculation={}",
+                    diagnostic);
+        }
+    }
+
+    /**
+     * Describe local consumer availability without acquiring or instantiating consumer services.
+     * Publication permission is evaluated against matching consumer patterns, not the submitted topic.
+     */
+    public String getPublicationDiagnostics(final String topic) {
+        synchronized (this.topicToConsumerMap) {
+            final List<String> patterns = new ArrayList<>();
+            patterns.add(topic);
+            int pos = topic.lastIndexOf('/');
+            if (pos > 0) {
+                patterns.add(topic.substring(0, pos + 1) + "*");
+                do {
+                    patterns.add(topic.substring(0, pos + 1) + "**");
+                    pos = topic.lastIndexOf('/', pos - 1);
+                } while (pos > 0);
+            }
+            boolean bound = false;
+            boolean allowed = false;
+            for (final String pattern : patterns) {
+                if (this.topicToConsumerMap.containsKey(pattern)) {
+                    bound = true;
+                    allowed |= this.allowListMatchers != null
+                            && this.match(pattern, this.allowListMatchers)
+                            && (this.denyListMatchers == null || !this.match(pattern, this.denyListMatchers));
+                }
+            }
+            return "localConsumerBound=" + bound + ", publicationAllowed=" + allowed
+                    + ", publicationCycle=" + this.publicationCycle + ", registrationPending=" + this.publicationPending
+                    + ", registrationWindowChanges=" + this.publicationWindowChanges;
         }
     }
 

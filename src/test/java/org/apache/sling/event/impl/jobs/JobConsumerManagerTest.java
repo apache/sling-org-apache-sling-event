@@ -19,7 +19,13 @@
 package org.apache.sling.event.impl.jobs;
 
 import java.lang.annotation.Annotation;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.sling.discovery.PropertyProvider;
+import org.apache.sling.event.impl.TestUtil;
+import org.apache.sling.event.impl.jobs.config.TopologyCapabilities;
 import org.apache.sling.event.jobs.consumer.JobConsumer;
 import org.apache.sling.event.jobs.consumer.JobExecutor;
 import org.junit.Test;
@@ -27,10 +33,14 @@ import org.mockito.Mockito;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.ServiceRegistration;
+import org.slf4j.Logger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class JobConsumerManagerTest {
 
@@ -246,5 +256,116 @@ public class JobConsumerManagerTest {
 
         jcs.unbindJobExecutor(ref3);
         assertEquals(jc4, jcs.getExecutor("a/b"));
+    }
+
+    @Test
+    public void testRegistrationDiagnosticsObserveLostPublicationWithoutRepairingIt() throws Exception {
+        final BundleContext context = Mockito.mock(BundleContext.class);
+        final JobConsumerManager manager = new JobConsumerManager();
+        final Logger logger = Mockito.mock(Logger.class);
+        Mockito.when(logger.isDebugEnabled()).thenReturn(true);
+        TestUtil.setFieldValue(manager, "logger", logger);
+        final ServiceRegistration<?> registration = Mockito.mock(ServiceRegistration.class);
+        manager.bindJobExecutor(executorReference("a/existing", 1L));
+        final ServiceReference<JobExecutor> arriving = executorReference("b/arriving", 2L);
+        final ExecutorService worker = Executors.newSingleThreadExecutor();
+        try {
+            Mockito.when(context.registerService(
+                            Mockito.eq(PropertyProvider.class), Mockito.any(PropertyProvider.class), Mockito.any()))
+                    .thenAnswer(invocation -> {
+                        final PropertyProvider provider = invocation.getArgument(1);
+                        assertEquals("a/existing", provider.getProperty(TopologyCapabilities.PROPERTY_TOPICS));
+                        // Keep registration open until a different thread has completed the binding.
+                        worker.submit(() -> manager.bindJobExecutor(arriving)).get(5, TimeUnit.SECONDS);
+                        assertTrue(
+                                manager.getPublicationDiagnostics("b/arriving").contains("registrationPending=true"));
+                        assertNull(provider.getProperty(TopologyCapabilities.PROPERTY_TOPICS));
+                        return registration;
+                    });
+
+            manager.activate(context, getDefaultConfig(), getDeprecatedConfig());
+
+            assertNull(manager.getTopics());
+            final String state = manager.getPublicationDiagnostics("b/arriving");
+            assertTrue(state.contains("localConsumerBound=true"));
+            assertTrue(state.contains("publicationAllowed=true"));
+            assertTrue(state.contains("registrationPending=false"));
+            assertTrue(state.contains("registrationWindowChanges=1"));
+            Mockito.verify(logger)
+                    .info(
+                            "Consumer topic provider registration finished; cycle={}, completed={}, "
+                                    + "windowChanges={}, expectedTopics={}, actualTopics={}, topicsConsistent={}",
+                            1L,
+                            true,
+                            1,
+                            "a/existing,b/arriving",
+                            null,
+                            false);
+            Mockito.verify(registration, Mockito.never()).setProperties(Mockito.any());
+            Mockito.verify(context, Mockito.never()).getService(Mockito.any());
+        } finally {
+            worker.shutdownNow();
+            assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
+    public void testPublicationDiagnosticsApplyFiltersToConsumerPatterns() {
+        final JobConsumerManager manager = new JobConsumerManager();
+        final BundleContext context = Mockito.mock(BundleContext.class);
+        Mockito.when(context.registerService(
+                        Mockito.eq(PropertyProvider.class), Mockito.any(PropertyProvider.class), Mockito.any()))
+                .thenAnswer(invocation -> Mockito.mock(ServiceRegistration.class));
+        final JobConsumerManager.Config config = Mockito.spy(getDefaultConfig());
+        Mockito.when(config.job_consumermanager_denylist()).thenReturn(new String[] {"blocked/*"});
+        manager.activate(context, config, getDeprecatedConfig());
+        manager.bindJobExecutor(executorReference("allowed/*", 1L));
+        manager.bindJobExecutor(executorReference("blocked/**", 2L));
+
+        assertTrue(manager.getPublicationDiagnostics("allowed/job").contains("localConsumerBound=true"));
+        assertTrue(manager.getPublicationDiagnostics("allowed/job").contains("publicationAllowed=true"));
+        assertTrue(manager.getPublicationDiagnostics("blocked/deep/job").contains("localConsumerBound=true"));
+        assertTrue(manager.getPublicationDiagnostics("blocked/deep/job").contains("publicationAllowed=false"));
+        assertTrue(manager.getPublicationDiagnostics("allowed/deep/job").contains("localConsumerBound=false"));
+        Mockito.verify(context, Mockito.never()).getService(Mockito.any());
+    }
+
+    @Test
+    public void testRegistrationFailureIsReportedAndPropagated() {
+        final JobConsumerManager manager = new JobConsumerManager();
+        final Logger logger = Mockito.mock(Logger.class);
+        TestUtil.setFieldValue(manager, "logger", logger);
+        final BundleContext context = Mockito.mock(BundleContext.class);
+        final IllegalStateException failure = new IllegalStateException("Registration failed");
+        Mockito.when(context.registerService(
+                        Mockito.eq(PropertyProvider.class), Mockito.any(PropertyProvider.class), Mockito.any()))
+                .thenThrow(failure);
+
+        try {
+            manager.activate(context, getDefaultConfig(), getDeprecatedConfig());
+            fail("Registration failure must propagate");
+        } catch (final IllegalStateException actual) {
+            assertTrue(actual == failure);
+        }
+
+        assertTrue(manager.getPublicationDiagnostics("missing/job").contains("registrationPending=false"));
+        Mockito.verify(logger)
+                .info(
+                        "Consumer topic provider registration finished; cycle={}, completed={}, "
+                                + "windowChanges={}, expectedTopics={}, actualTopics={}, topicsConsistent={}",
+                        1L,
+                        false,
+                        0,
+                        "",
+                        "",
+                        true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ServiceReference<JobExecutor> executorReference(final String topic, final long id) {
+        final ServiceReference<JobExecutor> reference = Mockito.mock(ServiceReference.class);
+        Mockito.when(reference.getProperty(JobExecutor.PROPERTY_TOPICS)).thenReturn(topic);
+        Mockito.when(reference.getProperty(Constants.SERVICE_ID)).thenReturn(id);
+        return reference;
     }
 }

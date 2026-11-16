@@ -237,6 +237,9 @@ public class JobManagerConfiguration {
      */
     private volatile TopologyCapabilities topologyCapabilities;
 
+    /** Last successful event-handler completion, distinct from discovery delivery or delayed maintenance. */
+    private volatile long lastTopologyEventTime;
+
     /**
      * External readiness signal (e.g. from a Kubernetes readiness probe via an OSGi Condition
      * service). When {@code null}, job processing is paused but the topology state is preserved.
@@ -437,6 +440,16 @@ public class JobManagerConfiguration {
      */
     public TopologyCapabilities getTopologyCapabilities() {
         return this.topologyCapabilities;
+    }
+
+    /**
+     * Get the completion time of the last successfully handled topology event.
+     * A startup-delayed event is not counted until forwarded and handled; maintenance scheduled
+     * by that handler may still be pending.
+     * @return Epoch milliseconds, or zero if no event has completed yet.
+     */
+    public long getLastTopologyEventTime() {
+        return this.lastTopologyEventTime;
     }
 
     public QueueConfigurationManager getQueueConfigurationManager() {
@@ -729,6 +742,8 @@ public class JobManagerConfiguration {
 
             this.startProcessing(eventType, new TopologyCapabilities(event.getNewView(), this));
         }
+        // Leave the previous timestamp intact if handling fails, rather than suggesting successful progress.
+        this.lastTopologyEventTime = System.currentTimeMillis();
     }
 
     /**

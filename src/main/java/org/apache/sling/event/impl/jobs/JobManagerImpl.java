@@ -586,10 +586,7 @@ public class JobManagerImpl implements JobManager, EventHandler, Runnable {
         info.targetId = (caps == null ? null : caps.detectTarget(jobTopic, jobProperties, info));
 
         if (info.targetId == null && logger.isInfoEnabled()) {
-            logger.info(
-                    "Persisting job {} into queue {} with no assigned target",
-                    Utility.toString(jobTopic, jobProperties),
-                    info.queueName);
+            logUnassignedJob(jobTopic, info.queueName, caps);
         } else if (info.targetId != null && logger.isDebugEnabled()) {
             logger.debug(
                     "Persisting job {} into queue {}, target={}",
@@ -616,6 +613,33 @@ public class JobManagerImpl implements JobManager, EventHandler, Runnable {
         }
 
         return null;
+    }
+
+    /**
+     * Diagnose the routing decision before persistence, without exposing potentially sensitive job
+     * properties.
+     */
+    private void logUnassignedJob(final String jobTopic, final String queueName, final TopologyCapabilities caps) {
+        logger.info(
+                "Persisting job [topic={}] into queue {} with no assigned target; reason={}, instanceId={}, "
+                        + "readiness={}, capabilitiesActive={}, viewCurrent={}, leader={}, capabilitiesChanged={}, "
+                        + "lastTopologyEventTime={}, localTopics={}, localInstanceAdvertised={}, localPublication=[{}]",
+                jobTopic,
+                queueName,
+                caps == null ? "no-topology" : "no-matching-consumer",
+                Environment.APPLICATION_ID,
+                this.configuration.isJobProcessingEnabled(),
+                caps == null ? null : caps.isActive(),
+                caps == null ? null : caps.isCurrent(),
+                caps == null ? null : caps.isLeader(),
+                caps != this.configuration.getTopologyCapabilities(),
+                this.configuration.getLastTopologyEventTime(),
+                this.jobConsumerManager.getTopics(),
+                caps == null
+                        ? null
+                        : caps.getPotentialTargets(jobTopic).stream()
+                                .anyMatch(target -> target.getSlingId().equals(Environment.APPLICATION_ID)),
+                this.jobConsumerManager.getPublicationDiagnostics(jobTopic));
     }
 
     /**

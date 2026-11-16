@@ -173,7 +173,17 @@ public class TopologyCapabilities {
      * @return {@code true} if still active.
      */
     public boolean isActive() {
-        return this.active && this.jobManagerConfiguration.isActive() && this.view.isCurrent();
+        return this.active && this.jobManagerConfiguration.isActive() && this.isCurrent();
+    }
+
+    /**
+     * Whether the discovery view used to build these capabilities is still current.
+     * This can remain true after local deactivation; unlike {@link #isActive()}, it checks only
+     * the discovery view so diagnostics can distinguish the two states.
+     * @return {@code true} if the view is current.
+     */
+    public boolean isCurrent() {
+        return this.view.isCurrent();
     }
 
     /**
