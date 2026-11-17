@@ -44,6 +44,14 @@ import static org.junit.Assert.fail;
 
 public class JobConsumerManagerTest {
 
+    private BundleContext getBundleContext() {
+        final BundleContext context = Mockito.mock(BundleContext.class);
+        Mockito.when(context.registerService(
+                        Mockito.eq(PropertyProvider.class), Mockito.any(PropertyProvider.class), Mockito.any()))
+                .thenAnswer(invocation -> Mockito.mock(ServiceRegistration.class));
+        return context;
+    }
+
     private JobConsumerManager.Config getDefaultConfig() {
         return new JobConsumerManager.Config() {
 
@@ -91,7 +99,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testSimpleMappingConsumer() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -111,7 +119,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testCategoryMappingConsumer() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -131,7 +139,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testSubCategoryMappingConsumer() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -151,7 +159,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testSimpleMappingExecutor() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -171,7 +179,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testCategoryMappingExecutor() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -191,7 +199,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testSubCategoryMappingExecutor() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -211,7 +219,7 @@ public class JobConsumerManagerTest {
 
     @Test
     public void testRanking() {
-        final BundleContext bc = Mockito.mock(BundleContext.class);
+        final BundleContext bc = getBundleContext();
         final JobConsumerManager jcs = new JobConsumerManager();
         jcs.activate(bc, getDefaultConfig(), getDeprecatedConfig());
 
@@ -259,7 +267,55 @@ public class JobConsumerManagerTest {
     }
 
     @Test
-    public void testRegistrationDiagnosticsObserveLostPublicationWithoutRepairingIt() throws Exception {
+    public void testLastExecutorRemovedDuringProviderRegistration() {
+        final BundleContext bc = getBundleContext();
+        final JobConsumerManager manager = new JobConsumerManager();
+        final ServiceReference<JobExecutor> existing = executorReference("a/existing", 1L);
+        final ServiceRegistration<?> registration = Mockito.mock(ServiceRegistration.class);
+        manager.bindJobExecutor(existing);
+        Mockito.doAnswer(invocation -> {
+                    final PropertyProvider provider = invocation.getArgument(1);
+                    assertEquals("a/existing", provider.getProperty(TopologyCapabilities.PROPERTY_TOPICS));
+                    manager.unbindJobExecutor(existing);
+                    return registration;
+                })
+                .when(bc)
+                .registerService(
+                        Mockito.eq(PropertyProvider.class), Mockito.any(PropertyProvider.class), Mockito.any());
+
+        manager.activate(bc, getDefaultConfig(), getDeprecatedConfig());
+
+        assertEquals("", manager.getTopics());
+        Mockito.verify(registration).setProperties(Mockito.any());
+    }
+
+    @Test
+    public void testTransientTopicChangeDuringProviderRegistrationIsPublished() {
+        final BundleContext bc = getBundleContext();
+        final JobConsumerManager manager = new JobConsumerManager();
+        final ServiceReference<JobExecutor> existing = executorReference("a/existing", 1L);
+        final ServiceReference<JobExecutor> arriving = executorReference("b/arriving", 2L);
+        final ServiceRegistration<?> registration = Mockito.mock(ServiceRegistration.class);
+        manager.bindJobExecutor(existing);
+        Mockito.doAnswer(invocation -> {
+                    final PropertyProvider provider = invocation.getArgument(1);
+                    assertEquals("a/existing", provider.getProperty(TopologyCapabilities.PROPERTY_TOPICS));
+                    manager.bindJobExecutor(arriving);
+                    manager.unbindJobExecutor(arriving);
+                    return registration;
+                })
+                .when(bc)
+                .registerService(
+                        Mockito.eq(PropertyProvider.class), Mockito.any(PropertyProvider.class), Mockito.any());
+
+        manager.activate(bc, getDefaultConfig(), getDeprecatedConfig());
+
+        assertEquals("a/existing", manager.getTopics());
+        Mockito.verify(registration).setProperties(Mockito.any());
+    }
+
+    @Test
+    public void testRegistrationDiagnosticsObserveRepairedPublication() throws Exception {
         final BundleContext context = Mockito.mock(BundleContext.class);
         final JobConsumerManager manager = new JobConsumerManager();
         final Logger logger = Mockito.mock(Logger.class);
@@ -285,7 +341,7 @@ public class JobConsumerManagerTest {
 
             manager.activate(context, getDefaultConfig(), getDeprecatedConfig());
 
-            assertNull(manager.getTopics());
+            assertEquals("a/existing,b/arriving", manager.getTopics());
             final String state = manager.getPublicationDiagnostics("b/arriving");
             assertTrue(state.contains("localConsumerBound=true"));
             assertTrue(state.contains("publicationAllowed=true"));
@@ -299,9 +355,9 @@ public class JobConsumerManagerTest {
                             true,
                             1,
                             "a/existing,b/arriving",
-                            null,
-                            false);
-            Mockito.verify(registration, Mockito.never()).setProperties(Mockito.any());
+                            "a/existing,b/arriving",
+                            true);
+            Mockito.verify(registration).setProperties(Mockito.any());
             Mockito.verify(context, Mockito.never()).getService(Mockito.any());
         } finally {
             worker.shutdownNow();
